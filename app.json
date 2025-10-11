@@ -26,6 +26,12 @@
             "CFBundleURLSchemes": [
               "artyard"
             ]
+          },
+          {
+            "CFBundleURLName": "artyard",
+            "CFBundleURLSchemes": [
+              "artyard"
+            ]
           }
         ],
         "NSCameraUsageDescription": "ArtYard needs access to your camera to take photos of your artwork.",
@@ -38,8 +44,15 @@
           },
           {
             "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
           }
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -75,8 +88,8 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "supabaseUrl": "https://your-project.supabase.co",
-      "supabaseAnonKey": "your-anon-key",
+      "supabaseUrl": "https://bkvycanciimgyftdtqpx.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY",
       "eas": {
         "projectId": "273782f5-efd0-4ebc-be22-667922222f8d"
       }

@@ -56,16 +56,22 @@ export const getRedirectUri = () => {
     
     if (isDev) {
       // 개발 환경: 항상 172.30.1.66:8085 사용 (모바일 웹 호환)
-      return `${protocol}//172.30.1.66:8085/auth`;
+      const webRedirectUri = `${protocol}//172.30.1.66:8085/auth`;
+      console.log('🌐 웹 개발 환경 리다이렉트 URI:', webRedirectUri);
+      return webRedirectUri;
     } else {
       // 프로덕션 환경: 현재 도메인 사용
-      return `${window.location.origin}/auth`;
+      const prodRedirectUri = `${window.location.origin}/auth`;
+      console.log('🌐 웹 프로덕션 환경 리다이렉트 URI:', prodRedirectUri);
+      return prodRedirectUri;
     }
   }
   
   // React Native 환경에서는 커스텀 스킴 사용
   const scheme = process.env.EXPO_PUBLIC_REDIRECT_SCHEME || 'artyard';
-  return makeRedirectUri({ scheme, path: 'auth' });
+  const nativeRedirectUri = makeRedirectUri({ scheme, path: 'auth' });
+  console.log('📱 React Native 리다이렉트 URI:', { scheme, nativeRedirectUri });
+  return nativeRedirectUri;
 };
 
 /**

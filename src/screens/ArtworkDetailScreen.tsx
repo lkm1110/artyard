@@ -298,11 +298,11 @@ export const ArtworkDetailScreen: React.FC = () => {
       ? window.confirm(`Are you sure you want to delete "${artwork.title}"? This action cannot be undone.`)
       : await new Promise<boolean>((resolve) => {
           Alert.alert(
-            'Delete Artwork',
-            `Are you sure you want to delete "${artwork.title}"? This action cannot be undone.`,
+            '🗑️ 작품 삭제',
+            `"${artwork.title}" 작품을 정말 삭제하시겠어요?\n\n⚠️ 삭제된 작품은 복구할 수 없습니다.`,
             [
               { 
-                text: 'Cancel', 
+                text: '취소', 
                 style: 'cancel',
                 onPress: () => {
                   console.log('❌ 사용자가 삭제 취소');
@@ -310,7 +310,7 @@ export const ArtworkDetailScreen: React.FC = () => {
                 }
               },
               {
-                text: 'Delete',
+                text: '🗑️ 삭제하기',
                 style: 'destructive',
                 onPress: () => {
                   console.log('🔥 사용자가 삭제 확인');
@@ -395,11 +395,18 @@ export const ArtworkDetailScreen: React.FC = () => {
       ? window.confirm('Would you like to start a chat with this artist?')
       : await new Promise(resolve => {
           Alert.alert(
-            'Contact Artist',
-            'Would you like to start a chat with this artist?',
+            '💬 아티스트와 채팅하기',
+            `${artwork.artist?.nickname || '이 아티스트'}님과 대화를 시작하시겠어요?\n\n작품에 대해 더 자세히 알아보거나 구매 문의를 할 수 있습니다.`,
             [
-              { text: 'Yes', onPress: () => resolve(true) },
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              { 
+                text: '💬 채팅 시작', 
+                onPress: () => resolve(true) 
+              },
+              { 
+                text: '취소', 
+                style: 'cancel', 
+                onPress: () => resolve(false) 
+              },
             ]
           );
         });
@@ -503,16 +510,16 @@ export const ArtworkDetailScreen: React.FC = () => {
                       ? window.confirm('Are you sure you want to delete this comment?')
                       : (() => {
                           Alert.alert(
-                            'Delete Comment',
-                            'Are you sure you want to delete this comment?',
+                            '🗑️ 댓글 삭제',
+                            '이 댓글을 정말 삭제하시겠어요?\n\n삭제된 댓글은 복구할 수 없습니다.',
                             [
                               { 
-                                text: 'Cancel', 
+                                text: '취소', 
                                 style: 'cancel',
                                 onPress: () => console.log('❌ 댓글 삭제 취소')
                               },
                               {
-                                text: 'Delete',
+                                text: '🗑️ 삭제하기',
                                 style: 'destructive',
                                 onPress: () => {
                                   console.log('🔥 댓글 삭제 확인 - API 호출 시작');

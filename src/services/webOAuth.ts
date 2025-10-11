@@ -4,6 +4,7 @@
  */
 
 import { supabase } from './supabase';
+import { Platform } from 'react-native';
 
 // 시뮬레이션 테스트 사용자들 (실제 Auth에 생성됨)
 const TEST_USERS = [
@@ -161,17 +162,29 @@ const createOrSignInUser = async (userData: typeof TEST_USERS[0]) => {
  * 환경별 로그인 분기
  */
 export const getOAuthMethod = () => {
-  // 웹 환경 감지
+  // React Native 환경에서는 Platform API 사용 (가장 정확함)
+  if (Platform.OS !== 'web') {
+    return {
+      isWeb: false,
+      isMobile: true,
+      platform: 'native',
+      os: Platform.OS
+    };
+  }
+  
+  // 웹 환경에서만 navigator 체크
   if (typeof window !== 'undefined' && window.navigator) {
     const userAgent = window.navigator.userAgent;
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
     
     return {
-      isWeb: !isMobile,
+      isWeb: true,
       isMobile,
-      platform: isMobile ? 'mobile' : 'web'
+      platform: 'web',
+      os: 'web'
     };
   }
   
-  return { isWeb: true, isMobile: false, platform: 'web' };
+  // 기본값 (웹)
+  return { isWeb: true, isMobile: false, platform: 'web', os: 'web' };
 };
