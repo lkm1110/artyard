@@ -1,6 +1,6 @@
 /**
- * 로그인 스크린
- * Google, Apple, Facebook, Kakao 소셜 로그인 제공
+ * Login Screen
+ * Social login with Google, Apple, Facebook, Kakao
  */
 
 import React, { useEffect, useState } from 'react';
@@ -21,14 +21,14 @@ import { signInWithApple, signInWithAppleWeb, isAppleAuthenticationAvailable } f
 import { signInWithFacebook, signInWithFacebookWeb } from '../services/facebookAuth';
 import { GoogleIcon, AppleIcon, FacebookIcon, KakaoIcon } from '../components/BrandIcons';
 
-// 플랫폼별 Alert 함수
+// Platform-specific Alert function
 const showAlert = (title: string, message?: string, buttons?: any[]) => {
   if (Platform.OS === 'web') {
-    // 웹에서는 일반 alert() 사용
+    // Use native alert() for web
     const fullMessage = message ? `${title}\n\n${message}` : title;
     alert(fullMessage);
   } else {
-    // 모바일에서는 React Native Alert 사용
+    // Use React Native Alert for mobile
     if (buttons) {
       Alert.alert(title, message, buttons);
     } else {
@@ -42,7 +42,7 @@ export const LoginScreen: React.FC = () => {
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
 
   useEffect(() => {
-    // Apple Sign-In 사용 가능 여부 확인
+    // Check Apple Sign-In availability
     const checkAppleAuth = async () => {
       const available = await isAppleAuthenticationAvailable();
       setIsAppleAvailable(available);
@@ -53,29 +53,29 @@ export const LoginScreen: React.FC = () => {
 
   const handleGoogleLogin = async () => {
     try {
-      console.log('Google 로그인 시도 중...');
+      console.log('Attempting Google login...');
       const { data, error } = await signInWithGoogle();
       if (error) {
-        console.error('Google 로그인 실패:', error);
-        showAlert('❌ 로그인 실패', `Google 로그인에 실패했습니다.\n\n${error.message}`);
+        console.error('Google login failed:', error);
+        showAlert('❌ Login Failed', `Google login failed.\n\n${error.message}`);
       } else {
-        console.log('Google 로그인 성공:', data);
-        showAlert('✅ 로그인 성공', 'Google 로그인에 성공했습니다!');
+        console.log('Google login successful:', data);
+        showAlert('✅ Login Successful', 'Google login completed successfully!');
       }
     } catch (error) {
-      console.error('Google 로그인 오류:', error);
-      showAlert('❌ 로그인 오류', `Google 로그인 중 오류가 발생했습니다.\n\n${error}`);
+      console.error('Google login error:', error);
+      showAlert('❌ Login Error', `An error occurred during Google login.\n\n${error}`);
     }
   };
 
 
   const handleAppleLogin = async () => {
     try {
-      console.log('🍎 Apple 로그인 시도 중...');
-      console.log('🔍 Apple 로그인 리다이렉트 URI:', getRedirectUri('apple'));
-      console.log('🔍 현재 플랫폼:', Platform.OS);
+      console.log('🍎 Attempting Apple login...');
+      console.log('🔍 Apple login redirect URI:', getRedirectUri('apple'));
+      console.log('🔍 Current platform:', Platform.OS);
       
-        // Supabase OAuth 사용 (새창 팝업)
+        // Use Supabase OAuth (popup window)
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'apple',
           options: {
@@ -88,32 +88,32 @@ export const LoginScreen: React.FC = () => {
           },
         });
 
-      console.log('📡 Apple OAuth 응답:', { data, error });
+      console.log('📡 Apple OAuth response:', { data, error });
 
       if (error) {
-        console.error('❌ Apple OAuth 오류 상세:', error);
+        console.error('❌ Apple OAuth error details:', error);
         throw error;
       }
 
-      console.log('✅ Apple OAuth 리다이렉트 시작:', data);
+      console.log('✅ Apple OAuth redirect started:', data);
     } catch (error: any) {
-      console.error('❌ Apple 로그인 오류:', error);
+      console.error('❌ Apple login error:', error);
       
-      const errorMessage = error.message || 'Apple 로그인 중 오류가 발생했습니다.';
+      const errorMessage = error.message || 'An error occurred during Apple login.';
       
-      if (!errorMessage.includes('취소')) {
-        showAlert('❌ Apple 로그인 실패', `Apple 로그인에 실패했습니다.\n\n${errorMessage}`);
+      if (!errorMessage.includes('cancelled')) {
+        showAlert('❌ Apple Login Failed', `Apple login failed.\n\n${errorMessage}`);
       }
     }
   };
 
   const handleFacebookLogin = async () => {
     try {
-      console.log('📘 Facebook 로그인 시도 중...');
-      console.log('🔍 Facebook 로그인 리다이렉트 URI:', getRedirectUri());
-      console.log('🔍 현재 플랫폼:', Platform.OS);
+      console.log('📘 Attempting Facebook login...');
+      console.log('🔍 Facebook login redirect URI:', getRedirectUri());
+      console.log('🔍 Current platform:', Platform.OS);
       
-        // Supabase OAuth 사용 (새창 팝업)
+        // Use Supabase OAuth (popup window)
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'facebook',
           options: {
@@ -126,67 +126,67 @@ export const LoginScreen: React.FC = () => {
           },
         });
 
-      console.log('📡 Facebook OAuth 응답:', { data, error });
+      console.log('📡 Facebook OAuth response:', { data, error });
 
       if (error) {
-        console.error('❌ Facebook OAuth 오류 상세:', error);
+        console.error('❌ Facebook OAuth error details:', error);
         throw error;
       }
 
-      console.log('✅ Facebook OAuth 리다이렉트 시작:', data);
+      console.log('✅ Facebook OAuth redirect started:', data);
     } catch (error: any) {
-      console.error('❌ Facebook 로그인 오류:', error);
+      console.error('❌ Facebook login error:', error);
       
-      const errorMessage = error.message || 'Facebook 로그인 중 오류가 발생했습니다.';
+      const errorMessage = error.message || 'An error occurred during Facebook login.';
       
-      if (!errorMessage.includes('취소')) {
-        showAlert('❌ Facebook 로그인 실패', `Facebook 로그인에 실패했습니다.\n\n${errorMessage}`);
+      if (!errorMessage.includes('cancelled')) {
+        showAlert('❌ Facebook Login Failed', `Facebook login failed.\n\n${errorMessage}`);
       }
     }
   };
 
   const handleKakaoLogin = async () => {
     try {
-      console.log('카카오 로그인 시도 중...');
+      console.log('Attempting Kakao login...');
       const { isWeb, platform, os } = getOAuthMethod();
-      console.log('🔍 카카오 로그인 플랫폼 감지:', { isWeb, platform, os, currentPlatform: Platform.OS });
+      console.log('🔍 Kakao login platform detection:', { isWeb, platform, os, currentPlatform: Platform.OS });
       
       if (isWeb) {
-        console.log('🌐 웹 환경에서 카카오 실제 OAuth 로그인 실행');
+        console.log('🌐 Running Kakao OAuth login in web environment');
         
-        // Supabase를 통한 실제 카카오 OAuth - 같은 창에서 리다이렉트
-        console.log('🔍 카카오 로그인 리다이렉트 URI:', getRedirectUri('kakao'));
+        // Real Kakao OAuth through Supabase - redirect in same window
+        console.log('🔍 Kakao login redirect URI:', getRedirectUri('kakao'));
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'kakao',
           options: {
             redirectTo: getRedirectUri('kakao'),
             queryParams: {
-              scope: 'profile_nickname profile_image', // 닉네임 + 프로필사진 (이메일 제외)
+              scope: 'profile_nickname profile_image', // Nickname + Profile image (excluding email)
             },
-            skipBrowserRedirect: false, // 같은 창에서 리다이렉트
+            skipBrowserRedirect: false, // Redirect in same window
           },
         });
 
         if (error) {
-          console.error('❌ 카카오 OAuth 오류:', error);
+          console.error('❌ Kakao OAuth error:', error);
           throw error;
         }
 
-        console.log('✅ 카카오 OAuth 리다이렉트 시작:', data);
+        console.log('✅ Kakao OAuth redirect started:', data);
       } else {
-        // 실제 모바일 환경
+        // Actual mobile environment
         const { success, error } = await signInWithKakao();
         if (!success || error) {
-          console.error('카카오 로그인 실패:', error);
-          showAlert('❌ 카카오 로그인 실패', `로그인에 실패했습니다.\n\n${error?.message || '알 수 없는 오류'}`);
+          console.error('Kakao login failed:', error);
+          showAlert('❌ Kakao Login Failed', `Login failed.\n\n${error?.message || 'Unknown error'}`);
         } else {
-          console.log('카카오 로그인 성공!');
-          showAlert('✅ 카카오 로그인 성공', '카카오 로그인에 성공했습니다!');
+          console.log('Kakao login successful!');
+          showAlert('✅ Kakao Login Successful', 'Kakao login completed successfully!');
         }
       }
     } catch (error) {
-      console.error('카카오 로그인 오류:', error);
-      showAlert('❌ 카카오 로그인 오류', `로그인 중 오류가 발생했습니다.\n\n${error}`);
+      console.error('Kakao login error:', error);
+      showAlert('❌ Kakao Login Error', `An error occurred during login.\n\n${error}`);
     }
   };
 
@@ -213,7 +213,7 @@ export const LoginScreen: React.FC = () => {
       </View>
 
       <View style={styles.buttonContainer}>
-        {/* 1순위: Google (공식 가이드라인) */}
+        {/* 1st Priority: Google (Official Guidelines) */}
         <Button
           title="Continue with Google"
           onPress={handleGoogleLogin}
@@ -232,7 +232,7 @@ export const LoginScreen: React.FC = () => {
           textStyle={{ color: '#3C4043', fontWeight: '500' }}
         />
         
-        {/* 2순위: Apple (공식 가이드라인) */}
+        {/* 2nd Priority: Apple (Official Guidelines) */}
         <Button
           title="Continue with Apple"
           onPress={handleAppleLogin}
@@ -246,7 +246,7 @@ export const LoginScreen: React.FC = () => {
           textStyle={{ color: '#000000', fontWeight: '600' }}
         />
         
-        {/* 3순위: Facebook (흰색 배경) */}
+        {/* 3rd Priority: Facebook (White Background) */}
         <Button
           title="Continue with Facebook"
           onPress={handleFacebookLogin}
@@ -260,7 +260,7 @@ export const LoginScreen: React.FC = () => {
           textStyle={{ color: '#1877F2', fontWeight: '600' }}
         />
         
-        {/* 4순위: Kakao (흰색 배경) */}
+        {/* 4th Priority: Kakao (White Background) */}
         <Button
           title="Continue with Kakao"
           onPress={handleKakaoLogin}

@@ -126,46 +126,34 @@ export const HomeScreen: React.FC = () => {
               
               <TouchableOpacity
                 style={[
-                  styles.modernActionButton,
+                  styles.iconOnlyButton,
                   { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }
                 ]}
                 onPress={() => setSearchModalVisible(true)}
                 activeOpacity={0.8}
               >
                 <Text style={[
-                  styles.modernActionIcon,
+                  styles.iconOnlyIcon,
                   { color: colors.primary }
                 ]}>
                   🔍
-                </Text>
-                <Text style={[
-                  styles.modernActionText,
-                  { color: colors.primary }
-                ]}>
-                  Search
                 </Text>
               </TouchableOpacity>
               
               {/* 필터 버튼 */}
               <TouchableOpacity
                 style={[
-                  styles.modernActionButton,
+                  styles.iconOnlyButton,
                   { backgroundColor: '#FF6B6B15', borderColor: '#FF6B6B30' }
                 ]}
                 onPress={() => setFilterModalVisible(true)}
                 activeOpacity={0.8}
               >
                 <Text style={[
-                  styles.modernActionIcon,
+                  styles.iconOnlyIcon,
                   { color: '#FF6B6B' }
                 ]}>
                   📊
-                </Text>
-                <Text style={[
-                  styles.modernActionText,
-                  { color: '#FF6B6B' }
-                ]}>
-                  Filter
                 </Text>
               </TouchableOpacity>
               
@@ -348,5 +336,21 @@ const styles = StyleSheet.create({
   modernActionText: {
     fontSize: typography.caption.fontSize,
     fontWeight: '600',
+  },
+  iconOnlyButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  iconOnlyIcon: {
+    fontSize: 20,
   },
 });

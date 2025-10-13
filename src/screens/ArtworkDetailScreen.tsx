@@ -1,5 +1,5 @@
 /**
- * 작품 상세보기 화면 - 실제 데이터만 사용
+ * Artwork Detail Screen - Uses actual data only
  */
 
 import React, { useState, useCallback } from 'react';
@@ -70,7 +70,7 @@ export const ArtworkDetailScreen: React.FC = () => {
         artwork.location_longitude && 
         (!artwork.location_country || !artwork.location_city)
       ) {
-        console.log('🗺️ 기존 작품의 위치 정보 보완 시작:', {
+        console.log('🗺️ Starting location info enhancement for existing artwork:', {
           lat: artwork.location_latitude,
           lng: artwork.location_longitude,
           hasCountry: !!artwork.location_country,

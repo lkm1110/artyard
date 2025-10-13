@@ -1,6 +1,6 @@
 /**
- * 개별 채팅 화면
- * 실제 메시지를 주고받는 화면
+ * Individual Chat Screen
+ * Screen for sending and receiving actual messages
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -31,7 +31,7 @@ interface ChatScreenProps {
   route: RouteProp<{ Chat: { chatId: string; otherUser: Profile } }>;
 }
 
-// 더미 메시지 데이터
+// Dummy message data
 const getDummyMessages = (chatId: string): Message[] => [
   {
     id: 'msg-1',
@@ -232,7 +232,7 @@ export const ChatScreen: React.FC = () => {
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
-      await deleteMessage(messageId, '사용자가 삭제함');
+      await deleteMessage(messageId, 'Deleted by user');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to delete message.');
     }
