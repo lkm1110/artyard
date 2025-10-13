@@ -625,7 +625,7 @@ export class AdvancedSpamDetectionService {
   }
 }
 
-// 사용자 행동 추적을 위한 헬퍼 함수
+// 사용자 행동 추적을 위한 헬퍼 함수 (임시 비활성화)
 export const trackUserBehavior = async (
   userId: string,
   behaviorType: string,
@@ -633,6 +633,10 @@ export const trackUserBehavior = async (
   intensityScore: number = 1.0,
   sessionId?: string
 ): Promise<void> => {
+  // 🛑 AI 시스템 임시 비활성화 - 즉시 반환
+  console.log('⚠️ AI 시스템 비활성화: trackUserBehavior 호출 무시됨');
+  return;
+  
   try {
     await supabase
       .from('user_behaviors')

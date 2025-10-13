@@ -34,10 +34,12 @@
             ]
           }
         ],
-        "NSCameraUsageDescription": "ArtYard needs access to your camera to take photos of your artwork.",
-        "NSPhotoLibraryUsageDescription": "ArtYard needs access to your photo library to select artwork images.",
-        "NSMicrophoneUsageDescription": "ArtYard needs access to microphone for video recordings.",
-        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
+          "NSCameraUsageDescription": "ArtYard needs access to your camera to take photos of your artwork.",
+          "NSPhotoLibraryUsageDescription": "ArtYard needs access to your photo library to select artwork images.",
+          "NSMicrophoneUsageDescription": "ArtYard needs access to microphone for video recordings.",
+          "NSLocationWhenInUseUsageDescription": "ArtYard would like to add location information to your artworks so others can see where they were created.",
+          "NSLocationAlwaysAndWhenInUseUsageDescription": "ArtYard would like to add location information to your artworks so others can see where they were created.",
+          "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
@@ -66,7 +68,9 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "intentFilters": [
         {

@@ -21,6 +21,22 @@ import { signInWithApple, signInWithAppleWeb, isAppleAuthenticationAvailable } f
 import { signInWithFacebook, signInWithFacebookWeb } from '../services/facebookAuth';
 import { GoogleIcon, AppleIcon, FacebookIcon, NaverIcon, KakaoIcon } from '../components/BrandIcons';
 
+// 플랫폼별 Alert 함수
+const showAlert = (title: string, message?: string, buttons?: any[]) => {
+  if (Platform.OS === 'web') {
+    // 웹에서는 일반 alert() 사용
+    const fullMessage = message ? `${title}\n\n${message}` : title;
+    alert(fullMessage);
+  } else {
+    // 모바일에서는 React Native Alert 사용
+    if (buttons) {
+      Alert.alert(title, message, buttons);
+    } else {
+      Alert.alert(title, message);
+    }
+  }
+};
+
 export const LoginScreen: React.FC = () => {
   const isDark = useColorScheme() === 'dark';
   const [isAppleAvailable, setIsAppleAvailable] = useState(false);
@@ -41,14 +57,14 @@ export const LoginScreen: React.FC = () => {
       const { data, error } = await signInWithGoogle();
       if (error) {
         console.error('Google 로그인 실패:', error);
-        Alert.alert('❌ 로그인 실패', `Google 로그인에 실패했습니다.\n\n${error.message}`);
+        showAlert('❌ 로그인 실패', `Google 로그인에 실패했습니다.\n\n${error.message}`);
       } else {
         console.log('Google 로그인 성공:', data);
-        Alert.alert('✅ 로그인 성공', 'Google 로그인에 성공했습니다!');
+        showAlert('✅ 로그인 성공', 'Google 로그인에 성공했습니다!');
       }
     } catch (error) {
       console.error('Google 로그인 오류:', error);
-      Alert.alert('❌ 로그인 오류', `Google 로그인 중 오류가 발생했습니다.\n\n${error}`);
+      showAlert('❌ 로그인 오류', `Google 로그인 중 오류가 발생했습니다.\n\n${error}`);
     }
   };
 
@@ -59,60 +75,40 @@ export const LoginScreen: React.FC = () => {
       console.log('🔍 네이버 로그인 플랫폼 감지:', { isWeb, platform, os, currentPlatform: Platform.OS });
       
       if (isWeb) {
-        console.log('웹 환경에서 네이버 로그인 시뮬레이션');
-        Alert.alert(
-          '📱 모바일에서 테스트하세요',
-          `네이버 OAuth는 PC 웹에서 제한됩니다.\n\n✅ 완전한 테스트 방법:\n1. 스마트폰에 Expo Go 설치\n2. QR 코드 스캔\n3. 모바일에서 테스트\n\n현재 환경: ${platform}`,
-          [{ text: '확인', style: 'default' }]
-        );
+        console.log('🌐 웹 환경에서 네이버 커스텀 OAuth 로그인 실행');
         
-        // 웹용 실제 Auth 로그인
-        const { success, data, authResult } = await signInWithNaverWeb();
-        if (success && authResult) {
-          console.log('✅ 네이버 웹 로그인 성공:', data);
-          console.log('✅ 실제 Auth 사용자 생성:', authResult.user?.email);
-          
-          // 세션이 없어도 강제로 메인 화면으로 이동
-          if (authResult.user && !authResult.session) {
-            console.log('🚀 세션 없이 강제 메인 화면 이동');
-            // AuthStore 초기화를 다시 트리거
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
-          }
-        } else {
-          console.log('네이버 웹 시뮬레이션 성공 (Auth 실패):', data);
-        }
+        // 네이버는 Supabase 기본 제공 안 됨 - 커스텀 OAuth 구현
+        showAlert('🚧 네이버 로그인', '네이버 로그인 기능을 준비 중입니다.\n\n현재 구글, 카카오, 애플, 페이스북 로그인을 사용해 주세요.');
+        return;
       } else {
-        // 실제 모바일 환경
-        const { success, error } = await signInWithNaver();
-        if (!success || error) {
-          console.error('네이버 로그인 실패:', error);
-          Alert.alert('❌ 네이버 로그인 실패', `로그인에 실패했습니다.\n\n${error?.message || '알 수 없는 오류'}`);
-        } else {
-          console.log('네이버 로그인 성공!');
-          Alert.alert('✅ 네이버 로그인 성공', '네이버 로그인에 성공했습니다!');
-        }
+        // 모바일 환경에서도 네이버는 비활성화
+        showAlert('🚧 네이버 로그인', '네이버 로그인 기능을 준비 중입니다.\n\n현재 구글, 카카오, 애플, 페이스북 로그인을 사용해 주세요.');
+        return;
       }
     } catch (error) {
       console.error('네이버 로그인 오류:', error);
-      Alert.alert('❌ 네이버 로그인 오류', `로그인 중 오류가 발생했습니다.\n\n${error}`);
+      showAlert('❌ 네이버 로그인 오류', `로그인 중 오류가 발생했습니다.\n\n${error}`);
     }
   };
 
   const handleAppleLogin = async () => {
     try {
       console.log('🍎 Apple 로그인 시도 중...');
-      console.log('🔍 Apple 로그인 리다이렉트 URI:', getRedirectUri());
+      console.log('🔍 Apple 로그인 리다이렉트 URI:', getRedirectUri('apple'));
       console.log('🔍 현재 플랫폼:', Platform.OS);
       
-      // Supabase OAuth 사용
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: getRedirectUri(),
-        },
-      });
+        // Supabase OAuth 사용 (새창 팝업)
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo: getRedirectUri('apple'),
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+            skipBrowserRedirect: false,
+          },
+        });
 
       console.log('📡 Apple OAuth 응답:', { data, error });
 
@@ -128,7 +124,7 @@ export const LoginScreen: React.FC = () => {
       const errorMessage = error.message || 'Apple 로그인 중 오류가 발생했습니다.';
       
       if (!errorMessage.includes('취소')) {
-        Alert.alert('❌ Apple 로그인 실패', `Apple 로그인에 실패했습니다.\n\n${errorMessage}`);
+        showAlert('❌ Apple 로그인 실패', `Apple 로그인에 실패했습니다.\n\n${errorMessage}`);
       }
     }
   };
@@ -139,13 +135,18 @@ export const LoginScreen: React.FC = () => {
       console.log('🔍 Facebook 로그인 리다이렉트 URI:', getRedirectUri());
       console.log('🔍 현재 플랫폼:', Platform.OS);
       
-      // Supabase OAuth 사용
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: {
-          redirectTo: getRedirectUri(),
-        },
-      });
+        // Supabase OAuth 사용 (새창 팝업)
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'facebook',
+          options: {
+            redirectTo: getRedirectUri(),
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+            skipBrowserRedirect: false,
+          },
+        });
 
       console.log('📡 Facebook OAuth 응답:', { data, error });
 
@@ -161,7 +162,7 @@ export const LoginScreen: React.FC = () => {
       const errorMessage = error.message || 'Facebook 로그인 중 오류가 발생했습니다.';
       
       if (!errorMessage.includes('취소')) {
-        Alert.alert('❌ Facebook 로그인 실패', `Facebook 로그인에 실패했습니다.\n\n${errorMessage}`);
+        showAlert('❌ Facebook 로그인 실패', `Facebook 로그인에 실패했습니다.\n\n${errorMessage}`);
       }
     }
   };
@@ -173,35 +174,41 @@ export const LoginScreen: React.FC = () => {
       console.log('🔍 카카오 로그인 플랫폼 감지:', { isWeb, platform, os, currentPlatform: Platform.OS });
       
       if (isWeb) {
-        console.log('웹 환경에서 카카오 로그인 시뮬레이션');
-        Alert.alert(
-          '📱 모바일에서 테스트하세요',
-          `카카오 OAuth는 PC 웹에서 제한됩니다.\n\n✅ 완전한 테스트 방법:\n1. 스마트폰에 Expo Go 설치\n2. QR 코드 스캔\n3. 모바일에서 테스트\n\n현재 환경: ${platform}`,
-          [{ text: '확인', style: 'default' }]
-        );
+        console.log('🌐 웹 환경에서 카카오 실제 OAuth 로그인 실행');
         
-        // 웹용 실제 Auth 로그인
-        const { success, data, authResult } = await signInWithKakaoWeb();
-        if (success && authResult) {
-          console.log('✅ 카카오 웹 로그인 성공:', data);
-          console.log('✅ 실제 Auth 사용자 생성:', authResult.user?.email);
-        } else {
-          console.log('카카오 웹 시뮬레이션 성공 (Auth 실패):', data);
+        // Supabase를 통한 실제 카카오 OAuth - 같은 창에서 리다이렉트
+        console.log('🔍 카카오 로그인 리다이렉트 URI:', getRedirectUri('kakao'));
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'kakao',
+          options: {
+            redirectTo: getRedirectUri('kakao'),
+            queryParams: {
+              scope: 'profile_nickname profile_image', // 닉네임 + 프로필사진 (이메일 제외)
+            },
+            skipBrowserRedirect: false, // 같은 창에서 리다이렉트
+          },
+        });
+
+        if (error) {
+          console.error('❌ 카카오 OAuth 오류:', error);
+          throw error;
         }
+
+        console.log('✅ 카카오 OAuth 리다이렉트 시작:', data);
       } else {
         // 실제 모바일 환경
         const { success, error } = await signInWithKakao();
         if (!success || error) {
           console.error('카카오 로그인 실패:', error);
-          Alert.alert('❌ 카카오 로그인 실패', `로그인에 실패했습니다.\n\n${error?.message || '알 수 없는 오류'}`);
+          showAlert('❌ 카카오 로그인 실패', `로그인에 실패했습니다.\n\n${error?.message || '알 수 없는 오류'}`);
         } else {
           console.log('카카오 로그인 성공!');
-          Alert.alert('✅ 카카오 로그인 성공', '카카오 로그인에 성공했습니다!');
+          showAlert('✅ 카카오 로그인 성공', '카카오 로그인에 성공했습니다!');
         }
       }
     } catch (error) {
       console.error('카카오 로그인 오류:', error);
-      Alert.alert('❌ 카카오 로그인 오류', `로그인 중 오류가 발생했습니다.\n\n${error}`);
+      showAlert('❌ 카카오 로그인 오류', `로그인 중 오류가 발생했습니다.\n\n${error}`);
     }
   };
 

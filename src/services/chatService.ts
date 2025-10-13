@@ -92,10 +92,10 @@ export const getChatMessages = async (chatId: string): Promise<Message[]> => {
   try {
     console.log('채팅 메시지 조회 시작:', chatId);
 
-    // 먼저 간단한 쿼리로 테스트 (body 컬럼 사용)
+    // 수정/삭제/읽음 필드 포함한 메시지 조회
     const { data: messages, error } = await supabase
       .from('messages')
-      .select('id, chat_id, sender_id, body, created_at')
+      .select('id, chat_id, sender_id, body, created_at, is_edited, edited_at, is_deleted, deleted_at, original_body, is_read')
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true });
 
@@ -322,5 +322,149 @@ export const unsubscribeFromChat = (subscription: any) => {
   if (subscription) {
     console.log('채팅방 실시간 구독 해제');
     supabase.removeChannel(subscription);
+  }
+};
+
+/**
+ * 메시지 수정
+ */
+export const editMessage = async (messageId: string, newContent: string): Promise<void> => {
+  try {
+    console.log('메시지 수정 시작:', { messageId, newContent });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    // 기존 메시지 조회
+    const { data: originalMessage, error: fetchError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .eq('sender_id', user.id) // 본인 메시지만 수정 가능
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!originalMessage) throw new Error('메시지를 찾을 수 없습니다.');
+
+    // 메시지 수정
+    const { error: updateError } = await supabase
+      .from('messages')
+      .update({
+        body: newContent,
+        is_edited: true,
+        edited_at: new Date().toISOString(),
+        original_body: originalMessage.original_body || originalMessage.body // 첫 수정 시에만 원본 저장
+      })
+      .eq('id', messageId);
+
+    if (updateError) throw updateError;
+
+    // 수정 이력 저장
+    const { error: historyError } = await supabase
+      .from('message_history')
+      .insert({
+        message_id: messageId,
+        action_type: 'edit',
+        old_content: originalMessage.body,
+        new_content: newContent,
+        performed_by: user.id
+      });
+
+    if (historyError) {
+      console.warn('메시지 이력 저장 실패:', historyError);
+      // 이력 저장 실패는 메시지 수정을 막지 않음
+    }
+
+    console.log('✅ 메시지 수정 완료:', messageId);
+  } catch (error) {
+    console.error('💥 메시지 수정 실패:', error);
+    throw error;
+  }
+};
+
+/**
+ * 메시지 삭제 (소프트 삭제)
+ */
+export const deleteMessage = async (messageId: string, reason?: string): Promise<void> => {
+  try {
+    console.log('메시지 삭제 시작:', { messageId, reason });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    // 기존 메시지 조회
+    const { data: originalMessage, error: fetchError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .eq('sender_id', user.id) // 본인 메시지만 삭제 가능
+      .single();
+
+    if (fetchError) throw fetchError;
+    if (!originalMessage) throw new Error('메시지를 찾을 수 없습니다.');
+
+    // 메시지 소프트 삭제
+    const { error: updateError } = await supabase
+      .from('messages')
+      .update({
+        is_deleted: true,
+        deleted_at: new Date().toISOString(),
+        original_body: originalMessage.original_body || originalMessage.body // 원본 백업
+      })
+      .eq('id', messageId);
+
+    if (updateError) throw updateError;
+
+    // 삭제 이력 저장
+    const { error: historyError } = await supabase
+      .from('message_history')
+      .insert({
+        message_id: messageId,
+        action_type: 'delete',
+        old_content: originalMessage.body,
+        performed_by: user.id,
+        reason: reason || '사용자가 삭제함'
+      });
+
+    if (historyError) {
+      console.warn('메시지 이력 저장 실패:', historyError);
+      // 이력 저장 실패는 메시지 삭제를 막지 않음
+    }
+
+    console.log('✅ 메시지 삭제 완료:', messageId);
+  } catch (error) {
+    console.error('💥 메시지 삭제 실패:', error);
+    throw error;
+  }
+};
+
+/**
+ * 메시지 이력 조회
+ */
+export const getMessageHistory = async (messageId: string): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('message_history')
+      .select(`
+        *,
+        performer:profiles!message_history_performed_by_fkey(
+          id,
+          handle,
+          avatar_url
+        )
+      `)
+      .eq('message_id', messageId)
+      .order('performed_at', { ascending: true });
+
+    if (error) throw error;
+
+    return data || [];
+  } catch (error) {
+    console.error('메시지 이력 조회 실패:', error);
+    return [];
   }
 };

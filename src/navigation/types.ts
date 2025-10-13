@@ -16,7 +16,7 @@ export type RootStackParamList = {
   };
   ProfileEdit: undefined;
   ArtworkUpload: undefined;
-  ChatScreen: {
+  Chat: {
     chatId: string;
     otherUserId: string;
     artworkId?: string;

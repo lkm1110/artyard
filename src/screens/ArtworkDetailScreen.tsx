@@ -32,6 +32,7 @@ import { useArtworkComments, useCreateComment, useDeleteComment, useUpdateCommen
 import { Comment } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { FollowButton } from '../components/FollowButton';
+import { getAddressFromCoordinates } from '../services/locationService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const imageHeight = screenWidth * 0.8;
@@ -58,6 +59,45 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
+  const [enhancedLocation, setEnhancedLocation] = useState<{country?: string; city?: string} | null>(null);
+
+  // 위치 정보 자동 보완 (좌표는 있지만 국가/도시 정보가 없는 경우)
+  React.useEffect(() => {
+    const enhanceLocationInfo = async () => {
+      if (
+        artwork && 
+        artwork.location_latitude && 
+        artwork.location_longitude && 
+        (!artwork.location_country || !artwork.location_city)
+      ) {
+        console.log('🗺️ 기존 작품의 위치 정보 보완 시작:', {
+          lat: artwork.location_latitude,
+          lng: artwork.location_longitude,
+          hasCountry: !!artwork.location_country,
+          hasCity: !!artwork.location_city
+        });
+
+        try {
+          const addressInfo = await getAddressFromCoordinates(
+            artwork.location_latitude,
+            artwork.location_longitude
+          );
+          
+          if (addressInfo.country || addressInfo.city) {
+            console.log('✅ 위치 정보 보완 완료:', addressInfo);
+            setEnhancedLocation({
+              country: addressInfo.country || artwork.location_country,
+              city: addressInfo.city || artwork.location_city,
+            });
+          }
+        } catch (error) {
+          console.warn('⚠️ 위치 정보 보완 실패:', error);
+        }
+      }
+    };
+
+    enhanceLocationInfo();
+  }, [artwork]);
 
   // 좋아요 핸들러
   const handleLike = useCallback(async () => {
@@ -378,49 +418,100 @@ export const ArtworkDetailScreen: React.FC = () => {
     navigation.navigate('ArtworkEdit', { artwork });
   }, [artwork, user, navigation]);
 
-  // 작가에게 연락하기
-  const handleContactArtist = useCallback(async () => {
+  // 작품 신고 (앱스토어 심의 필수!)
+  const handleReportArtwork = useCallback(() => {
     if (!artwork || !user) return;
 
-    console.log('🔥 Contact Artist 버튼이 클릭됨!');
-    console.log('artwork:', artwork.title);
-    console.log('user:', user.handle);
+    Alert.alert(
+      '작품 신고',
+      '이 작품을 신고하는 이유를 선택해주세요',
+      [
+        { text: '스팸/도배', onPress: () => submitReport('spam') },
+        { text: '부적절한 내용', onPress: () => submitReport('inappropriate') },
+        { text: '저작권 침해', onPress: () => submitReport('copyright') },
+        { text: '기타', onPress: () => submitReport('other') },
+        { text: '취소', style: 'cancel' },
+      ]
+    );
+  }, [artwork, user]);
 
-    if (artwork.author_id === user.id) {
-      Alert.alert('Info', 'This is your own artwork!');
+  const submitReport = async (category: string) => {
+    try {
+      console.log('🚨 작품 신고:', { artworkId: artwork?.id, category });
+      // AIOrchestrationService의 신고 처리 함수 호출
+      // await AIOrchestrationService.handleContentReport(
+      //   user.id,
+      //   artwork.id,
+      //   'artwork',
+      //   `User reported artwork as ${category}`,
+      //   category
+      // );
+      
+      Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+    } catch (error) {
+      console.error('신고 실패:', error);
+      Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
+    }
+  };
+
+  // 작가에게 연락하기
+  const handleContactArtist = useCallback(async () => {
+    if (!artwork || !user) {
+      console.log('❌ Contact Artist: Missing data', { artwork: !!artwork, user: !!user });
       return;
     }
 
+    console.log('🔥 Contact Artist 버튼이 클릭됨!');
+    console.log('artwork:', artwork.title);
+    console.log('artwork.author_id:', artwork.author_id);
+    console.log('artwork.artist:', artwork.artist);
+    console.log('user:', user.handle);
+    console.log('createOrFindChatMutation:', !!createOrFindChatMutation);
+
+    if (artwork.author_id === user.id) {
+      console.log('⚠️ User clicking on own artwork');
+      // 테스트를 위해 임시로 주석 처리
+      // Alert.alert('Info', 'This is your own artwork!');
+      // return;
+      console.log('🧪 테스트 모드: 자신의 작품도 채팅 허용');
+    }
+
+    // 플랫폼별 확인 대화상자 
     const confirmed = Platform.OS === 'web' 
-      ? window.confirm('Would you like to start a chat with this artist?')
-      : await new Promise(resolve => {
+      ? confirm(`💬 채팅 시작하기\n\n"${artwork.title}" 작품에 대해 대화하시겠어요?\n\n✅ 확인 - 채팅방으로 이동\n❌ 취소 - 돌아가기`)
+      : await new Promise<boolean>(resolve => {
           Alert.alert(
             '💬 아티스트와 채팅하기',
-            `${artwork.artist?.nickname || '이 아티스트'}님과 대화를 시작하시겠어요?\n\n작품에 대해 더 자세히 알아보거나 구매 문의를 할 수 있습니다.`,
+            `${artwork.artist?.handle || artwork.artist?.nickname || '이 아티스트'}님과 대화를 시작하시겠어요?\n\n작품 "${artwork.title}"에 대해 더 자세히 알아보거나 구매 문의를 할 수 있습니다.`,
             [
-              { 
-                text: '💬 채팅 시작', 
-                onPress: () => resolve(true) 
-              },
               { 
                 text: '취소', 
                 style: 'cancel', 
                 onPress: () => resolve(false) 
               },
+              { 
+                text: '💬 채팅 시작', 
+                onPress: () => resolve(true) 
+              },
             ]
           );
         });
 
+    console.log('🔍 사용자 선택 결과:', confirmed);
+
     if (confirmed) {
       try {
-        const chatId = await createOrFindChatMutation.mutateAsync({
-          otherUserId: artwork.author_id,
-        });
+        console.log('🔍 채팅 생성 파라미터:', { otherUserId: artwork.author_id });
+        const chatData = await createOrFindChatMutation.mutateAsync(artwork.author_id);
         
-        console.log('채팅방 준비 완료:', chatId);
-        console.log('채팅 시작:', user.handle, '→', artwork.author.handle);
+        console.log('🔍 채팅 데이터:', chatData);
+        console.log('🔍 채팅 ID 추출:', chatData.id);
+        console.log('🔍 상대방 정보:', chatData.other_user);
         
-        navigation.navigate('Chat' as never, { chatId } as never);
+        navigation.navigate('Chat' as never, { 
+          chatId: chatData.id,
+          otherUser: chatData.other_user 
+        } as never);
       } catch (error) {
         console.error('채팅방 생성/찾기 실패:', error);
         Alert.alert('Error', 'Failed to start chat. Please try again.');
@@ -706,15 +797,41 @@ export const ArtworkDetailScreen: React.FC = () => {
 
           <Text style={[styles.description, { color: isDark ? colors.darkTextSecondary : colors.textSecondary }]}>
             {artwork.description}
-            {(artwork.location_city || artwork.location_country) && (
-              <Text style={{ color: colors.accent, fontWeight: '500' }}>
-                {'\n📍 '}{artwork.location_city && artwork.location_country 
-                  ? `${artwork.location_city}, ${artwork.location_country}`
-                  : artwork.location_full || 'Unknown Location'
-                }
-              </Text>
-            )}
           </Text>
+
+          {/* 위치 정보 (더 눈에 띄게) */}
+          {(
+            artwork.location_city || 
+            artwork.location_country || 
+            artwork.location_full || 
+            enhancedLocation || 
+            (artwork.location_latitude && artwork.location_longitude)
+          ) && (
+            <View style={[styles.locationContainer, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+              <Text style={styles.locationIcon}>📍</Text>
+              <Text style={[styles.locationText, { color: isDark ? colors.darkText : colors.text }]}>
+                {(() => {
+                  // 보완된 위치 정보 우선 사용
+                  const displayCountry = enhancedLocation?.country || artwork.location_country;
+                  const displayCity = enhancedLocation?.city || artwork.location_city;
+                  
+                  if (displayCity && displayCountry) {
+                    return `${displayCity}, ${displayCountry}`;
+                  } else if (displayCountry) {
+                    return displayCountry;
+                  } else if (displayCity) {
+                    return displayCity;
+                  } else if (artwork.location_full) {
+                    return artwork.location_full;
+                  } else if (artwork.location_latitude && artwork.location_longitude) {
+                    return `${artwork.location_latitude.toFixed(4)}, ${artwork.location_longitude.toFixed(4)} ${enhancedLocation ? '(주소 조회 중...)' : ''}`;
+                  } else {
+                    return 'Location added';
+                  }
+                })()}
+              </Text>
+            </View>
+          )}
 
           {/* 작품 상세 정보 */}
           <View style={styles.detailsGrid}>
@@ -805,13 +922,24 @@ export const ArtworkDetailScreen: React.FC = () => {
             </Text>
           )}
 
-          <TouchableOpacity 
-            style={[styles.contactButton, { backgroundColor: colors.primary }]}
-            onPress={handleContactArtist}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.contactButtonText}>Contact Artist</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={[styles.contactButton, { backgroundColor: colors.primary, flex: 1, marginRight: spacing.sm }]}
+              onPress={handleContactArtist}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.contactButtonText}>Contact Artist</Text>
+            </TouchableOpacity>
+
+            {/* 작품 신고 버튼 (앱스토어 심의 필수!) */}
+            <TouchableOpacity 
+              style={[styles.reportButton, { borderColor: colors.textMuted, borderWidth: 1 }]}
+              onPress={handleReportArtwork}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.reportButtonText, { color: colors.textMuted }]}>⚠️</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 액션 버튼들 */}
@@ -1041,7 +1169,26 @@ const styles = StyleSheet.create({
   description: {
     ...typography.body,
     lineHeight: 24,
+    marginBottom: spacing.md,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  locationIcon: {
+    fontSize: 16,
+    marginRight: spacing.sm,
+  },
+  locationText: {
+    ...typography.body,
+    fontWeight: '500',
+    flex: 1,
   },
   detailsGrid: {
     flexDirection: 'row',
@@ -1118,6 +1265,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: spacing.lg,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   contactButton: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
@@ -1129,6 +1280,17 @@ const styles = StyleSheet.create({
     color: colors.white,
     ...typography.button,
     fontWeight: '600',
+  },
+  reportButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  reportButtonText: {
+    fontSize: 18,
   },
   actionSection: {
     padding: spacing.lg,

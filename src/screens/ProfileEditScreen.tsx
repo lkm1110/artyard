@@ -69,11 +69,14 @@ export const ProfileEditScreen: React.FC = () => {
   }, [user]);
 
   const validateForm = useCallback(async (): Promise<boolean> => {
+    console.log('📝 validateForm 시작:', { formData: formData.handle, original: originalData?.handle });
     const newErrors: FormErrors = {};
 
     // 강화된 닉네임 검증
+    console.log('🔍 닉네임 기본 검증 시작...');
     const nicknameValidation = validateNickname(formData.handle);
     if (!nicknameValidation.isValid) {
+      console.log('❌ 닉네임 기본 검증 실패:', nicknameValidation.error);
       newErrors.handle = nicknameValidation.error;
       
       // 제안 닉네임 생성
@@ -81,17 +84,21 @@ export const ProfileEditScreen: React.FC = () => {
         newErrors.handleSuggestions = suggestNickname(formData.handle);
       }
     } else if (formData.handle !== originalData?.handle) {
+      console.log('🔄 닉네임 변경 감지 - 중복 체크 시작...');
       // 닉네임이 변경된 경우 중복 체크
       try {
         const isAvailable = await checkHandleAvailability(formData.handle, user?.id);
+        console.log('✅ 닉네임 중복 체크 완료:', { handle: formData.handle, available: isAvailable });
         if (!isAvailable) {
           newErrors.handle = 'This nickname is already taken';
           newErrors.handleSuggestions = suggestNickname(formData.handle);
         }
       } catch (error) {
-        console.error('닉네임 중복 체크 실패:', error);
+        console.error('💥 닉네임 중복 체크 실패:', error);
         newErrors.handle = 'Unable to verify nickname availability';
       }
+    } else {
+      console.log('ℹ️ 닉네임 변경 없음 - 중복 체크 스킵');
     }
 
     // School validation (선택사항)
@@ -109,6 +116,7 @@ export const ProfileEditScreen: React.FC = () => {
       newErrors.bio = 'Bio must be less than 500 characters';
     }
 
+    console.log('📋 폼 검증 완료:', { errors: Object.keys(newErrors), isValid: Object.keys(newErrors).length === 0 });
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData, originalData, user]);
@@ -126,14 +134,17 @@ export const ProfileEditScreen: React.FC = () => {
       console.log('🔄 프로필 저장 시작...');
       
       // 폼 검증 (닉네임 중복 체크 포함)
+      console.log('🔄 validateForm 호출 시작...');
       const isValid = await validateForm();
+      console.log('🔄 validateForm 호출 완료:', { isValid });
+      
       if (!isValid) {
-        console.log('❌ 폼 검증 실패');
+        console.log('❌ 폼 검증 실패 - 저장 중단');
         setIsSaving(false);
         return;
       }
 
-      console.log('✅ 폼 검증 통과');
+      console.log('✅ 폼 검증 통과 - 백엔드 업데이트 시작');
 
       // 백엔드에 프로필 업데이트 요청
       const updatedProfile = await updateProfile(user.id, formData);

@@ -23,6 +23,8 @@ import { Screen } from '../components/Screen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useAuthStore } from '../store/authStore';
 import { useChatMessages, useSendMessage } from '../hooks/useChats';
+import { useMarkChatAsRead } from '../hooks/useUnreadMessages';
+import { editMessage, deleteMessage } from '../services/chatService';
 import { Message, Profile } from '../types';
 
 interface ChatScreenProps {
@@ -79,6 +81,11 @@ export const ChatScreen: React.FC = () => {
   // 실제 API 훅 사용
   const { data: messages = [], isLoading: messagesLoading, isError: messagesError } = useChatMessages(chatId);
   const sendMessageMutation = useSendMessage();
+  const { markAsRead } = useMarkChatAsRead();
+
+  // 메시지 수정/삭제 관련 상태
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
   
   const [newMessage, setNewMessage] = useState('');
   const flatListRef = useRef<FlatList>(null);
@@ -91,6 +98,32 @@ export const ChatScreen: React.FC = () => {
       }, 100);
     }
   }, [messages.length, messagesLoading]);
+
+  // 채팅방 입장 시 자동 읽음 처리
+  useEffect(() => {
+    if (chatId && user) {
+      console.log('📖 채팅방 입장 - 자동 읽음 처리:', chatId);
+      markAsRead(chatId);
+    }
+  }, [chatId, user, markAsRead]);
+
+  // 새 메시지 수신 시 자동 읽음 처리 (개선된 버전)
+  useEffect(() => {
+    if (messages.length > 0) {
+      // is_read 컬럼이 없을 수도 있으므로 안전하게 처리
+      const otherMessages = messages.filter(msg => msg.sender_id !== user?.id);
+      
+      if (otherMessages.length > 0) {
+        // 상대방 메시지가 있으면 항상 읽음 처리 (is_read 컬럼 여부와 관계없이)
+        console.log('📨 상대방 메시지 감지 - 자동 읽음 처리:', {
+          chatId, 
+          otherMessagesCount: otherMessages.length,
+          totalMessages: messages.length 
+        });
+        markAsRead(chatId);
+      }
+    }
+  }, [messages.length, chatId, user?.id, markAsRead]); // messages 대신 messages.length로 변경
 
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !user || sendMessageMutation.isPending) return;
@@ -127,61 +160,265 @@ export const ChatScreen: React.FC = () => {
     });
   };
 
+  // 메시지 수정/삭제 처리 함수들
+  const handleMessageLongPress = (message: Message) => {
+    console.log('🔍 메시지 길게 누르기:', {
+      messageId: message.id,
+      senderId: message.sender_id,
+      currentUserId: user?.id,
+      isDeleted: message.is_deleted,
+      canEdit: message.sender_id === user?.id && !message.is_deleted
+    });
+
+    if (message.sender_id !== user?.id || message.is_deleted) {
+      console.log('❌ 수정/삭제 권한 없음');
+      return;
+    }
+
+    console.log('✅ 수정/삭제 옵션 표시');
+    Alert.alert(
+      '메시지 옵션',
+      `"${message.content.length > 30 ? message.content.substring(0, 30) + '...' : message.content}"`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '수정',
+          onPress: () => {
+            console.log('📝 수정 모드 시작:', message.id);
+            setEditingMessageId(message.id);
+            setEditingText(message.content);
+          },
+        },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            console.log('🗑️ 삭제 시작:', message.id);
+            handleDeleteMessage(message.id);
+          },
+        },
+      ]
+    );
+  };
+
+  // 웹 환경을 위한 더블클릭 핸들러 추가
+  const handleMessageDoubleClick = (message: Message) => {
+    console.log('🔍 메시지 더블클릭 (웹 호환)');
+    handleMessageLongPress(message);
+  };
+
+  // 웹 환경 디버깅 정보 표시
+  React.useEffect(() => {
+    if (Platform.OS === 'web') {
+      console.log('💻 웹 환경에서 채팅 실행 중');
+      console.log('📋 사용 가능한 메시지 옵션:');
+      console.log('  1️⃣ 내 메시지 옆 ⋯ 버튼 클릭');
+      console.log('  2️⃣ 내 메시지 우클릭');
+      console.log('  3️⃣ 내 메시지 길게 누르기 (0.5초)');
+    }
+  }, []);
+
+  const handleEditMessage = async () => {
+    if (!editingMessageId || !editingText.trim()) return;
+
+    try {
+      await editMessage(editingMessageId, editingText.trim());
+      setEditingMessageId(null);
+      setEditingText('');
+    } catch (error: any) {
+      Alert.alert('오류', error.message || '메시지 수정에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await deleteMessage(messageId, '사용자가 삭제함');
+    } catch (error: any) {
+      Alert.alert('오류', error.message || '메시지 삭제에 실패했습니다.');
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingMessageId(null);
+    setEditingText('');
+  };
+
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isFromMe = item.sender_id === user?.id || item.sender_id === 'current-user';
     const showAvatar = !isFromMe;
     const showTime = index === 0 || 
       new Date(item.created_at).getTime() - new Date(messages[index - 1]?.created_at || 0).getTime() > 5 * 60 * 1000; // 5분 차이
 
-    return (
-      <View style={[
-        styles.messageContainer,
-        isFromMe ? styles.myMessageContainer : styles.otherMessageContainer
-      ]}>
-        {showAvatar && !isFromMe && (
-          <Image
-            source={{ 
-              uri: otherUser.avatar_url || 'https://picsum.photos/30/30?random=40' 
-            }}
-            style={styles.messageAvatar}
-          />
-        )}
-        
+    // 삭제된 메시지 처리
+    if (item.is_deleted) {
+      return (
         <View style={[
-          styles.messageBubble,
-          {
-            backgroundColor: isFromMe 
-              ? colors.primary 
-              : (isDark ? colors.darkCard : colors.card),
-            marginLeft: showAvatar ? 0 : 38,
-          }
+          styles.messageContainer,
+          isFromMe ? styles.myMessageContainer : styles.otherMessageContainer
         ]}>
-          <Text style={[
-            styles.messageText,
-            { 
-              color: isFromMe 
-                ? '#FFFFFF' 
-                : (isDark ? colors.darkText : colors.text)
-            }
+          {/* 삭제된 메시지도 동일한 구조 */}
+          <View style={[
+            styles.messageRow,
+            isFromMe ? styles.myMessageRow : styles.otherMessageRow
           ]}>
-            {item.content}
-          </Text>
-          
-          {showTime && (
-            <Text style={[
-              styles.messageTime,
+            
+            {/* 상대방 아바타 (좌측) */}
+            {!isFromMe && showAvatar && (
+              <Image
+                source={{ 
+                  uri: otherUser?.avatar_url || 'https://picsum.photos/30/30?random=40' 
+                }}
+                style={[styles.messageAvatar, { opacity: 0.5 }]}
+              />
+            )}
+            
+            {/* 삭제된 메시지 버블 */}
+            <View style={[
+              styles.messageBubble,
+              isFromMe ? styles.myMessageBubble : styles.otherMessageBubble,
               {
-                color: isFromMe 
-                  ? 'rgba(255, 255, 255, 0.7)' 
-                  : (isDark ? colors.darkTextMuted : colors.textMuted),
-                alignSelf: isFromMe ? 'flex-end' : 'flex-start',
+                backgroundColor: isDark ? colors.darkBorder : '#f0f0f0',
+                opacity: 0.7,
               }
             ]}>
-              {formatMessageTime(item.created_at)}
+              <Text style={[
+                styles.messageText,
+                { 
+                  color: isDark ? colors.darkTextMuted : colors.textMuted,
+                  fontStyle: 'italic'
+                }
+              ]}>
+                🗑️ 메시지가 삭제되었습니다
+              </Text>
+              
+              {showTime && (
+                <Text style={[
+                  styles.messageTime,
+                  {
+                    color: isDark ? colors.darkTextMuted : colors.textMuted,
+                    alignSelf: isFromMe ? 'flex-end' : 'flex-start',
+                  }
+                ]}>
+                  {formatMessageTime(item.created_at)}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.messageContainer,
+          isFromMe ? styles.myMessageContainer : styles.otherMessageContainer
+        ]}
+        onLongPress={() => handleMessageLongPress(item)}
+        // 웹에서 우클릭 지원
+        {...(Platform.OS === 'web' && {
+          onContextMenu: (e: any) => {
+            e.preventDefault();
+            console.log('🖱️ 우클릭으로 메시지 옵션 호출');
+            handleMessageLongPress(item);
+          }
+        })}
+        activeOpacity={0.8}
+        delayLongPress={500} // 길게 누르기 시간 단축
+      >
+        {/* 메시지 행 - 상대방 메시지는 좌측, 내 메시지는 우측 */}
+        <View style={[
+          styles.messageRow,
+          isFromMe ? styles.myMessageRow : styles.otherMessageRow
+        ]}>
+          
+          {/* 상대방 아바타 (좌측) */}
+          {!isFromMe && showAvatar && (
+            <Image
+              source={{ 
+                uri: otherUser?.avatar_url || 'https://picsum.photos/30/30?random=40' 
+              }}
+              style={styles.messageAvatar}
+            />
+          )}
+          
+          {/* 메시지 버블 */}
+          <View style={[
+            styles.messageBubble,
+            isFromMe ? styles.myMessageBubble : styles.otherMessageBubble,
+            {
+              backgroundColor: isFromMe 
+                ? colors.primary 
+                : (isDark ? colors.darkCard : colors.card),
+            }
+          ]}>
+            <Text style={[
+              styles.messageText,
+              { 
+                color: isFromMe 
+                  ? '#FFFFFF' 
+                  : (isDark ? colors.darkText : colors.text)
+              }
+            ]}>
+              {item.content}
             </Text>
+            
+            {/* 수정된 메시지 표시 */}
+            {item.is_edited && (
+              <Text style={[
+                styles.editedLabel,
+                { 
+                  color: isFromMe ? 'rgba(255,255,255,0.6)' : 
+                    (isDark ? colors.darkTextMuted : colors.textMuted)
+                }
+              ]}>
+                edited
+              </Text>
+            )}
+            
+            {/* 시간 표시 */}
+            {showTime && (
+              <Text style={[
+                styles.messageTime,
+                {
+                  color: isFromMe 
+                    ? 'rgba(255, 255, 255, 0.7)' 
+                    : (isDark ? colors.darkTextMuted : colors.textMuted),
+                  alignSelf: isFromMe ? 'flex-end' : 'flex-start',
+                }
+              ]}>
+                {formatMessageTime(item.created_at)}
+                {item.is_edited && ` • 수정됨`}
+              </Text>
+            )}
+          </View>
+          
+          {/* 내 메시지 옵션 버튼 (우측) */}
+          {isFromMe && !item.is_deleted && (
+            <TouchableOpacity
+              style={styles.messageOptionsButton}
+              onPress={() => {
+                console.log('🔘 옵션 버튼 클릭 (웹 호환)');
+                handleMessageLongPress(item);
+              }}
+              // 웹 호환성 향상
+              {...(Platform.OS === 'web' && {
+                style: {
+                  cursor: 'pointer'
+                }
+              })}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={[
+                styles.messageOptionsIcon,
+                { color: isDark ? colors.darkTextMuted : colors.textMuted }
+              ]}>
+                ⋯
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -239,13 +476,13 @@ export const ChatScreen: React.FC = () => {
             style={styles.userInfo}
             onPress={() => {
               // TODO: 사용자 프로필 보기
-              console.log('사용자 프로필 보기:', otherUser.handle);
+              console.log('사용자 프로필 보기:', otherUser?.handle || 'Unknown User');
             }}
             activeOpacity={0.8}
           >
             <Image
               source={{ 
-                uri: otherUser.avatar_url || 'https://picsum.photos/40/40?random=50' 
+                uri: otherUser?.avatar_url || 'https://picsum.photos/40/40?random=50' 
               }}
               style={styles.headerAvatar}
             />
@@ -254,16 +491,10 @@ export const ChatScreen: React.FC = () => {
                 styles.userName,
                 { color: isDark ? colors.darkText : colors.text }
               ]}>
-                {otherUser.handle}
-                {otherUser.is_verified_school && (
+                {otherUser?.handle || 'Unknown User'}
+                {otherUser?.is_verified_school && (
                   <Text style={styles.verifiedIcon}> ✓</Text>
                 )}
-              </Text>
-              <Text style={[
-                styles.userSchool,
-                { color: isDark ? colors.darkTextMuted : colors.textMuted }
-              ]}>
-                {otherUser.school}
               </Text>
             </View>
           </TouchableOpacity>
@@ -273,7 +504,7 @@ export const ChatScreen: React.FC = () => {
             onPress={() => {
               Alert.alert(
                 'Chat Options',
-                `Options for conversation with ${otherUser.handle}`,
+                `Options for conversation with ${otherUser?.handle || 'this user'}`,
                 [
                   { text: 'View Profile', onPress: () => console.log('View profile') },
                   { text: 'Report User', style: 'destructive', onPress: () => console.log('Report user') },
@@ -312,6 +543,29 @@ export const ChatScreen: React.FC = () => {
             borderTopColor: isDark ? colors.darkCard : colors.card,
           }
         ]}>
+          {/* 수정 모드 헤더 */}
+          {editingMessageId && (
+            <View style={[
+              styles.editModeHeader,
+              { backgroundColor: isDark ? colors.darkBorder : '#f0f0f0' }
+            ]}>
+              <Text style={[
+                styles.editModeText,
+                { color: isDark ? colors.darkText : colors.text }
+              ]}>
+                ✏️ 메시지 수정 중
+              </Text>
+              <TouchableOpacity onPress={cancelEdit}>
+                <Text style={[
+                  styles.cancelEditText,
+                  { color: colors.primary }
+                ]}>
+                  취소
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          
           <View style={[
             styles.inputWrapper,
             { backgroundColor: isDark ? colors.darkBg : colors.card }
@@ -324,10 +578,10 @@ export const ChatScreen: React.FC = () => {
                   maxHeight: 100,
                 }
               ]}
-              placeholder="Type a message..."
+              placeholder={editingMessageId ? "메시지를 수정하세요..." : "Type a message..."}
               placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
-              value={newMessage}
-              onChangeText={setNewMessage}
+              value={editingMessageId ? editingText : newMessage}
+              onChangeText={editingMessageId ? setEditingText : setNewMessage}
               multiline
               textAlignVertical="center"
             />
@@ -336,17 +590,21 @@ export const ChatScreen: React.FC = () => {
               style={[
                 styles.sendButton,
                 {
-                  backgroundColor: newMessage.trim() && !sendMessageMutation.isPending ? colors.primary : colors.textMuted,
+                  backgroundColor: (editingMessageId ? editingText.trim() : newMessage.trim()) && !sendMessageMutation.isPending 
+                    ? colors.primary 
+                    : colors.textMuted,
                 }
               ]}
-              onPress={handleSendMessage}
-              disabled={!newMessage.trim() || sendMessageMutation.isPending}
+              onPress={editingMessageId ? handleEditMessage : handleSendMessage}
+              disabled={!(editingMessageId ? editingText.trim() : newMessage.trim()) || sendMessageMutation.isPending}
               activeOpacity={0.8}
             >
               {sendMessageMutation.isPending ? (
                 <LoadingSpinner size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.sendIcon}>→</Text>
+                <Text style={styles.sendIcon}>
+                  {editingMessageId ? '✓' : '→'}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -427,17 +685,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   messageContainer: {
-    flexDirection: 'row',
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
-    alignItems: 'flex-end',
+    width: '100%',
   },
   myMessageContainer: {
-    justifyContent: 'flex-end',
+    alignItems: 'flex-end', // 우측 정렬
     paddingLeft: spacing.xl * 2, // 더 넓은 여백
   },
   otherMessageContainer: {
-    justifyContent: 'flex-start',
+    alignItems: 'flex-start', // 좌측 정렬
     paddingRight: spacing.xl * 2, // 더 넓은 여백
   },
   messageAvatar: {
@@ -446,13 +703,36 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginRight: spacing.sm,
   },
+  // 메시지 행 스타일
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    maxWidth: '85%',
+  },
+  myMessageRow: {
+    alignSelf: 'flex-end',
+    justifyContent: 'flex-end',
+  },
+  otherMessageRow: {
+    alignSelf: 'flex-start',
+    justifyContent: 'flex-start',
+  },
+  
+  // 메시지 버블 공통 스타일
   messageBubble: {
-    maxWidth: '75%',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.lg,
     ...shadows.sm,
-    minHeight: 40, // 최소 높이 보장
+    minHeight: 40,
+    flex: 1,
+    maxWidth: 250, // 최대 너비 제한으로 텍스트 잘림 방지
+  },
+  myMessageBubble: {
+    marginLeft: spacing.sm, // 옵션 버튼과의 간격
+  },
+  otherMessageBubble: {
+    marginRight: spacing.sm,
   },
   messageText: {
     ...typography.body,
@@ -523,5 +803,49 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     ...typography.body,
     fontWeight: '600',
+  },
+  // 수정 모드 스타일
+  editModeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  editModeText: {
+    ...typography.body,
+    fontWeight: '600',
+  },
+  cancelEditText: {
+    ...typography.body,
+    fontWeight: '600',
+  },
+  editedLabel: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  // 메시지 콘텐츠 래퍼 스타일
+  messageContentWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    maxWidth: '80%', // 메시지 최대 너비 제한
+    alignSelf: 'flex-end', // 기본적으로 우측 정렬 (내 메시지용)
+  },
+  messageOptionsButton: {
+    marginLeft: spacing.xs,
+    padding: spacing.xs,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 24,
+    minHeight: 24,
+  },
+  messageOptionsIcon: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

@@ -20,6 +20,7 @@ import {
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import { Screen } from '../components/Screen';
 // import { LoadingSpinner } from '../components/LoadingSpinner'; // 더 이상 사용하지 않음
@@ -27,8 +28,8 @@ import { Button } from '../components/Button';
 import { useAuthStore } from '../store/authStore';
 import { useUploadArtwork } from '../hooks/useArtworks';
 import { uploadImagesToStorage } from '../services/imageUploadService';
-import { getCurrentLocationInfo } from '../services/locationService';
-import { Material, LocationInfo } from '../types';
+import { getCurrentLocation, askForLocationConsent, formatLocationText, LocationInfo } from '../services/locationService';
+import { Material } from '../types';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -283,11 +284,21 @@ export const ArtworkUploadScreen: React.FC = () => {
 
       console.log('📍 Step 2: Getting location information...');
       let locationInfo: LocationInfo | null = null;
-      try {
-        locationInfo = await getCurrentLocationInfo('en'); // 영어 버전
-        console.log('✅ Location collected:', locationInfo);
-      } catch (error) {
-        console.log('⚠️ Failed to get location, proceeding without it:', error);
+      
+      // 사용자에게 위치 정보 수집 동의 요청
+      const userConsent = await askForLocationConsent();
+      if (userConsent) {
+        try {
+          locationInfo = await getCurrentLocation({
+            timeout: 10000,
+            accuracy: Location.Accuracy.Balanced
+          });
+          console.log('✅ Location collected:', locationInfo);
+        } catch (error) {
+          console.log('⚠️ Failed to get location, proceeding without it:', error);
+        }
+      } else {
+        console.log('ℹ️ User declined location sharing');
       }
 
       console.log('💾 Step 3: Saving artwork data to database...');
@@ -302,12 +313,17 @@ export const ArtworkUploadScreen: React.FC = () => {
         images: uploadedImageUrls,
         // 위치 정보 추가 (있는 경우에만)
         ...(locationInfo && {
+          location_latitude: locationInfo.latitude,
+          location_longitude: locationInfo.longitude,
           location_country: locationInfo.country,
           location_state: locationInfo.state,
           location_city: locationInfo.city,
-          location_full: locationInfo.full,
-          latitude: locationInfo.latitude,
-          longitude: locationInfo.longitude,
+          location_district: locationInfo.district,
+          location_street: locationInfo.street,
+          location_name: locationInfo.name,
+          location_full: formatLocationText(locationInfo),
+          location_accuracy: locationInfo.accuracy,
+          location_timestamp: locationInfo.timestamp,
         }),
       };
 
@@ -324,7 +340,7 @@ export const ArtworkUploadScreen: React.FC = () => {
           console.log('👈 Navigating to main feed...');
           navigation.reset({
             index: 0,
-            routes: [{ name: 'MainTabs' as never }],
+            routes: [{ name: 'MainApp' as never }],
           });
         }, 2000);
       } else {
@@ -338,7 +354,7 @@ export const ArtworkUploadScreen: React.FC = () => {
               console.log('👈 Navigating to main feed...');
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'MainTabs' as never }],
+                routes: [{ name: 'MainApp' as never }],
               });
             }
           }]

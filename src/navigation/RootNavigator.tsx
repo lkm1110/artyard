@@ -25,6 +25,7 @@ import { BookmarksScreen } from '../screens/BookmarksScreen';
 import { MyArtworksScreen } from '../screens/MyArtworksScreen';
 import { UserArtworksScreen } from '../screens/UserArtworksScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { AuthCallbackHandler } from '../components/AuthCallbackHandler';
 
 const Stack = createNativeStackNavigator();
 
@@ -98,6 +99,8 @@ export const RootNavigator: React.FC = () => {
 
   return (
     <NavigationContainer theme={theme}>
+      {/* OAuth 콜백 핸들러 (웹에서만 작동) */}
+      <AuthCallbackHandler />
       <Stack.Navigator
         screenOptions={{
           headerShown: false,

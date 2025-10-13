@@ -39,13 +39,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true, // 웹에서 OAuth 콜백 처리를 위해 활성화
+    flowType: 'pkce', // PKCE 플로우 사용으로 보안 강화
   },
 });
 
 /**
  * OAuth 리다이렉트 URI 생성 (플랫폼별 처리)
  */
-export const getRedirectUri = () => {
+export const getRedirectUri = (provider?: string) => {
+  // Apple과 Kakao OAuth는 개발 환경에서도 Supabase를 통해 처리
+  if ((provider === 'apple' || provider === 'kakao') && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const supabaseRedirectUri = 'https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback';
+    console.log(`🔗 ${provider} 로그인 - Supabase 리다이렉트 URI:`, supabaseRedirectUri);
+    return supabaseRedirectUri;
+  }
+  
   // 웹 환경에서는 현재 도메인 사용 (document 존재로 웹 환경 확실히 체크)
   if (typeof window !== 'undefined' && typeof document !== 'undefined' && window.location) {
     const hostname = window.location.hostname;

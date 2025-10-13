@@ -9,6 +9,8 @@ import {
   getChatMessages,
   sendMessage,
   createOrFindChat,
+  editMessage,
+  deleteMessage,
 } from '../services/chatService';
 import type { Chat, Message } from '../types';
 
@@ -74,6 +76,8 @@ export const useSendMessage = () => {
       return { previousMessages, tempMessage };
     },
     onSuccess: (newMessage, { chatId }) => {
+      console.log('✅ 메시지 전송 성공:', newMessage.id);
+      
       // 성공시 임시 메시지를 실제 메시지로 교체
       queryClient.setQueryData<Message[]>(
         ['chat', chatId, 'messages'],
@@ -84,8 +88,12 @@ export const useSendMessage = () => {
         }
       );
 
-      // 채팅 목록도 업데이트 (마지막 메시지 갱신)
-      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      // 채팅 목록도 부드럽게 업데이트 (에러 방지)
+      try {
+        queryClient.invalidateQueries({ queryKey: ['chats'] });
+      } catch (error) {
+        console.warn('채팅 목록 업데이트 실패 (무시):', error);
+      }
     },
     onError: (error, { chatId }, context) => {
       console.error('메시지 전송 실패:', error);
@@ -146,4 +154,44 @@ export const useRefreshChatMessages = () => {
     console.log('채팅 메시지 수동 새로고침:', chatId);
     return queryClient.invalidateQueries({ queryKey: ['chat', chatId, 'messages'] });
   };
+};
+
+/**
+ * 메시지 수정하기
+ */
+export const useEditMessage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ messageId, newContent }: { messageId: string; newContent: string }) => 
+      editMessage(messageId, newContent),
+    onSuccess: () => {
+      console.log('메시지 수정 성공');
+      // 모든 채팅 메시지 캐시를 무효화하여 실시간으로 업데이트
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+    },
+    onError: (error) => {
+      console.error('메시지 수정 실패:', error);
+    },
+  });
+};
+
+/**
+ * 메시지 삭제하기
+ */
+export const useDeleteMessage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ messageId, reason }: { messageId: string; reason?: string }) => 
+      deleteMessage(messageId, reason),
+    onSuccess: () => {
+      console.log('메시지 삭제 성공');
+      // 모든 채팅 메시지 캐시를 무효화하여 실시간으로 업데이트
+      queryClient.invalidateQueries({ queryKey: ['chat'] });
+    },
+    onError: (error) => {
+      console.error('메시지 삭제 실패:', error);
+    },
+  });
 };

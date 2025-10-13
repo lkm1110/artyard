@@ -50,9 +50,13 @@ export const MessagesScreen: React.FC = () => {
     return message.substring(0, maxLength) + '...';
   };
 
-  const handleChatPress = useCallback((chatId: string) => {
-    console.log('Navigate to chat:', chatId);
-    navigation.navigate('ChatScreen' as any, { chatId });
+  const handleChatPress = useCallback((chat: Chat) => {
+    console.log('Navigate to chat:', chat.id);
+    console.log('Other user info:', chat.other_user);
+    navigation.navigate('Chat' as any, { 
+      chatId: chat.id,
+      otherUser: chat.other_user 
+    });
   }, [navigation]);
 
   const renderEmptyState = () => (
@@ -71,7 +75,7 @@ export const MessagesScreen: React.FC = () => {
           borderBottomColor: isDark ? colors.darkBorder : colors.border,
         }
       ]}
-      onPress={() => handleChatPress(item.id)}
+      onPress={() => handleChatPress(item)}
       activeOpacity={0.7}
     >
       <Image
@@ -102,12 +106,6 @@ export const MessagesScreen: React.FC = () => {
           </Text>
         </View>
 
-        <Text style={[
-          styles.userSchool,
-          { color: isDark ? colors.darkTextMuted : colors.textMuted }
-        ]}>
-          {item.other_user?.school}
-        </Text>
 
         {item.last_message ? (
           <Text style={[
@@ -257,11 +255,6 @@ const styles = StyleSheet.create({
   timestamp: {
     ...typography.caption,
     fontSize: 12,
-  },
-  userSchool: {
-    ...typography.caption,
-    fontSize: 12,
-    marginBottom: spacing.xs,
   },
   lastMessage: {
     ...typography.body,

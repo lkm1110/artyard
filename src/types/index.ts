@@ -39,12 +39,18 @@ export interface Artwork {
   likes_count: number;
   comments_count: number;
   is_hidden: boolean;
+  // 위치 정보 (작품 생성 장소)
+  location_latitude?: number;
+  location_longitude?: number;
   location_country?: string;
   location_state?: string;
   location_city?: string;
+  location_district?: string;
+  location_street?: string;
+  location_name?: string;
   location_full?: string;
-  latitude?: number;
-  longitude?: number;
+  location_accuracy?: number;
+  location_timestamp?: number;
   created_at: string;
   // 조인된 데이터
   author?: Profile;
@@ -101,6 +107,26 @@ export interface Message {
   content: string;
   created_at: string;
   sender?: Profile;
+  // 수정/삭제 관련 필드
+  is_edited?: boolean;
+  edited_at?: string;
+  is_deleted?: boolean;
+  deleted_at?: string;
+  original_body?: string;
+  // 읽음 처리 필드
+  is_read?: boolean;
+}
+
+// 메시지 이력
+export interface MessageHistory {
+  id: string;
+  message_id: string;
+  action_type: 'edit' | 'delete' | 'restore';
+  old_content?: string;
+  new_content?: string;
+  performed_by: string;
+  performed_at: string;
+  reason?: string;
 }
 
 // 챌린지

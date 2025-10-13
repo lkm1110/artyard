@@ -6,6 +6,43 @@ import { supabase } from './supabase';
 import { useAuthStore } from '../store/authStore';
 
 /**
+ * 이미지 압축 유틸리티
+ */
+const compressImage = async (file: Blob, quality: number = 0.8, maxWidth: number = 1920): Promise<Blob> => {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    const img = new Image();
+    
+    img.onload = () => {
+      // 비율 유지하며 크기 조정
+      const aspectRatio = img.width / img.height;
+      let { width, height } = img;
+      
+      if (width > maxWidth) {
+        width = maxWidth;
+        height = width / aspectRatio;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // 이미지 그리기
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Blob으로 변환
+      canvas.toBlob(
+        (blob) => resolve(blob || file),
+        'image/jpeg',
+        quality
+      );
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
+};
+
+/**
  * 이미지를 Supabase Storage에 업로드
  */
 export const uploadImagesToStorage = async (imageUris: string[]): Promise<string[]> => {
@@ -117,6 +154,13 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
           console.log('✅ Fetch response received, converting to blob...');
           fileData = await response.blob();
           console.log('✅ Base64 to blob conversion complete, size:', fileData.size, 'bytes');
+          
+          // 큰 이미지 압축 (1MB 이상일 경우)
+          if (fileData.size > 1024 * 1024) {
+            console.log('📉 Large image detected, compressing...');
+            fileData = await compressImage(fileData, 0.8, 1920); // 80% 품질, 최대 1920px
+            console.log('✅ Image compressed to:', fileData.size, 'bytes');
+          }
         } else {
           // 파일 URI (모바일에서 촬영/선택한 경우)
           console.log('📱 Processing mobile URI');
@@ -125,6 +169,13 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
           console.log('✅ Fetch response received, converting to blob...');
           fileData = await response.blob();
           console.log('✅ URI to blob conversion complete, size:', fileData.size, 'bytes');
+          
+          // 큰 이미지 압축 (1MB 이상일 경우)
+          if (fileData.size > 1024 * 1024) {
+            console.log('📉 Large image detected, compressing...');
+            fileData = await compressImage(fileData, 0.8, 1920); // 80% 품질, 최대 1920px
+            console.log('✅ Image compressed to:', fileData.size, 'bytes');
+          }
         }
 
         console.log('📊 File data details:', {
@@ -143,13 +194,42 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
 
         console.log('⏳ Starting Supabase Storage upload...');
         
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('artworks')
-          .upload(fileName, fileData, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: fileData.type || 'image/jpeg',
-          });
+        // 타임아웃과 재시도 로직 추가
+        const uploadWithTimeout = async (retries = 3): Promise<{ data: any; error: any }> => {
+          for (let attempt = 1; attempt <= retries; attempt++) {
+            console.log(`🔄 Upload attempt ${attempt}/${retries}`);
+            
+            try {
+              // Promise.race로 30초 타임아웃 설정
+              const uploadPromise = supabase.storage
+                .from('artworks')
+                .upload(fileName, fileData, {
+                  cacheControl: '3600',
+                  upsert: false,
+                  contentType: fileData.type || 'image/jpeg',
+                });
+
+              const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Upload timeout after 30s')), 30000)
+              );
+
+              const result = await Promise.race([uploadPromise, timeoutPromise]);
+              console.log(`✅ Upload attempt ${attempt} completed`);
+              return result as { data: any; error: any };
+              
+            } catch (error: any) {
+              console.log(`⚠️ Upload attempt ${attempt} failed:`, error.message);
+              if (attempt === retries) {
+                return { data: null, error: { message: `Upload failed after ${retries} attempts: ${error.message}` } };
+              }
+              // 재시도 전 잠시 대기
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
+          return { data: null, error: { message: 'Unexpected error' } };
+        };
+
+        const { data: uploadData, error: uploadError } = await uploadWithTimeout();
 
         console.log('📨 Storage upload response:', {
           data: uploadData,

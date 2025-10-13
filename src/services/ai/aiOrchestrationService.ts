@@ -174,12 +174,12 @@ class BatchProcessingEngine {
 export class AIOrchestrationService {
   private static config: AIServiceConfig = {
     features: {
-      spamDetection: true,
-      contentModeration: true,
-      personalizedRecommendations: true,
-      trendingAnalysis: true,
-      userGrowth: true,
-      batchProcessing: true
+      spamDetection: false, // 임시 비활성화 (DB 테이블 이슈)
+      contentModeration: false, // 임시 비활성화 (DB 테이블 이슈)
+      personalizedRecommendations: false, // 임시 비활성화 (DB 테이블 이슈)
+      trendingAnalysis: false, // 임시 비활성화 (DB 테이블 이슈)
+      userGrowth: false, // 임시 비활성화 (DB 테이블 이슈)
+      batchProcessing: false // 임시 비활성화 (DB 테이블 이슈)
     },
     performance: {
       maxConcurrentAnalyses: 5,
@@ -444,6 +444,9 @@ export class AIOrchestrationService {
     metadata: any = {},
     sessionId: string = 'unknown'
   ): Promise<void> {
+    // 🛑 AI 시스템 임시 비활성화 - 즉시 반환
+    console.log('⚠️ AI 시스템 비활성화: handleUserAction 호출 무시됨 -', { userId, action, targetId });
+    return;
 
     console.log('👤 사용자 행동 처리:', { userId, action, targetId });
 
