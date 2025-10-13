@@ -15,7 +15,20 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "resourceClass": "large",
+        "env": {
+          "NODE_OPTIONS": "--max-old-space-size=8192"
+        }
+      }
+    },
+    "production-apk": {
+      "android": {
+        "buildType": "apk",
+        "resourceClass": "large",
+        "env": {
+          "NODE_OPTIONS": "--max-old-space-size=8192"
+        }
       }
     }
   },
