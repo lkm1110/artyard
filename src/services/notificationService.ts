@@ -26,8 +26,7 @@ export const getUnreadMessagesCounts = async (): Promise<UnreadCount[]> => {
       return [];
     }
 
-    console.log('🔍 읽지 않은 메시지 수 조회 시작 (단순화):', user.id);
-    console.log('📊 현재 사용자 ID:', user.id);
+    // 읽지 않은 메시지 조회 (로그 최소화)
 
     // 1단계: 사용자가 참여한 채팅방 조회 (실제 컬럼명 a, b 사용)
     const { data: userChats, error: chatsError } = await supabase
@@ -65,7 +64,7 @@ export const getUnreadMessagesCounts = async (): Promise<UnreadCount[]> => {
           .neq('is_read', true) // 읽음이 아닌 것들 (null과 false 포함)
           .neq('sender_id', user.id); // 자신이 보낸 메시지 제외
 
-        console.log(`📊 채팅방 ${chat.id} 읽지 않은 메시지:`, { count, error: messageError });
+        // 채팅방 읽지 않은 메시지 개수: ${count}
 
         if (!messageError && count !== null) {
           messageCount = count;
@@ -125,7 +124,7 @@ export const getUnreadMessagesCounts = async (): Promise<UnreadCount[]> => {
       }
     }
 
-    console.log('✅ 읽지 않은 메시지 수 조회 완료:', unreadCounts.length, '개의 알림');
+    // 읽지 않은 메시지 조회 완료: ${unreadCounts.length}개
     return unreadCounts;
   } catch (error) {
     console.error('💥 읽지 않은 메시지 조회 실패:', error);
@@ -138,28 +137,18 @@ export const getUnreadMessagesCounts = async (): Promise<UnreadCount[]> => {
  */
 export const getTotalUnreadCount = async (): Promise<number> => {
   try {
-    console.log('🔢 읽지 않은 메시지 직접 카운트 시작');
-    
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.log('⚠️ 인증되지 않은 사용자');
-      return 0;
-    }
+    if (authError || !user) return 0;
 
-    // 직접 SQL로 카운트 (빠르고 정확)
+    // RPC로 효율적 카운트
     const { data, error } = await supabase
       .rpc('count_unread_messages', { user_id: user.id });
 
     if (error) {
-      console.log('⚠️ RPC 함수 없음, 직접 계산:', error);
-      
-      // RPC 실패시 직접 계산
       return await getUnreadCountDirect(user.id);
     }
 
-    const count = data || 0;
-    console.log('🔢 RPC로 가져온 읽지 않은 메시지 수:', count);
-    return count;
+    return data || 0;
 
   } catch (error) {
     console.error('💥 읽지 않은 메시지 수 조회 실패:', error);
@@ -200,7 +189,7 @@ const getUnreadCountDirect = async (userId: string): Promise<number> => {
       totalCount += count || 0;
     }
 
-    console.log('🔢 직접 계산한 읽지 않은 메시지 수:', totalCount);
+    // 직접 계산 결과: ${totalCount}
     return totalCount;
 
   } catch (error) {

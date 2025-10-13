@@ -127,7 +127,10 @@ export const HomeScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.iconOnlyButton,
-                  { backgroundColor: colors.primary + '15' }
+                  { 
+                    backgroundColor: colors.primary + '15',
+                    borderWidth: 0
+                  }
                 ]}
                 onPress={() => setSearchModalVisible(true)}
                 activeOpacity={0.8}
@@ -144,7 +147,10 @@ export const HomeScreen: React.FC = () => {
               <TouchableOpacity
                 style={[
                   styles.iconOnlyButton,
-                  { backgroundColor: '#FF6B6B15' }
+                  { 
+                    backgroundColor: '#FF6B6B15',
+                    borderWidth: 0
+                  }
                 ]}
                 onPress={() => setFilterModalVisible(true)}
                 activeOpacity={0.8}
@@ -322,7 +328,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
     gap: spacing.xs,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -341,6 +346,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.lg,
+    borderWidth: 0,
+    borderColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
