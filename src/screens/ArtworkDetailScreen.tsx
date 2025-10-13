@@ -423,14 +423,14 @@ export const ArtworkDetailScreen: React.FC = () => {
     if (!artwork || !user) return;
 
     Alert.alert(
-      '작품 신고',
-      '이 작품을 신고하는 이유를 선택해주세요',
+      'Report Artwork',
+      'Please select the reason for reporting this artwork',
       [
-        { text: '스팸/도배', onPress: () => submitReport('spam') },
-        { text: '부적절한 내용', onPress: () => submitReport('inappropriate') },
-        { text: '저작권 침해', onPress: () => submitReport('copyright') },
-        { text: '기타', onPress: () => submitReport('other') },
-        { text: '취소', style: 'cancel' },
+        { text: 'Spam', onPress: () => submitReport('spam') },
+        { text: 'Inappropriate Content', onPress: () => submitReport('inappropriate') },
+        { text: 'Copyright Violation', onPress: () => submitReport('copyright') },
+        { text: 'Other', onPress: () => submitReport('other') },
+        { text: 'Cancel', style: 'cancel' },
       ]
     );
   }, [artwork, user]);
@@ -447,10 +447,10 @@ export const ArtworkDetailScreen: React.FC = () => {
       //   category
       // );
       
-      Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+      Alert.alert('Report Submitted', 'Thank you for your report. We will review it and take appropriate action.');
     } catch (error) {
       console.error('신고 실패:', error);
-      Alert.alert('오류', '신고 처리 중 문제가 발생했습니다.');
+      Alert.alert('Error', 'Failed to submit report. Please try again.');
     }
   };
 

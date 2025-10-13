@@ -1,6 +1,6 @@
 /**
  * 로그인 스크린
- * Google, Apple, Facebook, Naver, Kakao 소셜 로그인 제공
+ * Google, Apple, Facebook, Kakao 소셜 로그인 제공
  */
 
 import React, { useEffect, useState } from 'react';
@@ -15,11 +15,11 @@ import { Screen } from '../components/Screen';
 import { Button } from '../components/Button';
 import { colors, spacing, typography } from '../constants/theme';
 import { signInWithGoogle, supabase, getRedirectUri } from '../services/supabase';
-import { signInWithNaver, signInWithKakao } from '../services/socialAuth';
-import { signInWithKakaoWeb, signInWithNaverWeb, getOAuthMethod } from '../services/webOAuth';
+import { signInWithKakao } from '../services/socialAuth';
+import { signInWithKakaoWeb, getOAuthMethod } from '../services/webOAuth';
 import { signInWithApple, signInWithAppleWeb, isAppleAuthenticationAvailable } from '../services/appleAuth';
 import { signInWithFacebook, signInWithFacebookWeb } from '../services/facebookAuth';
-import { GoogleIcon, AppleIcon, FacebookIcon, NaverIcon, KakaoIcon } from '../components/BrandIcons';
+import { GoogleIcon, AppleIcon, FacebookIcon, KakaoIcon } from '../components/BrandIcons';
 
 // 플랫폼별 Alert 함수
 const showAlert = (title: string, message?: string, buttons?: any[]) => {
@@ -68,28 +68,6 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleNaverLogin = async () => {
-    try {
-      console.log('네이버 로그인 시도 중...');
-      const { isWeb, platform, os } = getOAuthMethod();
-      console.log('🔍 네이버 로그인 플랫폼 감지:', { isWeb, platform, os, currentPlatform: Platform.OS });
-      
-      if (isWeb) {
-        console.log('🌐 웹 환경에서 네이버 커스텀 OAuth 로그인 실행');
-        
-        // 네이버는 Supabase 기본 제공 안 됨 - 커스텀 OAuth 구현
-        showAlert('🚧 네이버 로그인', '네이버 로그인 기능을 준비 중입니다.\n\n현재 구글, 카카오, 애플, 페이스북 로그인을 사용해 주세요.');
-        return;
-      } else {
-        // 모바일 환경에서도 네이버는 비활성화
-        showAlert('🚧 네이버 로그인', '네이버 로그인 기능을 준비 중입니다.\n\n현재 구글, 카카오, 애플, 페이스북 로그인을 사용해 주세요.');
-        return;
-      }
-    } catch (error) {
-      console.error('네이버 로그인 오류:', error);
-      showAlert('❌ 네이버 로그인 오류', `로그인 중 오류가 발생했습니다.\n\n${error}`);
-    }
-  };
 
   const handleAppleLogin = async () => {
     try {
@@ -282,21 +260,7 @@ export const LoginScreen: React.FC = () => {
           textStyle={{ color: '#1877F2', fontWeight: '600' }}
         />
         
-        {/* 4순위: Naver (흰색 배경) */}
-        <Button
-          title="Continue with Naver"
-          onPress={handleNaverLogin}
-          variant="outline"
-          icon={<NaverIcon size={20} />}
-          style={[styles.button, { 
-            backgroundColor: '#FFFFFF', 
-            borderColor: '#03C75A',
-            borderWidth: 1,
-          }]}
-          textStyle={{ color: '#03C75A', fontWeight: '600' }}
-        />
-        
-        {/* 5순위: Kakao (흰색 배경) */}
+        {/* 4순위: Kakao (흰색 배경) */}
         <Button
           title="Continue with Kakao"
           onPress={handleKakaoLogin}

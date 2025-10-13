@@ -16,11 +16,15 @@ import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { ArtworkFeed } from '../components/ArtworkFeed';
 import { SearchModal } from '../components/SearchModal';
-import { ModernFilterModal } from '../components/ModernFilterModal';
+import { SimpleFilterModal } from '../components/SimpleFilterModal';
 import { useAuthStore } from '../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
 import type { Artwork } from '../types';
-import { AdvancedFilter } from '../types/advanced';
+// Simple filter interface
+interface SimpleFilter {
+  priceRange?: { min: number; max: number };
+  sizeRange?: { min: number; max: number };
+}
 
 // Material filter options
 const MATERIAL_FILTERS = [
@@ -41,7 +45,7 @@ export const HomeScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchModalVisible, setSearchModalVisible] = useState<boolean>(false);
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
-  const [advancedFilter, setAdvancedFilter] = useState<AdvancedFilter>({});
+  const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>({});
 
   const handleUploadPress = () => {
     if (!isAuthenticated) {
@@ -84,10 +88,10 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('Notifications');
   };
 
-  const handleAdvancedFilterApply = (filter: AdvancedFilter) => {
-    setAdvancedFilter(filter);
+  const handleSimpleFilterApply = (filter: SimpleFilter) => {
+    setSimpleFilter(filter);
     setFilterModalVisible(false);
-    console.log('고급 필터 적용:', filter);
+    console.log('필터 적용:', filter);
   };
 
   const handleSearchArtworkPress = (artworkId: string) => {
@@ -121,29 +125,47 @@ export const HomeScreen: React.FC = () => {
               )}
               
               <TouchableOpacity
-                style={styles.actionButton}
+                style={[
+                  styles.modernActionButton,
+                  { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }
+                ]}
                 onPress={() => setSearchModalVisible(true)}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
                 <Text style={[
-                  styles.actionIcon,
+                  styles.modernActionIcon,
                   { color: colors.primary }
                 ]}>
                   🔍
                 </Text>
-              </TouchableOpacity>
-              
-              {/* 고급 필터 버튼 */}
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => setFilterModalVisible(true)}
-                activeOpacity={0.7}
-              >
                 <Text style={[
-                  styles.actionIcon,
+                  styles.modernActionText,
                   { color: colors.primary }
                 ]}>
+                  Search
+                </Text>
+              </TouchableOpacity>
+              
+              {/* 필터 버튼 */}
+              <TouchableOpacity
+                style={[
+                  styles.modernActionButton,
+                  { backgroundColor: '#FF6B6B15', borderColor: '#FF6B6B30' }
+                ]}
+                onPress={() => setFilterModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={[
+                  styles.modernActionIcon,
+                  { color: '#FF6B6B' }
+                ]}>
                   📊
+                </Text>
+                <Text style={[
+                  styles.modernActionText,
+                  { color: '#FF6B6B' }
+                ]}>
+                  Filter
                 </Text>
               </TouchableOpacity>
               
@@ -232,12 +254,12 @@ export const HomeScreen: React.FC = () => {
           onArtworkPress={handleSearchArtworkPress}
         />
         
-        {/* 고급 필터 모달 */}
-        <ModernFilterModal
+        {/* 간단한 필터 모달 */}
+        <SimpleFilterModal
           visible={filterModalVisible}
           onClose={() => setFilterModalVisible(false)}
-          onApplyFilter={handleAdvancedFilterApply}
-          initialFilter={advancedFilter}
+          onApplyFilter={handleSimpleFilterApply}
+          initialFilter={simpleFilter}
         />
       </View>
     </Screen>
@@ -303,6 +325,27 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   filterText: {
+    fontSize: typography.caption.fontSize,
+    fontWeight: '600',
+  },
+  modernActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    gap: spacing.xs,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modernActionIcon: {
+    fontSize: 16,
+  },
+  modernActionText: {
     fontSize: typography.caption.fontSize,
     fontWeight: '600',
   },

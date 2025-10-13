@@ -226,7 +226,7 @@ export const ChatScreen: React.FC = () => {
       setEditingMessageId(null);
       setEditingText('');
     } catch (error: any) {
-      Alert.alert('오류', error.message || '메시지 수정에 실패했습니다.');
+      Alert.alert('Error', error.message || 'Failed to edit message.');
     }
   };
 
@@ -234,7 +234,7 @@ export const ChatScreen: React.FC = () => {
     try {
       await deleteMessage(messageId, '사용자가 삭제함');
     } catch (error: any) {
-      Alert.alert('오류', error.message || '메시지 삭제에 실패했습니다.');
+      Alert.alert('Error', error.message || 'Failed to delete message.');
     }
   };
 
@@ -288,7 +288,7 @@ export const ChatScreen: React.FC = () => {
                   fontStyle: 'italic'
                 }
               ]}>
-                🗑️ 메시지가 삭제되었습니다
+                🗑️ This message was deleted
               </Text>
               
               {showTime && (
@@ -578,7 +578,7 @@ export const ChatScreen: React.FC = () => {
                   maxHeight: 100,
                 }
               ]}
-              placeholder={editingMessageId ? "메시지를 수정하세요..." : "Type a message..."}
+              placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
               placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
               value={editingMessageId ? editingText : newMessage}
               onChangeText={editingMessageId ? setEditingText : setNewMessage}
