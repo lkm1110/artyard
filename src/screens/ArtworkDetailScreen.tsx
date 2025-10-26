@@ -33,6 +33,7 @@ import { Comment } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { FollowButton } from '../components/FollowButton';
 import { getAddressFromCoordinates } from '../services/locationService';
+import { supabase } from '../services/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 const imageHeight = screenWidth * 0.8;
@@ -62,6 +63,44 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [enhancedLocation, setEnhancedLocation] = useState<{country?: string; city?: string} | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
+
+  // Load reviews for this artwork
+  const loadReviews = useCallback(async () => {
+    try {
+      setReviewsLoading(true);
+      const { data, error } = await supabase
+        .from('reviews')
+        .select(`
+          *,
+          reviewer:profiles!reviews_reviewer_id_fkey(handle, avatar_url)
+        `)
+        .eq('artwork_id', artworkId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setReviews(data || []);
+      
+      // Calculate average rating
+      if (data && data.length > 0) {
+        const avg = data.reduce((sum: number, review: any) => sum + review.rating, 0) / data.length;
+        setAverageRating(Math.round(avg * 10) / 10);
+      }
+    } catch (error) {
+      console.error('Failed to load reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [artworkId]);
+
+  useEffect(() => {
+    if (artworkId) {
+      loadReviews();
+    }
+  }, [artworkId, loadReviews]);
 
   // 위치 정보 자동 보완 (좌표는 있지만 국가/도시 정보가 없는 경우)
   React.useEffect(() => {
@@ -1022,6 +1061,57 @@ export const ArtworkDetailScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Reviews Section */}
+        {reviews.length > 0 && (
+          <View style={[styles.reviewsSection, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+            <View style={styles.reviewsHeader}>
+              <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                Reviews ({reviews.length})
+              </Text>
+              {averageRating > 0 && (
+                <View style={styles.averageRating}>
+                  <Text style={styles.averageRatingNumber}>{averageRating}</Text>
+                  <Text style={styles.starIcon}>⭐</Text>
+                </View>
+              )}
+            </View>
+
+            {reviewsLoading ? (
+              <LoadingSpinner />
+            ) : (
+              <View style={styles.reviewsList}>
+                {reviews.slice(0, 5).map((review) => (
+                  <View key={review.id} style={[styles.reviewItem, { borderBottomColor: isDark ? colors.darkBorder : colors.border }]}>
+                    <View style={styles.reviewHeader}>
+                      <Text style={[styles.reviewerName, { color: isDark ? colors.darkText : colors.text }]}>
+                        {review.reviewer?.handle || 'Anonymous'}
+                      </Text>
+                      <View style={styles.ratingStars}>
+                        {[...Array(5)].map((_, i) => (
+                          <Text key={i} style={styles.starSmall}>
+                            {i < review.rating ? '⭐' : '☆'}
+                          </Text>
+                        ))}
+                      </View>
+                    </View>
+                    <Text style={[styles.reviewComment, { color: isDark ? colors.darkTextSecondary : colors.textSecondary }]}>
+                      {review.comment}
+                    </Text>
+                    <Text style={[styles.reviewDate, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                      {new Date(review.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                ))}
+                {reviews.length > 5 && (
+                  <Text style={[styles.moreReviews, { color: colors.primary }]}>
+                    +{reviews.length - 5} more reviews
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
         {/* 댓글 섹션 */}
         <View style={[styles.commentsSection, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
           <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
@@ -1415,6 +1505,69 @@ const styles = StyleSheet.create({
   actionButtonText: {
     ...typography.button,
     fontSize: 14,
+  },
+  reviewsSection: {
+    padding: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  averageRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  averageRatingNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  starIcon: {
+    fontSize: 20,
+  },
+  reviewsList: {
+    gap: spacing.md,
+  },
+  reviewItem: {
+    paddingBottom: spacing.md,
+    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  reviewerName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  starSmall: {
+    fontSize: 12,
+  },
+  reviewComment: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.xs,
+  },
+  reviewDate: {
+    fontSize: 12,
+  },
+  moreReviews: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
+    paddingVertical: spacing.md,
   },
   commentsSection: {
     padding: spacing.lg,

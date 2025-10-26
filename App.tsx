@@ -53,7 +53,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="auto" />
-      {/* <PermissionsHandler /> */}
+      <PermissionsHandler />
       <RootNavigator />
       <DebugLogger />
     </QueryClientProvider>

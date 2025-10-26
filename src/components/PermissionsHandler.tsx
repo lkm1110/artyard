@@ -33,12 +33,12 @@ export const PermissionsHandler: React.FC<PermissionsHandlerProps> = ({ onComple
 
         if (mediaLibraryStatus.status !== 'granted') {
           Alert.alert(
-            '사진 접근 권한 필요',
-            'ArtYard에서 작품을 업로드하려면 사진 접근 권한이 필요합니다.',
+            'Photo Access Required',
+            'ArtYard needs photo access to upload artworks.',
             [
-              { text: '취소', style: 'cancel' },
+              { text: 'Cancel', style: 'cancel' },
               {
-                text: '설정으로 이동',
+                text: 'Open Settings',
                 onPress: () => Linking.openSettings(),
               },
             ]
@@ -51,12 +51,12 @@ export const PermissionsHandler: React.FC<PermissionsHandlerProps> = ({ onComple
 
         if (cameraStatus.status !== 'granted') {
           Alert.alert(
-            '카메라 접근 권한 필요',
-            'ArtYard에서 사진을 촬영하려면 카메라 접근 권한이 필요합니다.',
+            'Camera Access Required',
+            'ArtYard needs camera access to take photos.',
             [
-              { text: '취소', style: 'cancel' },
+              { text: 'Cancel', style: 'cancel' },
               {
-                text: '설정으로 이동',
+                text: 'Open Settings',
                 onPress: () => Linking.openSettings(),
               },
             ]
@@ -73,12 +73,12 @@ export const PermissionsHandler: React.FC<PermissionsHandlerProps> = ({ onComple
 
         if (notificationStatus.status !== 'granted') {
           Alert.alert(
-            '알림 권한 권장',
-            '새 메시지, 좋아요, 댓글 등의 알림을 받으려면 알림 권한을 허용해주세요.',
+            'Notifications Recommended',
+            'Allow notifications to receive updates about messages, likes, and comments.',
             [
-              { text: '나중에', style: 'cancel' },
+              { text: 'Later', style: 'cancel' },
               {
-                text: '설정으로 이동',
+                text: 'Open Settings',
                 onPress: () => Linking.openSettings(),
               },
             ]
