@@ -9,6 +9,8 @@ import { StatusBar } from 'expo-status-bar';
 import { queryClient } from './src/utils/queryClient';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import AIOrchestrationService from './src/services/ai/aiOrchestrationService';
+import { DebugLogger } from './src/components/DebugLogger';
+import { PermissionsHandler } from './src/components/PermissionsHandler';
 
 export default function App() {
   // AI 시스템 초기화
@@ -51,7 +53,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="auto" />
+      {/* <PermissionsHandler /> */}
       <RootNavigator />
+      <DebugLogger />
     </QueryClientProvider>
   );
 }

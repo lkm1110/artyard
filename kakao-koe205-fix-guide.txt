@@ -1,0 +1,52 @@
+🍊 카카오 KOE205 에러 해결 가이드
+
+=== KOE205 에러란? ===
+"서비스 이용약관 설정 오류" - 카카오 앱 설정에서 약관 설정 문제
+
+=== 해결 방법 ===
+
+1️⃣ 카카오 개발자 콘솔 접속:
+🌐 https://developers.kakao.com/console/app
+
+2️⃣ 앱 설정 → 기본 정보:
+✅ 개인정보처리방침: https://lkm1110.github.io/artyard/simple-privacy-page.html
+✅ 서비스 약관: https://lkm1110.github.io/artyard/ (또는 동일한 URL)
+✅ 홈페이지: https://lkm1110.github.io/artyard/
+
+3️⃣ 제품 설정 → 카카오 로그인 → 동의항목:
+❌ 카카오계정(이메일): 완전히 삭제하거나 "사용 안함"으로 설정
+✅ 닉네임: 필수 동의
+✅ 프로필 사진: 선택 동의
+
+4️⃣ 제품 설정 → 카카오 로그인 → 보안:
+✅ Client Secret 사용: 활성화
+✅ Client Secret 코드: 새로 생성
+✅ Activation 상태: 활성
+
+5️⃣ 앱 설정 → 플랫폼 → iOS:
+✅ 번들 ID: com.artyard.app
+✅ 앱스토어 ID: 6753962694
+✅ 마켓 URL: https://apps.apple.com/app/id6753962694
+
+6️⃣ 제품 설정 → 카카오 로그인 → Redirect URI:
+✅ https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback
+
+=== 추가 확인사항 ===
+🔍 앱 검수 상태: "서비스중" 또는 "개발중"
+🔍 사업자 등록: 개인개발자는 "개인" 선택
+🔍 카테고리: "소셜네트워킹" 또는 "라이프스타일"
+
+=== KOE205 발생 이유 ===
+❌ 서비스 약관 URL 미입력
+❌ 개인정보처리방침 URL 미입력  
+❌ 동의항목에 필수가 아닌 항목 포함
+❌ 앱 기본 정보 불완전
+
+=== 최종 체크리스트 ===
+□ 개인정보처리방침 URL 입력
+□ 서비스 약관 URL 입력  
+□ 이메일 동의항목 완전 제거
+□ iOS 플랫폼 정보 정확히 입력
+□ Client Secret 활성화
+□ Redirect URI 정확히 설정
+

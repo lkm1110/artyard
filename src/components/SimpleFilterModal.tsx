@@ -21,6 +21,7 @@ const { width: screenWidth } = Dimensions.get('window');
 interface SimpleFilter {
   priceRange?: { min: number; max: number };
   sizeRange?: { min: number; max: number };
+  categories?: string[];
 }
 
 interface Props {
@@ -38,9 +39,22 @@ export const SimpleFilterModal: React.FC<Props> = ({
 }) => {
   const isDark = useColorScheme() === 'dark';
   
+  // 카테고리 목록
+  const CATEGORIES = [
+    'Painting',
+    'Sculpture',
+    'Photography',
+    'Digital Art',
+    'Drawing',
+    'Print',
+    'Mixed Media',
+    'Other',
+  ];
+  
   // 필터 상태 (기본값 설정)
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
   const [sizeRange, setSizeRange] = useState({ min: 10, max: 150 });
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (initialFilter) {
@@ -50,13 +64,25 @@ export const SimpleFilterModal: React.FC<Props> = ({
       if (initialFilter.sizeRange) {
         setSizeRange(initialFilter.sizeRange);
       }
+      if (initialFilter.categories) {
+        setSelectedCategories(initialFilter.categories);
+      }
     }
   }, [initialFilter]);
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
 
   const handleApplyFilter = () => {
     const filter: SimpleFilter = {
       priceRange: priceRange.min > 0 || priceRange.max < 1000 ? priceRange : undefined,
       sizeRange: sizeRange.min > 10 || sizeRange.max < 150 ? sizeRange : undefined,
+      categories: selectedCategories.length > 0 ? selectedCategories : undefined,
     };
 
     onApplyFilter(filter);
@@ -66,6 +92,7 @@ export const SimpleFilterModal: React.FC<Props> = ({
   const handleResetFilter = () => {
     setPriceRange({ min: 0, max: 1000 });
     setSizeRange({ min: 10, max: 150 });
+    setSelectedCategories([]);
   };
 
   return (
@@ -258,6 +285,53 @@ export const SimpleFilterModal: React.FC<Props> = ({
               </View>
             </View>
           </View>
+
+          {/* 카테고리 필터 */}
+          <View style={styles.section}>
+            <Text style={[
+              styles.sectionTitle,
+              { color: isDark ? colors.darkText : colors.text }
+            ]}>
+              🎨 Categories
+            </Text>
+            
+            <View style={[
+              styles.filterCard,
+              { backgroundColor: isDark ? colors.darkCard : colors.card }
+            ]}>
+              <View style={styles.categoriesGrid}>
+                {CATEGORIES.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    style={[
+                      styles.categoryChip,
+                      selectedCategories.includes(category) && styles.categoryChipSelected,
+                      { 
+                        backgroundColor: selectedCategories.includes(category) 
+                          ? colors.primary 
+                          : (isDark ? colors.darkBackground : colors.background),
+                        borderColor: selectedCategories.includes(category)
+                          ? colors.primary
+                          : (isDark ? colors.darkBorder : colors.border),
+                      }
+                    ]}
+                    onPress={() => toggleCategory(category)}
+                  >
+                    <Text style={[
+                      styles.categoryText,
+                      { 
+                        color: selectedCategories.includes(category)
+                          ? colors.white
+                          : (isDark ? colors.darkText : colors.text)
+                      }
+                    ]}>
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
           
         </View>
 
@@ -367,10 +441,29 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
+    paddingBottom: spacing.xl + spacing.lg, // 하단 네비게이션을 피하기 위해 추가 여백
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
   applyButton: {
     width: '100%',
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  categoryChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+  },
+  categoryChipSelected: {
+    // 선택된 카테고리 스타일 (backgroundColor는 동적으로 설정)
+  },
+  categoryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

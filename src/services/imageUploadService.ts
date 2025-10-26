@@ -86,33 +86,30 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
         userId: authState.user?.id
       });
       
-      if (authState.isAuthenticated && authState.session?.user) {
+      // authStore에서 user 정보 가져오기 (session.user 또는 user.id)
+      if (authState.isAuthenticated && (authState.session?.user || authState.user?.id)) {
         console.log('✅ AuthStore에서 세션 정보 획득');
-        user = authState.session.user;
+        user = authState.session?.user || {
+          id: authState.user?.id,
+          email: authState.user?.id, // fallback
+        };
       } else {
         console.error('❌ AuthStore에도 유효한 세션이 없습니다');
-        throw new Error('Authentication timeout and no valid session in store');
+        throw new Error('인증 오류: 로그인이 필요합니다');
       }
     }
     
-    if (authError && !user) {
-      console.error('❌ 인증 오류:', authError);
-      console.error('❌ 인증 오류 상세:', {
-        message: authError.message,
-        statusCode: authError.status,
-        statusText: authError.statusText
-      });
-      throw new Error(`인증 오류: ${authError.message}`);
-    }
-    
+    // user가 있으면 성공 (authError 무시)
     if (!user) {
-      console.error('❌ 로그인된 사용자가 없습니다');
-      console.error('❌ Auth data 상세:', {
-        data: authResult?.data,
-        user: authResult?.data?.user,
-        session: authResult?.data?.session
-      });
-      throw new Error('로그인이 필요합니다.');
+      console.error('❌ 인증 오류: user 정보 없음');
+      if (authError) {
+        console.error('❌ 인증 오류 상세:', {
+          message: authError.message,
+          statusCode: authError.status,
+          statusText: authError.statusText
+        });
+      }
+      throw new Error('인증 오류: 로그인이 필요합니다');
     }
     
     console.log('✅ 사용자 인증 완료:', user.id);

@@ -1,5 +1,5 @@
 /**
- * 프로필 스크린
+ * Profile Screen
  */
 
 import React from 'react';
@@ -9,6 +9,7 @@ import {
   StyleSheet,
   useColorScheme,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -16,6 +17,7 @@ import { Button } from '../components/Button';
 import { useAuthStore } from '../store/authStore';
 import { colors, spacing, typography } from '../constants/theme';
 import { FollowButton } from '../components/FollowButton';
+import { supabase } from '../services/supabase';
 
 interface ProfileScreenProps {
   route?: {
@@ -30,7 +32,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
   const navigation = useNavigation<any>(); // TODO: 타입 정의 개선
   const { user, signOut } = useAuthStore();
   
-  // 다른 사용자의 프로필을 보는 경우
+  // Viewing another user's profile
   const viewingUserId = route?.params?.userId;
   const isOwnProfile = !viewingUserId || viewingUserId === user?.id;
 
@@ -40,6 +42,49 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
     } catch (error) {
       console.error('Sign out error:', error);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.\n\nAll your artworks, comments, and data will be permanently deleted.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (!user?.id) {
+                Alert.alert('Error', 'User not found');
+                return;
+              }
+
+              // Delete user account from auth.users (cascade will handle related data)
+              const { error } = await supabase.auth.admin.deleteUser(user.id);
+
+              if (error) {
+                // If admin API not available, try RPC function
+                const { error: rpcError } = await supabase.rpc('delete_user_account', {
+                  user_id: user.id
+                });
+
+                if (rpcError) throw rpcError || error;
+              }
+
+              Alert.alert('Account Deleted', 'Your account has been successfully deleted.');
+              await signOut();
+            } catch (error: any) {
+              console.error('Delete account error:', error);
+              Alert.alert('Error', error.message || 'Failed to delete account. Please contact support.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -88,7 +133,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
                   size="small"
                   style={styles.profileFollowButton}
                   onFollowChange={(isFollowing, stats) => {
-                    console.log('프로필 팔로우 상태 변경:', isFollowing, stats);
+                    console.log('Profile follow status changed:', isFollowing, stats);
                   }}
                 />
               )}
@@ -122,7 +167,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
         )}
 
         <View style={styles.actions}>
-          {/* 자신의 프로필인 경우에만 편집 버튼 표시 */}
+          {/* Edit button for own profile only */}
           {isOwnProfile && (
             <Button
               title="Edit Profile"
@@ -132,7 +177,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
             />
           )}
           
-          {/* 자신의 프로필인 경우에만 북마크, 내 작품, 로그아웃 버튼 표시 */}
+          {/* Bookmarks, My Artworks, Logout buttons for own profile only */}
           {isOwnProfile && (
             <>
               <Button
@@ -150,10 +195,48 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
               />
               
               <Button
+                title="🛒 My Orders"
+                onPress={() => navigation.navigate('Orders' as never)}
+                variant="outline"
+                style={styles.button}
+              />
+              
+              <Button
+                title="💰 My Sales"
+                onPress={() => navigation.navigate('Sales' as never)}
+                variant="outline"
+                style={styles.button}
+              />
+              
+              <Button
+                title="📊 Artist Dashboard"
+                onPress={() => navigation.navigate('ArtistDashboard' as never)}
+                variant="outline"
+                style={styles.button}
+              />
+              
+              {/* Admin Dashboard (admins only) */}
+              {user?.is_admin && (
+                <Button
+                  title="🛡️ Admin Dashboard"
+                  onPress={() => navigation.navigate('AdminDashboard' as never)}
+                  variant="outline"
+                  style={styles.button}
+                />
+              )}
+              
+              <Button
                 title="Sign Out"
                 onPress={handleSignOut}
                 variant="text"
                 style={[styles.button, styles.signOutButton]}
+              />
+              
+              <Button
+                title="Delete Account"
+                onPress={handleDeleteAccount}
+                variant="text"
+                style={[styles.button, styles.deleteAccountButton]}
               />
             </>
           )}
@@ -251,6 +334,9 @@ const styles = StyleSheet.create({
   signOutButton: {
     marginTop: spacing.lg,
     opacity: 0.8,
+  },
+  deleteAccountButton: {
+    opacity: 0.6,
   },
 });
 

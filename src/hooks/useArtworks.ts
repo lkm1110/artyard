@@ -24,6 +24,9 @@ export const useArtworks = (
     material?: string;
     price?: string;
     search?: string;
+    priceRange?: { min: number; max: number };
+    sizeRange?: { min: number; max: number };
+    categories?: string[];
   }
 ) => {
   return useQuery({

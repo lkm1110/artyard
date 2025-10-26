@@ -13,6 +13,7 @@ import { useUnreadCount } from '../hooks/useUnreadMessages';
 import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { MessagesScreen } from '../screens/MessagesScreen';
+import { ChallengesScreen } from '../screens/ChallengesScreen';
 
 // TODO: 아이콘 라이브러리 설치 후 아이콘 추가
 // import { Home, User, Plus, MessageCircle, Search } from 'lucide-react-native';
@@ -86,6 +87,15 @@ export const TabNavigator: React.FC = () => {
             // 업로드 모달 화면 열기
             navigation.navigate('ArtworkUpload');
           },
+        }}
+      />
+      
+      <Tab.Screen
+        name="Challenges"
+        component={ChallengesScreen}
+        options={{
+          title: 'Challenges',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🏆</Text>,
         }}
       />
       

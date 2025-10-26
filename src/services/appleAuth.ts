@@ -115,7 +115,7 @@ export const signInWithAppleWeb = async () => {
     AppleID.auth.init({
       clientId: process.env.EXPO_PUBLIC_APPLE_CLIENT_ID || 'com.artyard.app.web', // Service ID
       scope: 'name email',
-      redirectURI: `${window.location.origin}/auth/apple/callback`,
+      redirectURI: 'https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback',
       state: 'artyard-apple-auth',
       usePopup: true,
     });

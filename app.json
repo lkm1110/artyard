@@ -19,6 +19,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.artyard.app",
+      "buildNumber": "12",
+      "deploymentTarget": "13.4",
       "infoPlist": {
         "CFBundleURLTypes": [
           {
@@ -40,6 +42,10 @@
           "NSLocationWhenInUseUsageDescription": "ArtYard would like to add location information to your artworks so others can see where they were created.",
           "NSLocationAlwaysAndWhenInUseUsageDescription": "ArtYard would like to add location information to your artworks so others can see where they were created.",
           "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
+          "LSApplicationQueriesSchemes": [
+            "https",
+            "http"
+          ],
         "SKAdNetworkItems": [
           {
             "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
@@ -106,19 +112,6 @@
         "expo-apple-authentication",
         {
           "appleTeamId": "9T69A85KY2"
-        }
-      ],
-      [
-        "expo-facebook",
-        {
-          "appID": "822804507070963",
-          "clientToken": "c41a0c7b898b7de587db31ea76517853",
-          "displayName": "ArtYard",
-          "scheme": "fb822804507070963",
-          "advertiserIDCollectionEnabled": false,
-          "autoLogAppEventsEnabled": false,
-          "isAutoInitEnabled": true,
-          "iosUserTrackingPermission": "This identifier will be used to deliver personalized ads to you."
         }
       ]
     ],

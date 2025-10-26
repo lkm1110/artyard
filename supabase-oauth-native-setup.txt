@@ -1,0 +1,56 @@
+🔐 Supabase OAuth 네이티브 설정 가이드
+
+=== Supabase Dashboard 설정 ===
+🌐 https://supabase.com/dashboard/project/bkvycanciimgyftdtqpx/auth/providers
+
+=== 1️⃣ Google OAuth ===
+✅ Google OAuth 설정:
+- Client ID: ${EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID}
+- Client Secret: ${EXPO_PUBLIC_GOOGLE_CLIENT_SECRET}
+- Redirect URLs: 
+  - https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback
+  - com.artyard.app://auth/callback
+
+=== 2️⃣ Apple OAuth ===
+✅ Apple OAuth 설정:
+- Services ID: com.artyard.app.web (또는 com.artyard.app)
+- Team ID: ${EXPO_PUBLIC_APPLE_TEAM_ID}
+- Key ID: Apple Developer Console에서 확인
+- Client Secret (JWT): 새로 생성한 JWT 사용
+- Redirect URLs:
+  - https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback
+
+=== 3️⃣ Kakao OAuth ===
+✅ Kakao OAuth 설정:
+- Client ID: ${EXPO_PUBLIC_KAKAO_CLIENT_ID}
+- Client Secret: 카카오 개발자 콘솔에서 생성
+- Redirect URLs:
+  - https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback
+  - com.artyard.app://auth/callback
+
+=== 4️⃣ Facebook OAuth ===
+✅ Facebook OAuth 설정:
+- App ID: ${EXPO_PUBLIC_FACEBOOK_APP_ID}
+- App Secret: Facebook 개발자 콘솔에서 확인
+- Redirect URLs:
+  - https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback
+
+=== 5️⃣ Site URL 설정 ===
+✅ Authentication > Settings > Site URL:
+- https://lkm1110.github.io/artyard (프로덕션)
+- http://localhost:8081 (개발)
+- com.artyard.app (네이티브)
+
+=== 6️⃣ Additional Redirect URLs ===
+✅ Authentication > Settings > Redirect URLs:
+- https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback
+- https://lkm1110.github.io/artyard/auth
+- http://localhost:8081/auth
+- com.artyard.app://auth/callback
+- exp://localhost:8081/--/auth/callback
+
+=== 문제 해결 ===
+❌ 로그인 창이 안 뜸: Site URL과 Redirect URLs 확인
+❌ 인증 후 앱으로 돌아오지 않음: Deep Link 설정 확인
+❌ CORS 에러: Site URL에 현재 도메인 추가
+

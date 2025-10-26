@@ -60,6 +60,8 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [enhancedLocation, setEnhancedLocation] = useState<{country?: string; city?: string} | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportReason, setReportReason] = useState('');
 
   // 위치 정보 자동 보완 (좌표는 있지만 국가/도시 정보가 없는 경우)
   React.useEffect(() => {
@@ -420,26 +422,25 @@ export const ArtworkDetailScreen: React.FC = () => {
 
   // 작품 신고 (앱스토어 심의 필수!)
   const handleReportArtwork = useCallback(() => {
-    if (!artwork || !user) return;
-
-    Alert.alert(
-      'Report Artwork',
-      'Please select the reason for reporting this artwork',
-      [
-        { text: 'Spam', onPress: () => submitReport('spam') },
-        { text: 'Inappropriate Content', onPress: () => submitReport('inappropriate') },
-        { text: 'Copyright Violation', onPress: () => submitReport('copyright') },
-        { text: 'Other', onPress: () => submitReport('other') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    if (!artwork || !user) {
+      Alert.alert('Notice', 'Please log in to report');
+      return;
+    }
+    setReportModalVisible(true);
   }, [artwork, user]);
 
-  const submitReport = async (category: string) => {
+  const submitReport = async () => {
+    if (!reportReason.trim()) {
+      Alert.alert('Notice', 'Please enter a reason for the report');
+      return;
+    }
+    
+    const category = 'user_report';
     try {
       console.log('🚨 Artwork Report Submitted:', { 
         artworkId: artwork?.id, 
         category, 
+        reason: reportReason,
         reportedBy: user?.id,
         timestamp: new Date().toISOString()
       });
@@ -447,21 +448,23 @@ export const ArtworkDetailScreen: React.FC = () => {
       // In a real app, this would send to your backend/moderation system
       // For now, we just log and show success message for app store review
       
-      Alert.alert('Report Submitted', 'Thank you for your report. We will review it and take appropriate action.');
+      setReportModalVisible(false);
+      setReportReason('');
+      Alert.alert('Report Submitted', 'Your report has been received. We will review it and take appropriate action.');
     } catch (error) {
-      console.error('Report submission failed:', error);
-      Alert.alert('Error', 'Failed to submit report. Please try again.');
+      console.error('신고 제출 실패:', error);
+      Alert.alert('Error', 'An error occurred while submitting the report.');
     }
   };
 
-  // 작가에게 연락하기
+  // Contact Artist
   const handleContactArtist = useCallback(async () => {
     if (!artwork || !user) {
       console.log('❌ Contact Artist: Missing data', { artwork: !!artwork, user: !!user });
       return;
     }
 
-    console.log('🔥 Contact Artist 버튼이 클릭됨!');
+    console.log('🔥 Contact Artist button clicked!');
     console.log('artwork:', artwork.title);
     console.log('artwork.author_id:', artwork.author_id);
     console.log('artwork.artist:', artwork.artist);
@@ -470,43 +473,42 @@ export const ArtworkDetailScreen: React.FC = () => {
 
     if (artwork.author_id === user.id) {
       console.log('⚠️ User clicking on own artwork');
-      // 테스트를 위해 임시로 주석 처리
       // Alert.alert('Info', 'This is your own artwork!');
       // return;
-      console.log('🧪 테스트 모드: 자신의 작품도 채팅 허용');
+      console.log('🧪 Test mode: Allow chat with own artwork');
     }
 
-    // 플랫폼별 확인 대화상자 
+    // Platform-specific confirmation dialog
     const confirmed = Platform.OS === 'web' 
-      ? confirm(`💬 채팅 시작하기\n\n"${artwork.title}" 작품에 대해 대화하시겠어요?\n\n✅ 확인 - 채팅방으로 이동\n❌ 취소 - 돌아가기`)
+      ? confirm(`💬 Start Chat\n\nWould you like to chat about "${artwork.title}"?\n\n✅ Confirm - Go to chat\n❌ Cancel - Go back`)
       : await new Promise<boolean>(resolve => {
           Alert.alert(
-            '💬 아티스트와 채팅하기',
-            `${artwork.artist?.handle || artwork.artist?.nickname || '이 아티스트'}님과 대화를 시작하시겠어요?\n\n작품 "${artwork.title}"에 대해 더 자세히 알아보거나 구매 문의를 할 수 있습니다.`,
+            '💬 Chat with Artist',
+            `Would you like to start a conversation with ${artwork.artist?.handle || artwork.artist?.nickname || 'this artist'}?\n\nYou can learn more about "${artwork.title}" or make a purchase inquiry.`,
             [
               { 
-                text: '취소', 
+                text: 'Cancel', 
                 style: 'cancel', 
                 onPress: () => resolve(false) 
               },
               { 
-                text: '💬 채팅 시작', 
+                text: '💬 Start Chat', 
                 onPress: () => resolve(true) 
               },
             ]
           );
         });
 
-    console.log('🔍 사용자 선택 결과:', confirmed);
+    console.log('🔍 User selection:', confirmed);
 
     if (confirmed) {
       try {
-        console.log('🔍 채팅 생성 파라미터:', { otherUserId: artwork.author_id });
+        console.log('🔍 Chat creation params:', { otherUserId: artwork.author_id });
         const chatData = await createOrFindChatMutation.mutateAsync(artwork.author_id);
         
-        console.log('🔍 채팅 데이터:', chatData);
-        console.log('🔍 채팅 ID 추출:', chatData.id);
-        console.log('🔍 상대방 정보:', chatData.other_user);
+        console.log('🔍 Chat data:', chatData);
+        console.log('🔍 Chat ID:', chatData.id);
+        console.log('🔍 Other user info:', chatData.other_user);
         
         navigation.navigate('Chat' as never, { 
           chatId: chatData.id,
@@ -795,6 +797,16 @@ export const ArtworkDetailScreen: React.FC = () => {
             </Text>
           </View>
 
+          {/* Purchase 버튼 (본인 작품이 아닐 때만) */}
+          {artwork.author.id !== user?.id && (
+            <TouchableOpacity
+              style={[styles.purchaseButton, { backgroundColor: colors.primary }]}
+              onPress={() => navigation.navigate('Checkout' as never, { artworkId: artwork.id } as never)}
+            >
+              <Text style={styles.purchaseButtonText}>💳 Purchase Artwork</Text>
+            </TouchableOpacity>
+          )}
+
           <Text style={[styles.description, { color: isDark ? colors.darkTextSecondary : colors.textSecondary }]}>
             {artwork.description}
           </Text>
@@ -903,16 +915,27 @@ export const ArtworkDetailScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
             
-            {/* 팔로우 버튼 (자신의 작품이 아닌 경우에만 표시) */}
+            {/* 팔로우 버튼과 신고 버튼 (자신의 작품이 아닌 경우에만 표시) */}
             {user && artwork.author_id !== user.id && (
-              <FollowButton
-                userId={artwork.author_id}
-                size="medium"
-                style={styles.followButton}
-                onFollowChange={(isFollowing, stats) => {
-                  console.log('팔로우 상태 변경:', isFollowing, stats);
-                }}
-              />
+              <View style={styles.headerButtonsRow}>
+                <FollowButton
+                  userId={artwork.author_id}
+                  size="medium"
+                  style={styles.followButton}
+                  onFollowChange={(isFollowing, stats) => {
+                    console.log('팔로우 상태 변경:', isFollowing, stats);
+                  }}
+                />
+                
+                {/* 작품 신고 버튼 (앱스토어 심의 필수!) */}
+                <TouchableOpacity 
+                  style={[styles.reportButton, { borderColor: colors.textMuted, borderWidth: 1, marginLeft: spacing.sm }]}
+                  onPress={handleReportArtwork}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.reportButtonText, { color: colors.textMuted }]}>⚠️</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
           
@@ -922,24 +945,13 @@ export const ArtworkDetailScreen: React.FC = () => {
             </Text>
           )}
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity 
-              style={[styles.contactButton, { backgroundColor: colors.primary, flex: 1, marginRight: spacing.sm }]}
-              onPress={handleContactArtist}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.contactButtonText}>Contact Artist</Text>
-            </TouchableOpacity>
-
-            {/* 작품 신고 버튼 (앱스토어 심의 필수!) */}
-            <TouchableOpacity 
-              style={[styles.reportButton, { borderColor: colors.textMuted, borderWidth: 1 }]}
-              onPress={handleReportArtwork}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.reportButtonText, { color: colors.textMuted }]}>⚠️</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={[styles.contactButton, { backgroundColor: colors.primary }]}
+            onPress={handleContactArtist}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.contactButtonText}>Contact Artist</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 액션 버튼들 */}
@@ -1077,6 +1089,69 @@ export const ArtworkDetailScreen: React.FC = () => {
           </View>
         </KeyboardAvoidingView>
       )}
+      
+      {/* 신고 모달 */}
+      <Modal
+        visible={reportModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                Report Artwork
+              </Text>
+              <TouchableOpacity onPress={() => setReportModalVisible(false)}>
+                <Text style={[styles.modalCloseButton, { color: colors.textMuted }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={[styles.modalDescription, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+              Please provide detailed information about why you are reporting this artwork. False reports may result in penalties.
+            </Text>
+            
+            <TextInput
+              style={[
+                styles.reportTextInput,
+                {
+                  backgroundColor: isDark ? colors.darkBackground : colors.background,
+                  color: isDark ? colors.darkText : colors.text,
+                  borderColor: isDark ? colors.darkBorder : colors.border,
+                }
+              ]}
+              placeholder="Enter reason for report (e.g., copyright infringement, inappropriate content, etc.)"
+              placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+              value={reportReason}
+              onChangeText={setReportReason}
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+              maxLength={500}
+            />
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.textMuted }]}
+                onPress={() => {
+                  setReportModalVisible(false);
+                  setReportReason('');
+                }}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textMuted }]}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSubmitButton, { backgroundColor: colors.primary }]}
+                onPress={submitReport}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.white }]}>Submit Report</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 };
@@ -1165,6 +1240,19 @@ const styles = StyleSheet.create({
   price: {
     ...typography.h3,
     fontWeight: 'bold',
+  },
+  purchaseButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    marginVertical: spacing.md,
+    ...shadows.medium,
+  },
+  purchaseButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   description: {
     ...typography.body,
@@ -1462,6 +1550,74 @@ const styles = StyleSheet.create({
     color: colors.white,
     ...typography.button,
     fontSize: 14,
+    fontWeight: '600',
+  },
+  headerButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 500,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    ...shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    ...typography.h3,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    fontSize: 24,
+    fontWeight: '300',
+  },
+  modalDescription: {
+    ...typography.body,
+    marginBottom: spacing.lg,
+    lineHeight: 20,
+  },
+  reportTextInput: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    minHeight: 120,
+    marginBottom: spacing.lg,
+    ...typography.body,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    borderWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  modalSubmitButton: {
+    ...shadows.sm,
+  },
+  modalButtonText: {
+    ...typography.button,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

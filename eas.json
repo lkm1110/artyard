@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 12.0.0"
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -11,22 +12,22 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=2048"
       }
     },
     "production": {
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle",
-        "env": {
-          "NODE_OPTIONS": "--max-old-space-size=4096"
-        }
+        "image": "latest"
       }
     },
     "production-apk": {
       "android": {
         "buildType": "apk",
-        "env": {
-          "NODE_OPTIONS": "--max-old-space-size=4096"
-        }
+        "image": "latest"
       }
     }
   },

@@ -24,6 +24,7 @@ import type { Artwork } from '../types';
 interface SimpleFilter {
   priceRange?: { min: number; max: number };
   sizeRange?: { min: number; max: number };
+  categories?: string[];
 }
 
 // Material filter options
@@ -128,8 +129,10 @@ export const HomeScreen: React.FC = () => {
                 style={[
                   styles.iconOnlyButton,
                   { 
-                    backgroundColor: colors.primary + '15',
-                    borderWidth: 0
+                    backgroundColor: 'transparent',
+                    borderWidth: 0,
+                    shadowOpacity: 0,
+                    elevation: 0
                   }
                 ]}
                 onPress={() => setSearchModalVisible(true)}
@@ -137,7 +140,7 @@ export const HomeScreen: React.FC = () => {
               >
                 <Text style={[
                   styles.iconOnlyIcon,
-                  { color: colors.primary }
+                  { color: isDark ? colors.darkText : colors.text }
                 ]}>
                   🔍
                 </Text>
@@ -148,8 +151,10 @@ export const HomeScreen: React.FC = () => {
                 style={[
                   styles.iconOnlyButton,
                   { 
-                    backgroundColor: '#FF6B6B15',
-                    borderWidth: 0
+                    backgroundColor: 'transparent',
+                    borderWidth: 0,
+                    shadowOpacity: 0,
+                    elevation: 0
                   }
                 ]}
                 onPress={() => setFilterModalVisible(true)}
@@ -157,7 +162,7 @@ export const HomeScreen: React.FC = () => {
               >
                 <Text style={[
                   styles.iconOnlyIcon,
-                  { color: '#FF6B6B' }
+                  { color: isDark ? colors.darkText : colors.text }
                 ]}>
                   📊
                 </Text>
@@ -236,6 +241,7 @@ export const HomeScreen: React.FC = () => {
           onUserPress={handleUserPress}
           filter={{
             material: selectedFilter !== 'all' ? selectedFilter : undefined,
+            ...simpleFilter,
           }}
         />
         

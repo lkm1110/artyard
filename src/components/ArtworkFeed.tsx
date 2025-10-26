@@ -22,6 +22,9 @@ interface ArtworkFeedProps {
     material?: string;
     search?: string;
     price?: string;
+    priceRange?: { min: number; max: number };
+    sizeRange?: { min: number; max: number };
+    categories?: string[];
   };
 }
 

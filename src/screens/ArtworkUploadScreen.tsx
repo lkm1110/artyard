@@ -37,6 +37,7 @@ interface FormData {
   title: string;
   description: string;
   material: Material;
+  category: string;
   sizeWidth: string;
   sizeHeight: string;
   year: number;
@@ -56,6 +57,17 @@ const MATERIAL_OPTIONS: Material[] = [
   'Other'
 ];
 
+const CATEGORY_OPTIONS = [
+  'Painting',
+  'Sculpture',
+  'Photography',
+  'Digital Art',
+  'Drawing',
+  'Print',
+  'Mixed Media',
+  'Other',
+];
+
 // PRICE_BAND_OPTIONS 제거됨 - 직접 입력으로 변경
 
 export const ArtworkUploadScreen: React.FC = () => {
@@ -67,6 +79,7 @@ export const ArtworkUploadScreen: React.FC = () => {
     title: '',
     description: '',
     material: 'Illustration',
+    category: 'Painting',
     sizeWidth: '',
     sizeHeight: '',
     year: new Date().getFullYear(),
@@ -78,6 +91,7 @@ export const ArtworkUploadScreen: React.FC = () => {
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [showMaterialPicker, setShowMaterialPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   
   // 실제 업로드 훅
   const uploadArtworkMutation = useUploadArtwork();
@@ -306,6 +320,7 @@ export const ArtworkUploadScreen: React.FC = () => {
         title: formData.title.trim(),
         description: formData.description.trim(),
         material: formData.material,
+        category: formData.category,
         size: `${formData.sizeWidth}×${formData.sizeHeight}cm`,
         year: formData.year,
         edition: formData.edition.trim(),
@@ -568,6 +583,31 @@ export const ArtworkUploadScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
+            {/* Category */}
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
+                Category *
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.picker,
+                  {
+                    backgroundColor: isDark ? colors.darkCard : colors.card,
+                    borderColor: 'transparent',
+                  }
+                ]}
+                onPress={() => setShowCategoryPicker(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.pickerText, { color: isDark ? colors.darkText : colors.text }]}>
+                  {formData.category}
+                </Text>
+                <Text style={[styles.pickerArrow, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                  ▼
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Size (Width × Height) */}
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
@@ -780,6 +820,47 @@ export const ArtworkUploadScreen: React.FC = () => {
           </View>
         )}
 
+        {/* Category Picker Modal */}
+        {showCategoryPicker && (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.pickerModal, { backgroundColor: isDark ? colors.darkCard : colors.bg }]}>
+              <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                Select Category
+              </Text>
+              {CATEGORY_OPTIONS.map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  style={styles.pickerOption}
+                  onPress={() => {
+                    updateField('category', category);
+                    setShowCategoryPicker(false);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.pickerOptionText,
+                    { 
+                      color: formData.category === category ? colors.primary : (isDark ? colors.darkText : colors.text),
+                      fontWeight: formData.category === category ? '600' : '400',
+                    }
+                  ]}>
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowCategoryPicker(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modalCloseText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Price Picker Modal 제거됨 - 직접 입력으로 변경 */}
       </KeyboardAvoidingView>
     </Screen>
@@ -978,7 +1059,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    paddingBottom: Platform.OS === 'ios' ? spacing.xl : spacing.md,
+    paddingBottom: spacing.xl + spacing.lg, // 하단 네비게이션을 피하기 위해 추가 여백
     borderTopWidth: 1,
     gap: spacing.md,
   },

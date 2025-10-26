@@ -1,0 +1,26 @@
+📱 ArtYard iOS App Store 심사용 테스트 계정
+
+=== 테스트 계정 정보 ===
+이메일: appreview.artyard@gmail.com
+비밀번호: AppStore2024!
+
+=== 로그인 방법 ===
+1. 앱 실행
+2. "Continue with Google" 선택
+3. 위 계정으로 로그인
+
+=== 테스트 시나리오 ===
+✅ 홈 피드에서 작품 둘러보기
+✅ 작품 클릭해서 상세보기
+✅ 좋아요/북마크 기능 테스트
+✅ 아티스트에게 메시지 보내기
+✅ 새 작품 업로드해보기
+✅ 프로필 수정해보기
+✅ 검색/필터 기능 사용
+✅ 작품 신고 기능 테스트
+
+=== 심사관용 메모 ===
+"This app uses OAuth social login exclusively. 
+The provided Google account can be used to test all features. 
+No traditional username/password required."
+

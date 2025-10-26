@@ -10,16 +10,22 @@ import {
   StyleSheet,
   useColorScheme,
   Platform,
+  Alert,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { Screen } from '../components/Screen';
 import { Button } from '../components/Button';
 import { colors, spacing, typography } from '../constants/theme';
 import { signInWithGoogle, supabase, getRedirectUri } from '../services/supabase';
-import { signInWithKakao } from '../services/socialAuth';
-import { signInWithKakaoWeb, getOAuthMethod } from '../services/webOAuth';
 import { signInWithApple, signInWithAppleWeb, isAppleAuthenticationAvailable } from '../services/appleAuth';
 import { signInWithFacebook, signInWithFacebookWeb } from '../services/facebookAuth';
-import { GoogleIcon, AppleIcon, FacebookIcon, KakaoIcon } from '../components/BrandIcons';
+import { 
+  signInWithGoogleNative, 
+  signInWithFacebookNative,
+  signInWithAppleNative 
+} from '../services/nativeOAuth';
+import { GoogleIcon, AppleIcon, FacebookIcon } from '../components/BrandIcons';
 
 // Platform-specific Alert function
 const showAlert = (title: string, message?: string, buttons?: any[]) => {
@@ -49,22 +55,84 @@ export const LoginScreen: React.FC = () => {
     };
     
     checkAppleAuth();
+    
+    // 네이티브 환경에서 AppState 변경 감지 (웹 → 앱 전환 시 세션 체크)
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      if (Platform.OS === 'web') return;
+      
+      console.log('🔍 LoginScreen AppState 변경:', nextAppState);
+      
+      if (nextAppState === 'active') {
+        console.log('🔄 앱이 포그라운드로 돌아옴 - LoginScreen에서 세션 확인...');
+        
+        try {
+          // 잠시 기다린 후 세션 확인
+          setTimeout(async () => {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            console.log('📊 LoginScreen 포그라운드 세션 확인:', { 
+              session: !!session, 
+              user: session?.user?.id,
+              provider: session?.user?.app_metadata?.provider
+            });
+            
+            if (session) {
+              console.log('✅ LoginScreen에서 로그인 감지! 안내 표시...');
+              showAlert(
+                '🎉 Login Successful!',
+                `Welcome! You are now logged in with ${session.user?.app_metadata?.provider || 'your account'}. The app will refresh automatically.`
+              );
+              
+              // 추가로 세션 재확인 (안전장치)
+              setTimeout(async () => {
+                const { data: { session: doubleCheck } } = await supabase.auth.getSession();
+                if (doubleCheck) {
+                  console.log('✅ 이중 확인: 로그인 상태 확실함');
+                }
+              }, 3000);
+            }
+          }, 1500);
+        } catch (error) {
+          console.error('❌ LoginScreen 포그라운드 세션 확인 오류:', error);
+        }
+      }
+    };
+    
+    let appStateSubscription: any = null;
+    if (Platform.OS !== 'web') {
+      console.log('📱 LoginScreen AppState 리스너 등록...');
+      appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+    }
+    
+    return () => {
+      if (appStateSubscription) {
+        appStateSubscription.remove();
+        console.log('📱 LoginScreen AppState 리스너 정리 완료');
+      }
+    };
   }, []);
 
   const handleGoogleLogin = async () => {
     try {
-      console.log('Attempting Google login...');
-      const { data, error } = await signInWithGoogle();
+      console.log('🔍 Button clicked! Starting Google login...');
+      showAlert('🔍 Test', 'Button is working! Platform: ' + Platform.OS + ' - Starting OAuth...');
+      
+      console.log('🔍 Platform detection:', Platform.OS);
+      
+      // 네이티브 OAuth 사용
+      const { data, error } = await signInWithGoogleNative();
+
       if (error) {
-        console.error('Google login failed:', error);
-        showAlert('❌ Login Failed', `Google login failed.\n\n${error.message}`);
-      } else {
-        console.log('Google login successful:', data);
-        showAlert('✅ Login Successful', 'Google login completed successfully!');
+        console.error('❌ Google OAuth error:', error);
+        throw error;
       }
-    } catch (error) {
+
+      console.log('✅ Google OAuth initiated:', data);
+      const browserName = Platform.OS === 'ios' ? 'Safari' : 'browser';
+      showAlert(`🌐 ${browserName === 'Safari' ? 'Safari' : 'Browser'} Opened`, `Complete Google login in ${browserName}, then return to ArtYard. The app will automatically detect your login status.`);
+    } catch (error: any) {
       console.error('Google login error:', error);
-      showAlert('❌ Login Error', `An error occurred during Google login.\n\n${error}`);
+      const errorMessage = error.message || 'An error occurred during Google login.';
+      showAlert('❌ Login Failed', `Google login failed.\n\n${errorMessage}`);
     }
   };
 
@@ -72,30 +140,21 @@ export const LoginScreen: React.FC = () => {
   const handleAppleLogin = async () => {
     try {
       console.log('🍎 Attempting Apple login...');
-      console.log('🔍 Apple login redirect URI:', getRedirectUri('apple'));
+      showAlert('🍎 Test', 'Apple button working! Platform: ' + Platform.OS + ' - Starting OAuth...');
+      
       console.log('🔍 Current platform:', Platform.OS);
       
-        // Use Supabase OAuth (popup window)
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'apple',
-          options: {
-            redirectTo: getRedirectUri('apple'),
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            },
-            skipBrowserRedirect: false,
-          },
-        });
-
-      console.log('📡 Apple OAuth response:', { data, error });
+      // 네이티브 OAuth 사용
+      const { data, error } = await signInWithAppleNative();
 
       if (error) {
         console.error('❌ Apple OAuth error details:', error);
         throw error;
       }
 
-      console.log('✅ Apple OAuth redirect started:', data);
+      console.log('✅ Apple OAuth initiated:', data);
+      const browserName = Platform.OS === 'ios' ? 'Safari' : 'browser';
+      showAlert(`🌐 ${browserName === 'Safari' ? 'Safari' : 'Browser'} Opened`, `Complete Apple ID login in ${browserName}, then return to ArtYard. The app will automatically detect your login status.`);
     } catch (error: any) {
       console.error('❌ Apple login error:', error);
       
@@ -110,30 +169,21 @@ export const LoginScreen: React.FC = () => {
   const handleFacebookLogin = async () => {
     try {
       console.log('📘 Attempting Facebook login...');
-      console.log('🔍 Facebook login redirect URI:', getRedirectUri());
+      showAlert('📘 Test', 'Facebook button working! Platform: ' + Platform.OS + ' - Starting OAuth...');
+      
       console.log('🔍 Current platform:', Platform.OS);
       
-        // Use Supabase OAuth (popup window)
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'facebook',
-          options: {
-            redirectTo: getRedirectUri(),
-            queryParams: {
-              access_type: 'offline',
-              prompt: 'consent',
-            },
-            skipBrowserRedirect: false,
-          },
-        });
-
-      console.log('📡 Facebook OAuth response:', { data, error });
+      // 네이티브 OAuth 사용
+      const { data, error } = await signInWithFacebookNative();
 
       if (error) {
         console.error('❌ Facebook OAuth error details:', error);
         throw error;
       }
 
-      console.log('✅ Facebook OAuth redirect started:', data);
+      console.log('✅ Facebook OAuth initiated:', data);
+      const browserName = Platform.OS === 'ios' ? 'Safari' : 'browser';
+      showAlert(`🌐 ${browserName === 'Safari' ? 'Safari' : 'Browser'} Opened`, `Complete Facebook login in ${browserName}, then return to ArtYard. The app will automatically detect your login status.`);
     } catch (error: any) {
       console.error('❌ Facebook login error:', error);
       
@@ -145,50 +195,6 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
-  const handleKakaoLogin = async () => {
-    try {
-      console.log('Attempting Kakao login...');
-      const { isWeb, platform, os } = getOAuthMethod();
-      console.log('🔍 Kakao login platform detection:', { isWeb, platform, os, currentPlatform: Platform.OS });
-      
-      if (isWeb) {
-        console.log('🌐 Running Kakao OAuth login in web environment');
-        
-        // Real Kakao OAuth through Supabase - redirect in same window
-        console.log('🔍 Kakao login redirect URI:', getRedirectUri('kakao'));
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: 'kakao',
-          options: {
-            redirectTo: getRedirectUri('kakao'),
-            queryParams: {
-              scope: 'profile_nickname profile_image', // Nickname + Profile image (excluding email)
-            },
-            skipBrowserRedirect: false, // Redirect in same window
-          },
-        });
-
-        if (error) {
-          console.error('❌ Kakao OAuth error:', error);
-          throw error;
-        }
-
-        console.log('✅ Kakao OAuth redirect started:', data);
-      } else {
-        // Actual mobile environment
-        const { success, error } = await signInWithKakao();
-        if (!success || error) {
-          console.error('Kakao login failed:', error);
-          showAlert('❌ Kakao Login Failed', `Login failed.\n\n${error?.message || 'Unknown error'}`);
-        } else {
-          console.log('Kakao login successful!');
-          showAlert('✅ Kakao Login Successful', 'Kakao login completed successfully!');
-        }
-      }
-    } catch (error) {
-      console.error('Kakao login error:', error);
-      showAlert('❌ Kakao Login Error', `An error occurred during login.\n\n${error}`);
-    }
-  };
 
   return (
     <Screen style={styles.container}>
@@ -258,20 +264,6 @@ export const LoginScreen: React.FC = () => {
             borderWidth: 1,
           }]}
           textStyle={{ color: '#1877F2', fontWeight: '600' }}
-        />
-        
-        {/* 4th Priority: Kakao (White Background) */}
-        <Button
-          title="Continue with Kakao"
-          onPress={handleKakaoLogin}
-          variant="outline"
-          icon={<KakaoIcon size={20} />}
-          style={[styles.button, { 
-            backgroundColor: '#FFFFFF', 
-            borderColor: '#FEE500',
-            borderWidth: 1,
-          }]}
-          textStyle={{ color: '#3C4043', fontWeight: '600' }}
         />
       </View>
 

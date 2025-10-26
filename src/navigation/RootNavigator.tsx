@@ -25,7 +25,27 @@ import { BookmarksScreen } from '../screens/BookmarksScreen';
 import { MyArtworksScreen } from '../screens/MyArtworksScreen';
 import { UserArtworksScreen } from '../screens/UserArtworksScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
+import { CheckoutScreen } from '../screens/CheckoutScreen';
+import { TwoCheckoutPaymentScreen } from '../screens/TwoCheckoutPaymentScreen';
+import { AddressFormScreen } from '../screens/AddressFormScreen';
+import { ChallengesScreen } from '../screens/ChallengesScreen';
+import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
+import { ArtistDashboardScreen } from '../screens/ArtistDashboardScreen';
 import { AuthCallbackHandler } from '../components/AuthCallbackHandler';
+
+// Admin screens
+import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
+import { ReportsManagementScreen } from '../screens/admin/ReportsManagementScreen';
+import { ArtworkManagementScreen } from '../screens/admin/ArtworkManagementScreen';
+import { UserManagementScreen } from '../screens/admin/UserManagementScreen';
+import { OrderManagementScreen } from '../screens/admin/OrderManagementScreen';
+import { ChallengeManagementScreen } from '../screens/admin/ChallengeManagementScreen';
+import { AdminManagementScreen } from '../screens/admin/AdminManagementScreen';
+
+// User screens
+import { OrdersScreen } from '../screens/OrdersScreen';
+import { SalesScreen } from '../screens/SalesScreen';
+import { ReviewScreen } from '../screens/ReviewScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -195,9 +215,125 @@ export const RootNavigator: React.FC = () => {
                 animation: 'slide_from_right'
               }} 
             />
-            {/* TODO: 추가 스크린들
-            <Stack.Screen name="Challenge" component={ChallengeScreen} />
-            */}
+            <Stack.Screen 
+              name="Checkout" 
+              component={CheckoutScreen}
+              options={{ 
+                animation: 'slide_from_bottom',
+                presentation: 'modal'
+              }} 
+            />
+            <Stack.Screen 
+              name="TwoCheckoutPayment" 
+              component={TwoCheckoutPaymentScreen}
+              options={{ 
+                animation: 'slide_from_right',
+                presentation: 'modal'
+              }} 
+            />
+            <Stack.Screen 
+              name="AddressForm" 
+              component={AddressFormScreen}
+              options={{ 
+                animation: 'slide_from_bottom',
+                presentation: 'modal'
+              }} 
+            />
+            <Stack.Screen 
+              name="Challenges" 
+              component={ChallengesScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="ChallengeDetail" 
+              component={ChallengeDetailScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="ArtistDashboard" 
+              component={ArtistDashboardScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            
+            {/* Admin Screens */}
+            <Stack.Screen 
+              name="AdminDashboard" 
+              component={AdminDashboardScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="ReportsManagement" 
+              component={ReportsManagementScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="ArtworkManagement" 
+              component={ArtworkManagementScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="UserManagement" 
+              component={UserManagementScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="OrderManagement" 
+              component={OrderManagementScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="ChallengeManagement" 
+              component={ChallengeManagementScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="AdminManagement" 
+              component={AdminManagementScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            
+            {/* User Order/Review Screens */}
+            <Stack.Screen 
+              name="Orders" 
+              component={OrdersScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="Sales" 
+              component={SalesScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="Review" 
+              component={ReviewScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
           </>
         )}
       </Stack.Navigator>

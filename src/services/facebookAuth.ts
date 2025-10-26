@@ -47,7 +47,7 @@ export const signInWithFacebook = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
       options: {
-        redirectTo: `${process.env.EXPO_PUBLIC_DEV_URL || 'http://localhost:8085'}/auth/callback`,
+        redirectTo: 'https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback',
         scopes: 'email',
       },
     });
@@ -79,7 +79,7 @@ export const signInWithFacebookWeb = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: 'https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback',
         scopes: 'email',
         queryParams: {
           access_type: 'offline',

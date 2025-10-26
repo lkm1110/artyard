@@ -4,6 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
+import { Platform } from 'react-native';
 import { storage } from '../utils/storage';
 
 // 환경 변수에서 설정값 가져오기
@@ -44,42 +45,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 /**
- * OAuth 리다이렉트 URI 생성 (플랫폼별 처리)
+ * OAuth 리다이렉트 URI 생성 (항상 Supabase 콜백 사용)
  */
 export const getRedirectUri = (provider?: string) => {
-  // Apple과 Kakao OAuth는 개발 환경에서도 Supabase를 통해 처리
-  if ((provider === 'apple' || provider === 'kakao') && typeof window !== 'undefined' && typeof document !== 'undefined') {
-    const supabaseRedirectUri = 'https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback';
-    console.log(`🔗 ${provider} 로그인 - Supabase 리다이렉트 URI:`, supabaseRedirectUri);
-    return supabaseRedirectUri;
-  }
+  console.log(`🔍 OAuth 플랫폼 감지: ${Platform.OS}, provider: ${provider}`);
   
-  // 웹 환경에서는 현재 도메인 사용 (document 존재로 웹 환경 확실히 체크)
-  if (typeof window !== 'undefined' && typeof document !== 'undefined' && window.location) {
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    
-    // 개발 환경 감지
-    const isDev = hostname === 'localhost' || hostname.includes('172.30.1.') || hostname.includes('192.168.');
-    
-    if (isDev) {
-      // 개발 환경: 항상 172.30.1.66:8085 사용 (모바일 웹 호환)
-      const webRedirectUri = `${protocol}//172.30.1.66:8085/auth`;
-      console.log('🌐 웹 개발 환경 리다이렉트 URI:', webRedirectUri);
-      return webRedirectUri;
-    } else {
-      // 프로덕션 환경: 현재 도메인 사용
-      const prodRedirectUri = `${window.location.origin}/auth`;
-      console.log('🌐 웹 프로덕션 환경 리다이렉트 URI:', prodRedirectUri);
-      return prodRedirectUri;
-    }
-  }
+  // ⭐ OAuth는 개발/프로덕션 관계없이 항상 Supabase 콜백 URL 사용
+  // 이유: 네이티브 앱은 localhost로 돌아올 수 없고, 웹에서도 통일성을 위해 Supabase 사용
+  const supabaseRedirectUri = 'https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback';
   
-  // React Native 환경에서는 커스텀 스킴 사용
-  const scheme = process.env.EXPO_PUBLIC_REDIRECT_SCHEME || 'artyard';
-  const nativeRedirectUri = makeRedirectUri({ scheme, path: 'auth' });
-  console.log('📱 React Native 리다이렉트 URI:', { scheme, nativeRedirectUri });
-  return nativeRedirectUri;
+  console.log(`🔄 OAuth 리다이렉트 URI (${Platform.OS}):`, supabaseRedirectUri);
+  console.log(`📍 이유: OAuth는 항상 Supabase 콜백 사용 (localhost 사용 안함)`);
+  
+  return supabaseRedirectUri;
 };
 
 /**
