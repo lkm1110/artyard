@@ -97,32 +97,13 @@ export const getDashboardSummary = async (
     const totalViews = views?.length || 0;
     const uniqueVisitors = new Set(views?.map(v => v.viewer_id).filter(Boolean)).size;
     
-    // 3. 인게이지먼트 통계 (단순화된 쿼리로 400 에러 방지)
+    // 3. 인게이지먼트 통계 (RLS 문제로 인해 비활성화)
+    // TODO: RLS 정책 수정 후 활성화 (database/FORCE-DISABLE-RLS.sql 실행 필요)
     let totalLikes = 0;
     let totalComments = 0;
     let totalBookmarks = 0;
     
-    // Likes - 날짜 필터 제거하고 JavaScript에서 필터링
-    try {
-      const { data: allLikes, error: likesError } = await supabase
-        .from('likes')
-        .select('id, created_at, artwork_id')
-        .in('artwork_id', artworkIds);
-      
-      if (!likesError && allLikes) {
-        // JavaScript에서 날짜 필터링
-        const filteredLikes = allLikes.filter(like => {
-          const likeDate = new Date(like.created_at);
-          return likeDate >= start && likeDate <= end;
-        });
-        totalLikes = filteredLikes.length;
-      }
-    } catch (error) {
-      // 에러 발생 시 조용히 무시 (기능에 영향 없음)
-      totalLikes = 0;
-    }
-    
-    // Comments
+    // Comments만 조회 (comments 테이블은 RLS 문제 없음)
     try {
       const { data: allComments, error: commentsError } = await supabase
         .from('comments')
@@ -140,23 +121,8 @@ export const getDashboardSummary = async (
       totalComments = 0;
     }
     
-    // Bookmarks - 날짜 필터 제거하고 JavaScript에서 필터링
-    try {
-      const { data: allBookmarks, error: bookmarksError } = await supabase
-        .from('bookmarks')
-        .select('id, created_at, artwork_id')
-        .in('artwork_id', artworkIds);
-      
-      if (!bookmarksError && allBookmarks) {
-        const filteredBookmarks = allBookmarks.filter(bookmark => {
-          const bookmarkDate = new Date(bookmark.created_at);
-          return bookmarkDate >= start && bookmarkDate <= end;
-        });
-        totalBookmarks = filteredBookmarks.length;
-      }
-    } catch (error) {
-      totalBookmarks = 0;
-    }
+    // Likes와 Bookmarks는 RLS 문제로 비활성화
+    // Supabase에서 FORCE-DISABLE-RLS.sql 실행 후 활성화 가능
     
     const engagementRate = totalViews > 0 
       ? Math.round(((totalLikes + totalComments + totalBookmarks) / totalViews) * 100)
