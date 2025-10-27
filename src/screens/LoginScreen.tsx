@@ -76,11 +76,8 @@ export const LoginScreen: React.FC = () => {
             });
             
             if (session) {
-              console.log('✅ LoginScreen에서 로그인 감지! 안내 표시...');
-              showAlert(
-                '🎉 Login Successful!',
-                `Welcome! You are now logged in with ${session.user?.app_metadata?.provider || 'your account'}. The app will refresh automatically.`
-              );
+              console.log('✅ LoginScreen에서 로그인 감지! 자동으로 메인 화면으로 이동...');
+              // showAlert 제거 - 자동으로 전환됨
               
               // 추가로 세션 재확인 (안전장치)
               setTimeout(async () => {
@@ -114,7 +111,7 @@ export const LoginScreen: React.FC = () => {
   const handleGoogleLogin = async () => {
     try {
       console.log('🔍 Button clicked! Starting Google login...');
-      showAlert('🔍 Test', 'Button is working! Platform: ' + Platform.OS + ' - Starting OAuth...');
+      // showAlert 제거 - 디버깅 로그만 유지
       
       console.log('🔍 Platform detection:', Platform.OS);
       
@@ -127,12 +124,11 @@ export const LoginScreen: React.FC = () => {
       }
 
       console.log('✅ Google OAuth initiated:', data);
-      const browserName = Platform.OS === 'ios' ? 'Safari' : 'browser';
-      showAlert(`🌐 ${browserName === 'Safari' ? 'Safari' : 'Browser'} Opened`, `Complete Google login in ${browserName}, then return to ArtYard. The app will automatically detect your login status.`);
+      // showAlert 제거 - 자동으로 로그인됨
     } catch (error: any) {
       console.error('Google login error:', error);
       const errorMessage = error.message || 'An error occurred during Google login.';
-      showAlert('❌ Login Failed', `Google login failed.\n\n${errorMessage}`);
+      // 에러만 콘솔에 기록
     }
   };
 
@@ -140,7 +136,7 @@ export const LoginScreen: React.FC = () => {
   const handleAppleLogin = async () => {
     try {
       console.log('🍎 Attempting Apple login...');
-      showAlert('🍎 Test', 'Apple button working! Platform: ' + Platform.OS + ' - Starting OAuth...');
+      // showAlert 제거 - 디버깅 로그만 유지
       
       console.log('🔍 Current platform:', Platform.OS);
       
@@ -153,15 +149,14 @@ export const LoginScreen: React.FC = () => {
       }
 
       console.log('✅ Apple OAuth initiated:', data);
-      const browserName = Platform.OS === 'ios' ? 'Safari' : 'browser';
-      showAlert(`🌐 ${browserName === 'Safari' ? 'Safari' : 'Browser'} Opened`, `Complete Apple ID login in ${browserName}, then return to ArtYard. The app will automatically detect your login status.`);
+      // showAlert 제거 - 자동으로 로그인됨
     } catch (error: any) {
       console.error('❌ Apple login error:', error);
       
       const errorMessage = error.message || 'An error occurred during Apple login.';
       
       if (!errorMessage.includes('cancelled')) {
-        showAlert('❌ Apple Login Failed', `Apple login failed.\n\n${errorMessage}`);
+        // 에러만 콘솔에 기록
       }
     }
   };
@@ -169,7 +164,7 @@ export const LoginScreen: React.FC = () => {
   const handleFacebookLogin = async () => {
     try {
       console.log('📘 Attempting Facebook login...');
-      showAlert('📘 Test', 'Facebook button working! Platform: ' + Platform.OS + ' - Starting OAuth...');
+      // showAlert 제거 - 디버깅 로그만 유지
       
       console.log('🔍 Current platform:', Platform.OS);
       
@@ -182,15 +177,14 @@ export const LoginScreen: React.FC = () => {
       }
 
       console.log('✅ Facebook OAuth initiated:', data);
-      const browserName = Platform.OS === 'ios' ? 'Safari' : 'browser';
-      showAlert(`🌐 ${browserName === 'Safari' ? 'Safari' : 'Browser'} Opened`, `Complete Facebook login in ${browserName}, then return to ArtYard. The app will automatically detect your login status.`);
+      // showAlert 제거 - 자동으로 로그인됨
     } catch (error: any) {
       console.error('❌ Facebook login error:', error);
       
       const errorMessage = error.message || 'An error occurred during Facebook login.';
       
       if (!errorMessage.includes('cancelled')) {
-        showAlert('❌ Facebook Login Failed', `Facebook login failed.\n\n${errorMessage}`);
+        // 에러만 콘솔에 기록
       }
     }
   };
