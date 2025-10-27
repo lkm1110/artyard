@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Image,
   useColorScheme,
+  Platform,
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,6 +33,12 @@ export const PushNotificationConsent: React.FC = () => {
   }, [user]);
 
   const checkAndShowConsent = async () => {
+    // 웹 환경에서는 푸시 알림 동의 팝업 표시하지 않음
+    if (Platform.OS === 'web') {
+      console.log('🌐 Push notification consent skipped on web');
+      return;
+    }
+
     if (!user) return;
 
     try {

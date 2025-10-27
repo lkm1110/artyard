@@ -25,7 +25,14 @@ export const registerForPushNotifications = async (userId: string): Promise<stri
   try {
     console.log('🔔 Starting push notification registration...');
 
-    // 1. 실제 디바이스 체크
+    // 1. 웹 환경 체크 (웹에서는 푸시 알림 비활성화)
+    if (Platform.OS === 'web') {
+      console.log('🌐 Push notifications are disabled on web (VAPID key required)');
+      console.log('ℹ️ Use in-app notifications instead on web');
+      return null;
+    }
+
+    // 2. 실제 디바이스 체크
     if (!Device.isDevice) {
       console.warn('⚠️ Push notifications only work on physical devices');
       return null;

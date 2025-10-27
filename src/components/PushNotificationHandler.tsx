@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useNavigation } from '@react-navigation/native';
 import { setupNotificationListeners, clearBadgeCount } from '../services/pushNotificationService';
@@ -16,6 +17,12 @@ export const PushNotificationHandler: React.FC = () => {
   const responseListener = useRef<any>();
 
   useEffect(() => {
+    // 웹 환경에서는 푸시 알림 핸들러 설정하지 않음
+    if (Platform.OS === 'web') {
+      console.log('🌐 Push notification handler skipped on web');
+      return;
+    }
+
     if (!user) return;
 
     console.log('🔔 Setting up push notification handlers...');
