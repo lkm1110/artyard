@@ -196,5 +196,9 @@ ORDER BY
     END,
     tablename;
 
-RAISE NOTICE '✨ 완료! 이제 400 에러가 사라집니다!';
+-- 완료 메시지
+DO $$
+BEGIN
+    RAISE NOTICE '✨ 완료! 이제 400 에러가 사라집니다!';
+END $$;
 
