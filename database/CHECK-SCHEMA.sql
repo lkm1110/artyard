@@ -45,10 +45,10 @@ ORDER BY ordinal_position;
 
 -- 5. RLS 상태 확인
 SELECT 
-    schemaname,
-    tablename,
+    n.nspname AS schema_name,
+    c.relname AS table_name,
     CASE 
-        WHEN relrowsecurity THEN 'ENABLED' 
+        WHEN c.relrowsecurity THEN 'ENABLED' 
         ELSE 'DISABLED' 
     END AS rls_status
 FROM pg_class c
