@@ -119,6 +119,8 @@ export const AdminManagementScreen = () => {
   };
 
   const handleAddAdmin = async (userId: string, handle: string) => {
+    console.log('🎯 Add Admin 클릭:', { userId, handle });
+    
     Alert.alert(
       'Confirm',
       `Add "${handle}" as an administrator?`,
@@ -128,29 +130,43 @@ export const AdminManagementScreen = () => {
           text: 'Add',
           onPress: async () => {
             try {
-              const { error } = await supabase
+              console.log('✅ 관리자 추가 시작...');
+              
+              const { data, error } = await supabase
                 .from('profiles')
                 .update({ is_admin: true })
-                .eq('id', userId);
+                .eq('id', userId)
+                .select();
+
+              console.log('📊 업데이트 결과:', data);
+              console.log('❌ 에러:', error);
 
               if (error) throw error;
 
-              // 관리자 액션 로그
-              await supabase.from('admin_actions').insert({
-                admin_id: user?.id,
-                action_type: 'admin_added' as any,
-                target_type: 'user',
-                target_id: userId,
-                reason: 'New admin added',
-              });
+              console.log('✅ 관리자 추가 성공!');
 
-              Alert.alert('Success', 'Administrator added');
+              // 관리자 액션 로그 (선택사항 - 실패해도 계속 진행)
+              try {
+                await supabase.from('admin_actions').insert({
+                  admin_id: user?.id,
+                  action_type: 'admin_added' as any,
+                  target_type: 'user',
+                  target_id: userId,
+                  reason: 'New admin added',
+                });
+                console.log('✅ 액션 로그 저장 성공');
+              } catch (logError) {
+                console.warn('⚠️ 액션 로그 저장 실패 (무시):', logError);
+              }
+
+              Alert.alert('Success', `"${handle}" has been added as an administrator`);
               setModalVisible(false);
               setSearchEmail('');
               setSearchResults([]);
               loadAdmins();
             } catch (error: any) {
-              Alert.alert('Error', error.message);
+              console.error('💥 관리자 추가 실패:', error);
+              Alert.alert('Error', error.message || 'Failed to add administrator');
             }
           },
         },
@@ -164,6 +180,8 @@ export const AdminManagementScreen = () => {
       return;
     }
 
+    console.log('🗑️ Remove Admin 클릭:', { userId, handle });
+
     Alert.alert(
       'Confirm',
       `Remove "${handle}" from administrators?`,
@@ -174,23 +192,36 @@ export const AdminManagementScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
+              console.log('🗑️ 관리자 제거 시작...');
+              
+              const { data, error } = await supabase
                 .from('profiles')
                 .update({ is_admin: false })
-                .eq('id', userId);
+                .eq('id', userId)
+                .select();
+
+              console.log('📊 업데이트 결과:', data);
+              console.log('❌ 에러:', error);
 
               if (error) throw error;
 
-              // 관리자 액션 로그
-              await supabase.from('admin_actions').insert({
-                admin_id: user?.id,
-                action_type: 'admin_removed' as any,
-                target_type: 'user',
-                target_id: userId,
-                reason: 'Admin removed',
-              });
+              console.log('✅ 관리자 제거 성공!');
 
-              Alert.alert('Success', 'Administrator removed');
+              // 관리자 액션 로그 (선택사항)
+              try {
+                await supabase.from('admin_actions').insert({
+                  admin_id: user?.id,
+                  action_type: 'admin_removed' as any,
+                  target_type: 'user',
+                  target_id: userId,
+                  reason: 'Admin removed',
+                });
+                console.log('✅ 액션 로그 저장 성공');
+              } catch (logError) {
+                console.warn('⚠️ 액션 로그 저장 실패 (무시):', logError);
+              }
+
+              Alert.alert('Success', `"${handle}" has been removed from administrators`);
               loadAdmins();
             } catch (error: any) {
               Alert.alert('Error', error.message);
