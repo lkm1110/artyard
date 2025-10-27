@@ -2,7 +2,7 @@
  * Artwork Detail Screen - Uses actual data only
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
