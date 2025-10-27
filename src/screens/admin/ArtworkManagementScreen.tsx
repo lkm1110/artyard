@@ -14,7 +14,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useColorScheme,
-  Alert,
   TextInput,
   Image,
 } from 'react-native';
@@ -66,53 +65,45 @@ export const ArtworkManagementScreen = () => {
       setArtworks(data || []);
     } catch (error: any) {
       console.error('작품 목록 로드 실패:', error);
-      Alert.alert('Error', 'Failed to load artworks');
+      alert('Error: Failed to load artworks');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteArtwork = async (artworkId: string, artworkTitle: string) => {
-    Alert.alert(
-      'Delete Artwork',
-      `Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setDeleting(artworkId);
-
-              const { error } = await supabase
-                .from('artworks')
-                .delete()
-                .eq('id', artworkId);
-
-              if (error) throw error;
-
-              // 관리자 액션 로그 기록
-              await supabase.from('admin_actions').insert({
-                admin_id: user?.id,
-                action_type: 'delete_artwork',
-                target_type: 'artwork',
-                target_id: artworkId,
-                reason: 'Manual deletion by admin',
-              });
-
-              Alert.alert('Success', 'Artwork deleted successfully');
-              loadArtworks();
-            } catch (error: any) {
-              console.error('작품 삭제 실패:', error);
-              Alert.alert('Error', error.message || 'Failed to delete artwork');
-            } finally {
-              setDeleting(null);
-            }
-          },
-        },
-      ]
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`
     );
+    
+    if (!confirmed) {
+      console.log('❌ Deletion cancelled');
+      return;
+    }
+    
+    try {
+      setDeleting(artworkId);
+      console.log('🗑️ Deleting artwork:', artworkId);
+
+      const { error } = await supabase
+        .from('artworks')
+        .delete()
+        .eq('id', artworkId);
+
+      if (error) throw error;
+
+      console.log('✅ Artwork deleted successfully');
+      
+      // admin_actions 로그 기능 제거 (CHECK constraint 문제로 비활성화)
+
+      alert('Success: Artwork deleted successfully');
+      loadArtworks();
+    } catch (error: any) {
+      console.error('💥 작품 삭제 실패:', error);
+      alert('Error: ' + (error.message || 'Failed to delete artwork'));
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const filteredArtworks = artworks.filter(artwork =>

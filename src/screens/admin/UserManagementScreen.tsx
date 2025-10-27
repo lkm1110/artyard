@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useColorScheme,
-  Alert,
   TextInput,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -55,39 +54,37 @@ export const UserManagementScreen = () => {
       setUsers(data || []);
     } catch (error: any) {
       console.error('사용자 목록 로드 실패:', error);
-      Alert.alert('Error', 'Failed to load users');
+      alert('Error: Failed to load users');
     } finally {
       setLoading(false);
     }
   };
 
   const handleBanUser = async (userId: string, handle: string) => {
-    Alert.alert(
-      'Ban User',
-      `Ban user "${handle}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Ban',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await supabase.from('user_bans').insert({
-                user_id: userId,
-                banned_by: user?.id,
-                reason: 'Manual ban by admin',
-                ban_type: 'permanent',
-              });
+    const confirmed = window.confirm(`Ban user "${handle}"?`);
+    
+    if (!confirmed) {
+      console.log('❌ Ban cancelled');
+      return;
+    }
+    
+    try {
+      console.log('🚫 Banning user:', userId);
+      
+      await supabase.from('user_bans').insert({
+        user_id: userId,
+        banned_by: user?.id,
+        reason: 'Manual ban by admin',
+        ban_type: 'permanent',
+      });
 
-              Alert.alert('Success', 'User banned');
-              loadUsers();
-            } catch (error: any) {
-              Alert.alert('Error', error.message);
-            }
-          },
-        },
-      ]
-    );
+      console.log('✅ User banned successfully');
+      alert('Success: User banned');
+      loadUsers();
+    } catch (error: any) {
+      console.error('💥 Ban 실패:', error);
+      alert('Error: ' + error.message);
+    }
   };
 
   const filteredUsers = users.filter(u =>
