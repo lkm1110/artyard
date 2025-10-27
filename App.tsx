@@ -12,7 +12,6 @@ import AIOrchestrationService from './src/services/ai/aiOrchestrationService';
 import { DebugLogger } from './src/components/DebugLogger';
 import { PermissionsHandler } from './src/components/PermissionsHandler';
 import { PushNotificationConsent } from './src/components/PushNotificationConsent';
-import { PushNotificationHandler } from './src/components/PushNotificationHandler';
 
 export default function App() {
   // AI 시스템 초기화
@@ -56,7 +55,6 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <StatusBar style="auto" />
       <PermissionsHandler />
-      <PushNotificationHandler />
       <PushNotificationConsent />
       <RootNavigator />
       <DebugLogger />

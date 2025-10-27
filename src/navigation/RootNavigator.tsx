@@ -51,6 +51,9 @@ import { MySettlementsScreen } from '../screens/MySettlementsScreen';
 // Admin settlement
 import { SettlementManagementScreen } from '../screens/admin/SettlementManagementScreen';
 
+// Push Notifications
+import { PushNotificationHandler } from '../components/PushNotificationHandler';
+
 const Stack = createNativeStackNavigator();
 
 export const RootNavigator: React.FC = () => {
@@ -125,6 +128,8 @@ export const RootNavigator: React.FC = () => {
     <NavigationContainer theme={theme}>
       {/* OAuth 콜백 핸들러 (웹에서만 작동) */}
       <AuthCallbackHandler />
+      {/* Push Notification Handler */}
+      <PushNotificationHandler />
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
