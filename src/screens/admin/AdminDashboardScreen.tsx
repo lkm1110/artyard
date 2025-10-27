@@ -370,6 +370,54 @@ export const AdminDashboardScreen = () => {
         />
       </View>
 
+      {/* Quick Actions */}
+      <View style={styles.quickActionsSection}>
+        <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
+          ⚡ Quick Actions
+        </Text>
+        <View style={styles.quickActionsGrid}>
+          <TouchableOpacity
+            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
+            onPress={() => navigation.navigate('AdminManagement' as never)}
+          >
+            <Text style={styles.quickActionIcon}>🛡️</Text>
+            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
+              Promote to Admin
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
+            onPress={() => navigation.navigate('UserManagement' as never)}
+          >
+            <Text style={styles.quickActionIcon}>🚫</Text>
+            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
+              Ban User
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
+            onPress={() => navigation.navigate('ArtworkManagement' as never)}
+          >
+            <Text style={styles.quickActionIcon}>🗑️</Text>
+            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
+              Delete Artwork
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
+            onPress={() => navigation.navigate('SettlementManagement' as never)}
+          >
+            <Text style={styles.quickActionIcon}>💰</Text>
+            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
+              Approve Settlement
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* 관리 메뉴 */}
       <View style={styles.menuSection}>
         <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
@@ -517,6 +565,37 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 12,
+    textAlign: 'center',
+  },
+  quickActionsSection: {
+    padding: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  quickActionButton: {
+    width: '47%',
+    padding: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickActionIcon: {
+    fontSize: 32,
+    marginBottom: spacing.sm,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
   menuSection: {
