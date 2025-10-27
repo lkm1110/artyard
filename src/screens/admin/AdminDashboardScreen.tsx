@@ -81,62 +81,123 @@ export const AdminDashboardScreen = () => {
       setLoading(true);
 
       // 1. 총 사용자 수
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      let totalUsers = 0;
+      try {
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        totalUsers = count || 0;
+      } catch (error) {
+        console.warn('Failed to load users count:', error);
+      }
 
       // 2. 총 작품 수
-      const { count: totalArtworks } = await supabase
-        .from('artworks')
-        .select('*', { count: 'exact', head: true });
+      let totalArtworks = 0;
+      try {
+        const { count } = await supabase
+          .from('artworks')
+          .select('*', { count: 'exact', head: true });
+        totalArtworks = count || 0;
+      } catch (error) {
+        console.warn('Failed to load artworks count:', error);
+      }
 
-      // 3. 총 거래 수 & 매출
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('total_amount, created_at')
-        .eq('status', 'completed');
+      // 3. 총 거래 수 & 매출 (여러 방법 시도)
+      let totalTransactions = 0;
+      let totalRevenue = 0;
+      let todayRevenue = 0;
+      
+      try {
+        // 방법 1: status 컬럼 사용
+        const { data: transactions, error } = await supabase
+          .from('transactions')
+          .select('total_amount, created_at')
+          .eq('status', 'completed');
 
-      const totalRevenue = transactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+        if (error) throw error;
 
-      // 오늘 매출
-      const today = new Date().toISOString().split('T')[0];
-      const todayTransactions = transactions?.filter(t => 
-        t.created_at?.startsWith(today)
-      ) || [];
-      const todayRevenue = todayTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+        totalRevenue = transactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+        totalTransactions = transactions?.length || 0;
+
+        // 오늘 매출
+        const today = new Date().toISOString().split('T')[0];
+        const todayTransactions = transactions?.filter(t => 
+          t.created_at?.startsWith(today)
+        ) || [];
+        todayRevenue = todayTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+      } catch (statusError) {
+        console.warn('Failed with status filter, trying without:', statusError);
+        
+        try {
+          // 방법 2: status 없이 모든 거래 가져오기
+          const { data: allTransactions, error } = await supabase
+            .from('transactions')
+            .select('total_amount, created_at');
+
+          if (error) throw error;
+
+          totalRevenue = allTransactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+          totalTransactions = allTransactions?.length || 0;
+
+          const today = new Date().toISOString().split('T')[0];
+          const todayTransactions = allTransactions?.filter(t => 
+            t.created_at?.startsWith(today)
+          ) || [];
+          todayRevenue = todayTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+        } catch (allError) {
+          console.warn('Failed to load transactions completely:', allError);
+        }
+      }
 
       // 4. 대기 중인 신고
-      const { count: pendingReports } = await supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+      let pendingReports = 0;
+      try {
+        const { count } = await supabase
+          .from('reports')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        pendingReports = count || 0;
+      } catch (error) {
+        console.warn('Failed to load pending reports:', error);
+      }
 
       // 5. 활성 사용자 (지난 7일)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      const { data: recentArtworks } = await supabase
-        .from('artworks')
-        .select('author_id')
-        .gte('created_at', sevenDaysAgo.toISOString());
+      let activeUsers = 0;
+      try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const { data: recentArtworks } = await supabase
+          .from('artworks')
+          .select('author_id')
+          .gte('created_at', sevenDaysAgo.toISOString());
 
-      const activeUsers = new Set(recentArtworks?.map(a => a.author_id) || []).size;
+        activeUsers = new Set(recentArtworks?.map(a => a.author_id) || []).size;
+      } catch (error) {
+        console.warn('Failed to load active users:', error);
+      }
 
       // 6. 활성 챌린지
-      const { count: activeChallenges } = await supabase
-        .from('challenges')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+      let activeChallenges = 0;
+      try {
+        const { count } = await supabase
+          .from('challenges')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'active');
+        activeChallenges = count || 0;
+      } catch (error) {
+        console.warn('Failed to load active challenges:', error);
+      }
 
       setStats({
-        totalUsers: totalUsers || 0,
-        totalArtworks: totalArtworks || 0,
-        totalTransactions: transactions?.length || 0,
+        totalUsers,
+        totalArtworks,
+        totalTransactions,
         totalRevenue,
-        pendingReports: pendingReports || 0,
+        pendingReports,
         activeUsers,
         todayRevenue,
-        activeChallenges: activeChallenges || 0,
+        activeChallenges,
       });
     } catch (error: any) {
       console.error('통계 로드 실패:', error);

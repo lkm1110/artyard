@@ -61,33 +61,105 @@ export const SalesScreen = () => {
     try {
       setLoading(true);
 
-      // 내 작품이 포함된 거래 조회
-      const { data, error } = await supabase
+      // Step 1: 내 작품 ID 목록 가져오기
+      const { data: myArtworks, error: artworksError } = await supabase
+        .from('artworks')
+        .select('id')
+        .eq('author_id', user?.id);
+
+      if (artworksError) {
+        console.error('Artworks query error:', artworksError);
+        throw artworksError;
+      }
+
+      const myArtworkIds = myArtworks?.map(a => a.id) || [];
+
+      if (myArtworkIds.length === 0) {
+        setSales([]);
+        return;
+      }
+
+      // Step 2: 내 작품이 포함된 거래 조회 (단순 쿼리)
+      const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
-        .select(`
-          *,
-          buyer:profiles!transactions_buyer_id_fkey(handle),
-          shipping_address:shipping_addresses(*),
-          artwork:artworks(
-            id,
-            title,
-            images,
-            author_id
-          )
-        `)
+        .select('*')
+        .in('artwork_id', myArtworkIds)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (transactionsError) {
+        console.error('Transactions query error:', transactionsError);
+        throw transactionsError;
+      }
 
-      // 내 작품만 필터링
-      const mySales = data?.filter(transaction => 
-        transaction.artwork?.author_id === user?.id
-      ) || [];
+      if (!transactions || transactions.length === 0) {
+        setSales([]);
+        return;
+      }
 
-      setSales(mySales);
+      // Step 3: 관련 데이터 병렬로 가져오기
+      const salesWithDetails = await Promise.all(
+        transactions.map(async (transaction) => {
+          try {
+            // Buyer 정보
+            let buyer = null;
+            if (transaction.buyer_id) {
+              const { data: buyerData } = await supabase
+                .from('profiles')
+                .select('handle')
+                .eq('id', transaction.buyer_id)
+                .maybeSingle();
+              
+              buyer = buyerData;
+            }
+
+            // Artwork 정보
+            let artwork = null;
+            if (transaction.artwork_id) {
+              const { data: artworkData } = await supabase
+                .from('artworks')
+                .select('id, title, images, author_id')
+                .eq('id', transaction.artwork_id)
+                .maybeSingle();
+              
+              artwork = artworkData;
+            }
+
+            // Shipping address 정보
+            let shipping_address = null;
+            if (transaction.shipping_address_id) {
+              const { data: addressData } = await supabase
+                .from('shipping_addresses')
+                .select('*')
+                .eq('id', transaction.shipping_address_id)
+                .maybeSingle();
+              
+              shipping_address = addressData;
+            }
+
+            return {
+              ...transaction,
+              buyer,
+              artwork,
+              shipping_address,
+            };
+          } catch (detailError) {
+            console.warn('Failed to load detail for sale:', transaction.id, detailError);
+            return {
+              ...transaction,
+              buyer: null,
+              artwork: null,
+              shipping_address: null,
+            };
+          }
+        })
+      );
+
+      setSales(salesWithDetails);
     } catch (error: any) {
       console.error('Failed to load sales:', error);
-      Alert.alert('Error', 'Failed to load sales');
+      // 에러가 발생해도 빈 배열로 설정하여 UI가 계속 작동하도록
+      setSales([]);
+      Alert.alert('Error', 'Failed to load sales. Please try again.');
     } finally {
       setLoading(false);
     }

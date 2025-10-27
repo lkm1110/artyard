@@ -53,18 +53,10 @@ export const OrdersScreen = () => {
     try {
       setLoading(true);
 
+      // Step 1: 기본 거래 정보만 가져오기
       let query = supabase
         .from('transactions')
-        .select(`
-          *,
-          shipping_address:shipping_addresses(*),
-          artwork:artworks(
-            id,
-            title,
-            images,
-            author:profiles!artworks_author_id_fkey(handle)
-          )
-        `)
+        .select('*')
         .eq('buyer_id', user?.id)
         .order('created_at', { ascending: false });
 
@@ -72,14 +64,80 @@ export const OrdersScreen = () => {
         query = query.eq('status', filter);
       }
 
-      const { data, error } = await query;
+      const { data: transactions, error: transactionsError } = await query;
 
-      if (error) throw error;
+      if (transactionsError) {
+        console.error('Transactions query error:', transactionsError);
+        throw transactionsError;
+      }
 
-      setOrders(data || []);
+      if (!transactions || transactions.length === 0) {
+        setOrders([]);
+        return;
+      }
+
+      // Step 2: 관련 데이터 병렬로 가져오기
+      const ordersWithDetails = await Promise.all(
+        transactions.map(async (transaction) => {
+          try {
+            // Artwork 정보
+            let artwork = null;
+            if (transaction.artwork_id) {
+              const { data: artworkData } = await supabase
+                .from('artworks')
+                .select('id, title, images, author_id')
+                .eq('id', transaction.artwork_id)
+                .maybeSingle();
+              
+              if (artworkData) {
+                // Author 정보
+                const { data: authorData } = await supabase
+                  .from('profiles')
+                  .select('handle')
+                  .eq('id', artworkData.author_id)
+                  .maybeSingle();
+                
+                artwork = {
+                  ...artworkData,
+                  author: authorData || { handle: 'Unknown' },
+                };
+              }
+            }
+
+            // Shipping address 정보
+            let shipping_address = null;
+            if (transaction.shipping_address_id) {
+              const { data: addressData } = await supabase
+                .from('shipping_addresses')
+                .select('*')
+                .eq('id', transaction.shipping_address_id)
+                .maybeSingle();
+              
+              shipping_address = addressData;
+            }
+
+            return {
+              ...transaction,
+              artwork,
+              shipping_address,
+            };
+          } catch (detailError) {
+            console.warn('Failed to load detail for transaction:', transaction.id, detailError);
+            return {
+              ...transaction,
+              artwork: null,
+              shipping_address: null,
+            };
+          }
+        })
+      );
+
+      setOrders(ordersWithDetails);
     } catch (error: any) {
       console.error('Failed to load orders:', error);
-      Alert.alert('Error', 'Failed to load orders');
+      // 에러가 발생해도 빈 배열로 설정하여 UI가 계속 작동하도록
+      setOrders([]);
+      Alert.alert('Error', 'Failed to load orders. Please try again.');
     } finally {
       setLoading(false);
     }
