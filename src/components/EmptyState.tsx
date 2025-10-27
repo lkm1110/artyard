@@ -13,24 +13,31 @@ import { colors, typography, spacing } from '../constants/theme';
 
 interface EmptyStateProps {
   title: string;
+  subtitle?: string; // 기존 description과 호환
   description?: string;
-  icon?: React.ReactNode;
+  icon?: string | React.ReactNode; // 문자열(이모지) 또는 컴포넌트
   action?: React.ReactNode;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
+  subtitle,
   description,
   icon,
   action,
 }) => {
   const isDark = useColorScheme() === 'dark';
+  const descriptionText = description || subtitle; // 호환성
 
   return (
     <View style={styles.container}>
       {icon && (
         <View style={styles.iconContainer}>
-          {icon}
+          {typeof icon === 'string' ? (
+            <Text style={styles.iconText}>{icon}</Text>
+          ) : (
+            icon
+          )}
         </View>
       )}
       
@@ -41,12 +48,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {title}
       </Text>
       
-      {description && (
+      {descriptionText && (
         <Text style={[
           styles.description,
           { color: isDark ? colors.darkTextMuted : colors.textMuted }
         ]}>
-          {description}
+          {descriptionText}
         </Text>
       )}
       
@@ -68,6 +75,10 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: spacing.lg,
+  },
+  iconText: {
+    fontSize: 64,
+    textAlign: 'center',
   },
   title: {
     fontSize: typography.heading.fontSize,
