@@ -63,44 +63,8 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [enhancedLocation, setEnhancedLocation] = useState<{country?: string; city?: string} | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [averageRating, setAverageRating] = useState(0);
-
-  // Load reviews for this artwork
-  const loadReviews = useCallback(async () => {
-    try {
-      setReviewsLoading(true);
-      const { data, error } = await supabase
-        .from('reviews')
-        .select(`
-          *,
-          reviewer:profiles!reviews_reviewer_id_fkey(handle, avatar_url)
-        `)
-        .eq('artwork_id', artworkId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setReviews(data || []);
-      
-      // Calculate average rating
-      if (data && data.length > 0) {
-        const avg = data.reduce((sum: number, review: any) => sum + review.rating, 0) / data.length;
-        setAverageRating(Math.round(avg * 10) / 10);
-      }
-    } catch (error) {
-      console.error('Failed to load reviews:', error);
-    } finally {
-      setReviewsLoading(false);
-    }
-  }, [artworkId]);
-
-  useEffect(() => {
-    if (artworkId) {
-      loadReviews();
-    }
-  }, [artworkId, loadReviews]);
+  
+  // Reviews 기능 제거 (reviews 테이블 없음 - 404 에러 방지)
 
   // 위치 정보 자동 보완 (좌표는 있지만 국가/도시 정보가 없는 경우)
   React.useEffect(() => {
