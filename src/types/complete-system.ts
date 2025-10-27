@@ -345,7 +345,7 @@ export interface CreatePaymentResponse {
   transaction_id: string;
   amount: number;
   shipping_fee: number;
-  total_amount: number;
+  total_amount: number; // 참고: DB 컬럼명은 'amount'입니다 (편의상 API 응답에만 사용)
 }
 
 // 배송 시작 요청

@@ -24,7 +24,7 @@ import { formatPrice } from '../types/complete-system';
 
 interface Sale {
   id: string;
-  total_amount: number;
+  amount: number;
   platform_fee: number;
   seller_amount: number;
   status: string;
@@ -270,13 +270,13 @@ export const SalesScreen = () => {
 
             <View style={styles.amounts}>
               <Text style={[styles.amountLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Total: {formatPrice(item.total_amount, 'USD')}
+                Total: {formatPrice(item.amount, 'USD')}
               </Text>
               <Text style={[styles.amountLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
                 Platform Fee: {formatPrice(item.platform_fee || 0, 'USD')}
               </Text>
               <Text style={[styles.sellerAmount, { color: colors.primary }]}>
-                You Get: {formatPrice(item.seller_amount || (item.total_amount * 0.9), 'USD')}
+                You Get: {formatPrice(item.seller_amount || (item.amount * 0.9), 'USD')}
               </Text>
             </View>
 

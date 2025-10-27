@@ -22,7 +22,7 @@ import { formatPrice } from '../types/complete-system';
 
 interface Order {
   id: string;
-  total_amount: number;
+  amount: number;
   status: string;
   created_at: string;
   shipping_address: any;
@@ -227,7 +227,7 @@ export const OrdersScreen = () => {
 
 
             <Text style={[styles.totalAmount, { color: colors.primary }]}>
-              {formatPrice(item.total_amount, 'USD')}
+              {formatPrice(item.amount, 'USD')}
             </Text>
           </View>
         </View>

@@ -111,12 +111,12 @@ export const AdminDashboardScreen = () => {
         // 방법 1: status 컬럼 사용
         const { data: transactions, error } = await supabase
           .from('transactions')
-          .select('total_amount, created_at')
+          .select('amount, created_at')
           .eq('status', 'completed');
 
         if (error) throw error;
 
-        totalRevenue = transactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+        totalRevenue = transactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
         totalTransactions = transactions?.length || 0;
 
         // 오늘 매출
@@ -124,7 +124,7 @@ export const AdminDashboardScreen = () => {
         const todayTransactions = transactions?.filter(t => 
           t.created_at?.startsWith(today)
         ) || [];
-        todayRevenue = todayTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+        todayRevenue = todayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
       } catch (statusError) {
         console.warn('Failed with status filter, trying without:', statusError);
         
@@ -132,18 +132,18 @@ export const AdminDashboardScreen = () => {
           // 방법 2: status 없이 모든 거래 가져오기
           const { data: allTransactions, error } = await supabase
             .from('transactions')
-            .select('total_amount, created_at');
+            .select('amount, created_at');
 
           if (error) throw error;
 
-          totalRevenue = allTransactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0;
+          totalRevenue = allTransactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
           totalTransactions = allTransactions?.length || 0;
 
           const today = new Date().toISOString().split('T')[0];
           const todayTransactions = allTransactions?.filter(t => 
             t.created_at?.startsWith(today)
           ) || [];
-          todayRevenue = todayTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+          todayRevenue = todayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
         } catch (allError) {
           console.warn('Failed to load transactions completely:', allError);
         }

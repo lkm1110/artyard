@@ -10,7 +10,7 @@ import { colors, spacing, borderRadius } from '../../constants/theme';
 
 interface Transaction {
   id: string;
-  total_amount: number;
+  amount: number;
   status: string;
   created_at: string;
 }
@@ -44,7 +44,7 @@ export const OrderManagementScreen = () => {
 
   const renderOrder = ({ item }: { item: Transaction }) => (
     <View style={[styles.card, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
-      <Text style={[styles.amount, { color: colors.primary }]}>${item.total_amount.toFixed(2)}</Text>
+      <Text style={[styles.amount, { color: colors.primary }]}>${item.amount.toFixed(2)}</Text>
       <Text style={[styles.status, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
         Status: {item.status}
       </Text>
