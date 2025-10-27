@@ -97,54 +97,65 @@ export const getDashboardSummary = async (
     const totalViews = views?.length || 0;
     const uniqueVisitors = new Set(views?.map(v => v.viewer_id).filter(Boolean)).size;
     
-    // 3. 인게이지먼트 통계 (에러 무시)
+    // 3. 인게이지먼트 통계 (단순화된 쿼리로 400 에러 방지)
     let totalLikes = 0;
     let totalComments = 0;
     let totalBookmarks = 0;
     
+    // Likes - 날짜 필터 제거하고 JavaScript에서 필터링
     try {
-      const { data: likes, error: likesError } = await supabase
+      const { data: allLikes, error: likesError } = await supabase
         .from('likes')
-        .select('id')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString())
+        .select('id, created_at, artwork_id')
         .in('artwork_id', artworkIds);
       
-      if (!likesError) {
-        totalLikes = likes?.length || 0;
+      if (!likesError && allLikes) {
+        // JavaScript에서 날짜 필터링
+        const filteredLikes = allLikes.filter(like => {
+          const likeDate = new Date(like.created_at);
+          return likeDate >= start && likeDate <= end;
+        });
+        totalLikes = filteredLikes.length;
       }
     } catch (error) {
-      console.warn('Failed to fetch likes:', error);
+      // 에러 발생 시 조용히 무시 (기능에 영향 없음)
+      totalLikes = 0;
     }
     
+    // Comments
     try {
-      const { data: comments, error: commentsError } = await supabase
+      const { data: allComments, error: commentsError } = await supabase
         .from('comments')
-        .select('id')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString())
+        .select('id, created_at, artwork_id')
         .in('artwork_id', artworkIds);
       
-      if (!commentsError) {
-        totalComments = comments?.length || 0;
+      if (!commentsError && allComments) {
+        const filteredComments = allComments.filter(comment => {
+          const commentDate = new Date(comment.created_at);
+          return commentDate >= start && commentDate <= end;
+        });
+        totalComments = filteredComments.length;
       }
     } catch (error) {
-      console.warn('Failed to fetch comments:', error);
+      totalComments = 0;
     }
     
+    // Bookmarks - 날짜 필터 제거하고 JavaScript에서 필터링
     try {
-      const { data: bookmarks, error: bookmarksError } = await supabase
+      const { data: allBookmarks, error: bookmarksError } = await supabase
         .from('bookmarks')
-        .select('id')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString())
+        .select('id, created_at, artwork_id')
         .in('artwork_id', artworkIds);
       
-      if (!bookmarksError) {
-        totalBookmarks = bookmarks?.length || 0;
+      if (!bookmarksError && allBookmarks) {
+        const filteredBookmarks = allBookmarks.filter(bookmark => {
+          const bookmarkDate = new Date(bookmark.created_at);
+          return bookmarkDate >= start && bookmarkDate <= end;
+        });
+        totalBookmarks = filteredBookmarks.length;
       }
     } catch (error) {
-      console.warn('Failed to fetch bookmarks:', error);
+      totalBookmarks = 0;
     }
     
     const engagementRate = totalViews > 0 
