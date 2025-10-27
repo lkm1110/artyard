@@ -80,6 +80,8 @@ export const AdminManagementScreen = () => {
 
     try {
       setSearching(true);
+      
+      console.log('🔍 검색 시작:', searchEmail);
 
       // profiles 테이블에서 handle로 검색 (이메일 대신)
       const { data: profiles, error } = await supabase
@@ -87,10 +89,14 @@ export const AdminManagementScreen = () => {
         .select('id, handle, created_at, is_admin')
         .ilike('handle', `%${searchEmail}%`);
 
+      console.log('📊 검색 결과:', profiles);
+      console.log('❌ 에러:', error);
+
       if (error) throw error;
 
       if (!profiles || profiles.length === 0) {
-        Alert.alert('Notice', 'No users found with that handle');
+        console.log('⚠️ 검색 결과 없음');
+        Alert.alert('Notice', `No users found with handle containing "${searchEmail}"\n\nTry searching by username only (without @domain.com)`);
         setSearchResults([]);
         return;
       }
