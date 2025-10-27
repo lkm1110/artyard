@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useColorScheme,
-  Alert,
   TextInput,
   Modal,
 } from 'react-native';
@@ -66,7 +65,7 @@ export const AdminManagementScreen = () => {
       setAdmins(adminsData);
     } catch (error: any) {
       console.error('관리자 목록 로드 실패:', error);
-      Alert.alert('Error', 'Failed to load admin list');
+      alert('Error: Failed to load admin list');
     } finally {
       setLoading(false);
     }
@@ -74,7 +73,7 @@ export const AdminManagementScreen = () => {
 
   const handleSearchUser = async () => {
     if (!searchEmail.trim()) {
-      Alert.alert('Notice', 'Please enter handle or email');
+      alert('Notice: Please enter handle or email');
       return;
     }
 
@@ -96,7 +95,7 @@ export const AdminManagementScreen = () => {
 
       if (!profiles || profiles.length === 0) {
         console.log('⚠️ 검색 결과 없음');
-        Alert.alert('Notice', `No users found with handle containing "${searchEmail}"\n\nTry searching by username only (without @domain.com)`);
+        alert(`Notice: No users found with handle containing "${searchEmail}"\n\nTry searching by username only (without @domain.com)`);
         setSearchResults([]);
         return;
       }
@@ -112,7 +111,7 @@ export const AdminManagementScreen = () => {
       setSearchResults(results);
     } catch (error: any) {
       console.error('사용자 검색 실패:', error);
-      Alert.alert('Error', error.message || 'Failed to search users');
+      alert('Error: ' + (error.message || 'Failed to search users'));
     } finally {
       setSearching(false);
     }
@@ -121,115 +120,107 @@ export const AdminManagementScreen = () => {
   const handleAddAdmin = async (userId: string, handle: string) => {
     console.log('🎯 Add Admin 클릭:', { userId, handle });
     
-    Alert.alert(
-      'Confirm',
-      `Add "${handle}" as an administrator?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Add',
-          onPress: async () => {
-            try {
-              console.log('✅ 관리자 추가 시작...');
-              
-              const { data, error } = await supabase
-                .from('profiles')
-                .update({ is_admin: true })
-                .eq('id', userId)
-                .select();
+    // 웹에서는 window.confirm 사용
+    const confirmed = window.confirm(`Add "${handle}" as an administrator?`);
+    
+    if (!confirmed) {
+      console.log('❌ 취소됨');
+      return;
+    }
+    
+    try {
+      console.log('✅ 관리자 추가 시작...');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ is_admin: true })
+        .eq('id', userId)
+        .select();
 
-              console.log('📊 업데이트 결과:', data);
-              console.log('❌ 에러:', error);
+      console.log('📊 업데이트 결과:', data);
+      console.log('❌ 에러:', error);
 
-              if (error) throw error;
+      if (error) throw error;
 
-              console.log('✅ 관리자 추가 성공!');
+      console.log('✅ 관리자 추가 성공!');
 
-              // 관리자 액션 로그 (선택사항 - 실패해도 계속 진행)
-              try {
-                await supabase.from('admin_actions').insert({
-                  admin_id: user?.id,
-                  action_type: 'admin_added' as any,
-                  target_type: 'user',
-                  target_id: userId,
-                  reason: 'New admin added',
-                });
-                console.log('✅ 액션 로그 저장 성공');
-              } catch (logError) {
-                console.warn('⚠️ 액션 로그 저장 실패 (무시):', logError);
-              }
+      // 관리자 액션 로그 (선택사항 - 실패해도 계속 진행)
+      try {
+        await supabase.from('admin_actions').insert({
+          admin_id: user?.id,
+          action_type: 'admin_added' as any,
+          target_type: 'user',
+          target_id: userId,
+          reason: 'New admin added',
+        });
+        console.log('✅ 액션 로그 저장 성공');
+      } catch (logError) {
+        console.warn('⚠️ 액션 로그 저장 실패 (무시):', logError);
+      }
 
-              Alert.alert('Success', `"${handle}" has been added as an administrator`);
-              setModalVisible(false);
-              setSearchEmail('');
-              setSearchResults([]);
-              loadAdmins();
-            } catch (error: any) {
-              console.error('💥 관리자 추가 실패:', error);
-              Alert.alert('Error', error.message || 'Failed to add administrator');
-            }
-          },
-        },
-      ]
-    );
+      alert(`Success: "${handle}" has been added as an administrator`);
+      setModalVisible(false);
+      setSearchEmail('');
+      setSearchResults([]);
+      loadAdmins();
+    } catch (error: any) {
+      console.error('💥 관리자 추가 실패:', error);
+      alert('Error: ' + (error.message || 'Failed to add administrator'));
+    }
   };
 
   const handleRemoveAdmin = async (userId: string, handle: string) => {
     if (userId === user?.id) {
-      Alert.alert('Notice', 'You cannot remove yourself as admin');
+      alert('Notice: You cannot remove yourself as admin');
       return;
     }
 
     console.log('🗑️ Remove Admin 클릭:', { userId, handle });
 
-    Alert.alert(
-      'Confirm',
-      `Remove "${handle}" from administrators?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🗑️ 관리자 제거 시작...');
-              
-              const { data, error } = await supabase
-                .from('profiles')
-                .update({ is_admin: false })
-                .eq('id', userId)
-                .select();
+    // 웹에서는 window.confirm 사용
+    const confirmed = window.confirm(`Remove "${handle}" from administrators?`);
+    
+    if (!confirmed) {
+      console.log('❌ 취소됨');
+      return;
+    }
+    
+    try {
+      console.log('🗑️ 관리자 제거 시작...');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ is_admin: false })
+        .eq('id', userId)
+        .select();
 
-              console.log('📊 업데이트 결과:', data);
-              console.log('❌ 에러:', error);
+      console.log('📊 업데이트 결과:', data);
+      console.log('❌ 에러:', error);
 
-              if (error) throw error;
+      if (error) throw error;
 
-              console.log('✅ 관리자 제거 성공!');
+      console.log('✅ 관리자 제거 성공!');
 
-              // 관리자 액션 로그 (선택사항)
-              try {
-                await supabase.from('admin_actions').insert({
-                  admin_id: user?.id,
-                  action_type: 'admin_removed' as any,
-                  target_type: 'user',
-                  target_id: userId,
-                  reason: 'Admin removed',
-                });
-                console.log('✅ 액션 로그 저장 성공');
-              } catch (logError) {
-                console.warn('⚠️ 액션 로그 저장 실패 (무시):', logError);
-              }
+      // 관리자 액션 로그 (선택사항)
+      try {
+        await supabase.from('admin_actions').insert({
+          admin_id: user?.id,
+          action_type: 'admin_removed' as any,
+          target_type: 'user',
+          target_id: userId,
+          reason: 'Admin removed',
+        });
+        console.log('✅ 액션 로그 저장 성공');
+      } catch (logError) {
+        console.warn('⚠️ 액션 로그 저장 실패 (무시):', logError);
+      }
 
-              Alert.alert('Success', `"${handle}" has been removed from administrators`);
-              loadAdmins();
-            } catch (error: any) {
-              Alert.alert('Error', error.message);
-            }
-          },
-        },
-      ]
-    );
+      alert(`Success: "${handle}" has been removed from administrators`);
+      loadAdmins();
+    } catch (error: any) {
+      console.error('💥 관리자 제거 실패:', error);
+      alert('Error: ' + (error.message || 'Failed to remove administrator'));
+    }
   };
 
   const renderAdmin = ({ item }: { item: Admin }) => (
