@@ -209,6 +209,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
               />
               
               <Button
+                title="💸 My Settlements"
+                onPress={() => navigation.navigate('MySettlements' as never)}
+                variant="outline"
+                style={styles.button}
+              />
+              
+              <Button
                 title="📊 Artist Dashboard"
                 onPress={() => navigation.navigate('ArtistDashboard' as never)}
                 variant="outline"

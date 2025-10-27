@@ -46,6 +46,10 @@ import { AdminManagementScreen } from '../screens/admin/AdminManagementScreen';
 import { OrdersScreen } from '../screens/OrdersScreen';
 import { SalesScreen } from '../screens/SalesScreen';
 import { ReviewScreen } from '../screens/ReviewScreen';
+import { MySettlementsScreen } from '../screens/MySettlementsScreen';
+
+// Admin settlement
+import { SettlementManagementScreen } from '../screens/admin/SettlementManagementScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -330,6 +334,22 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen 
               name="Review" 
               component={ReviewScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            
+            {/* Settlement Screens */}
+            <Stack.Screen 
+              name="MySettlements" 
+              component={MySettlementsScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="SettlementManagement" 
+              component={SettlementManagementScreen}
               options={{ 
                 animation: 'slide_from_right'
               }} 

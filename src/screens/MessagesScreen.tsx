@@ -1,8 +1,8 @@
 /**
- * 채팅 목록 화면 (Messages 탭) - 실제 데이터만 사용
+ * 채팅 목록 화면 (Messages 탭) - 실시간 업데이트
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,15 +21,49 @@ import { EmptyState } from '../components/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import { useChats, useRefreshChats } from '../hooks/useChats';
 import { Chat } from '../types';
+import { supabase } from '../services/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const MessagesScreen: React.FC = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   // 실제 채팅 데이터 조회
   const { data: chats = [], isLoading, isError } = useChats();
   const refreshChats = useRefreshChats();
+
+  // 🔥 실시간 채팅 목록 업데이트
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('🔴 Starting realtime subscription for all chats');
+
+    const channel = supabase
+      .channel('all-chats')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('💬 Message updated in chat list:', payload);
+          // 채팅 목록 새로고침
+          queryClient.invalidateQueries({ queryKey: ['chats'] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Chat list subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔴 Unsubscribing from chat list');
+      channel.unsubscribe();
+    };
+  }, [user, queryClient]);
 
   const formatTime = (dateString: string): string => {
     const date = new Date(dateString);

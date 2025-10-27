@@ -26,6 +26,8 @@ import { useChatMessages, useSendMessage } from '../hooks/useChats';
 import { useMarkChatAsRead } from '../hooks/useUnreadMessages';
 import { editMessage, deleteMessage } from '../services/chatService';
 import { Message, Profile } from '../types';
+import { supabase } from '../services/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface ChatScreenProps {
   route: RouteProp<{ Chat: { chatId: string; otherUser: Profile } }>;
@@ -88,16 +90,121 @@ export const ChatScreen: React.FC = () => {
   const [editingText, setEditingText] = useState('');
   
   const [newMessage, setNewMessage] = useState('');
+  const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  // 초기 메시지와 실시간 메시지 합치기
+  const allMessages = [...messages, ...realtimeMessages.filter(
+    rm => !messages.some(m => m.id === rm.id)
+  )].sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
 
   useEffect(() => {
     // 메시지가 로드되면 맨 아래로 스크롤
-    if (messages.length > 0 && !messagesLoading) {
+    if (allMessages.length > 0 && !messagesLoading) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: false });
       }, 100);
     }
-  }, [messages.length, messagesLoading]);
+  }, [allMessages.length, messagesLoading]);
+
+  // 🔥 실시간 채팅 구독
+  useEffect(() => {
+    if (!chatId) return;
+
+    console.log('🔴 Starting realtime subscription for chat:', chatId);
+
+    const channel = supabase
+      .channel(`chat:${chatId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chatId}`,
+        },
+        (payload) => {
+          console.log('🆕 New message received:', payload.new);
+          const newMsg = payload.new as Message;
+          
+          setRealtimeMessages((prev) => {
+            // 중복 방지
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+          
+          // 자동 스크롤
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+
+          // 상대방 메시지면 읽음 처리
+          if (newMsg.sender_id !== user?.id) {
+            markAsRead(chatId);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chatId}`,
+        },
+        (payload) => {
+          console.log('✏️ Message updated:', payload.new);
+          setRealtimeMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === payload.new.id ? (payload.new as Message) : msg
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chatId}`,
+        },
+        (payload) => {
+          console.log('🗑️ Message deleted:', payload.old);
+          setRealtimeMessages((prev) =>
+            prev.filter((msg) => msg.id !== payload.old.id)
+          );
+        }
+      )
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.userId !== user?.id) {
+          setIsTyping(payload.isTyping);
+          
+          // 3초 후 자동 해제
+          if (payload.isTyping) {
+            setTimeout(() => setIsTyping(false), 3000);
+          }
+        }
+      })
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to realtime updates');
+        }
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      console.log('🔴 Unsubscribing from chat:', chatId);
+      channel.unsubscribe();
+    };
+  }, [chatId, user?.id, markAsRead]);
 
   // 채팅방 입장 시 자동 읽음 처리
   useEffect(() => {
@@ -107,23 +214,16 @@ export const ChatScreen: React.FC = () => {
     }
   }, [chatId, user, markAsRead]);
 
-  // 새 메시지 수신 시 자동 읽음 처리 (개선된 버전)
-  useEffect(() => {
-    if (messages.length > 0) {
-      // is_read 컬럼이 없을 수도 있으므로 안전하게 처리
-      const otherMessages = messages.filter(msg => msg.sender_id !== user?.id);
-      
-      if (otherMessages.length > 0) {
-        // 상대방 메시지가 있으면 항상 읽음 처리 (is_read 컬럼 여부와 관계없이)
-        console.log('📨 상대방 메시지 감지 - 자동 읽음 처리:', {
-          chatId, 
-          otherMessagesCount: otherMessages.length,
-          totalMessages: messages.length 
-        });
-        markAsRead(chatId);
-      }
+  // 타이핑 브로드캐스트
+  const broadcastTyping = useCallback((isTyping: boolean) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId: user?.id, isTyping },
+      });
     }
-  }, [messages.length, chatId, user?.id, markAsRead]); // messages 대신 messages.length로 변경
+  }, [user?.id]);
 
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !user || sendMessageMutation.isPending) return;
@@ -523,7 +623,7 @@ export const ChatScreen: React.FC = () => {
         {/* Messages List */}
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={allMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           style={styles.messagesList}
@@ -534,6 +634,21 @@ export const ChatScreen: React.FC = () => {
             flatListRef.current?.scrollToEnd({ animated: true });
           }}
         />
+
+        {/* Typing Indicator */}
+        {isTyping && (
+          <View style={[
+            styles.typingIndicator,
+            { backgroundColor: isDark ? colors.darkCard : colors.card }
+          ]}>
+            <Text style={[
+              styles.typingText,
+              { color: isDark ? colors.darkTextMuted : colors.textMuted }
+            ]}>
+              {otherUser.handle} is typing...
+            </Text>
+          </View>
+        )}
 
         {/* Message Input */}
         <View style={[
@@ -581,7 +696,20 @@ export const ChatScreen: React.FC = () => {
               placeholder={editingMessageId ? "Edit your message..." : "Type a message..."}
               placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
               value={editingMessageId ? editingText : newMessage}
-              onChangeText={editingMessageId ? setEditingText : setNewMessage}
+              onChangeText={(text) => {
+                if (editingMessageId) {
+                  setEditingText(text);
+                } else {
+                  setNewMessage(text);
+                  // 타이핑 브로드캐스트
+                  if (text.length > 0) {
+                    broadcastTyping(true);
+                  } else {
+                    broadcastTyping(false);
+                  }
+                }
+              }}
+              onBlur={() => broadcastTyping(false)}
               multiline
               textAlignVertical="center"
             />
@@ -826,6 +954,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: 'italic',
     marginTop: 2,
+  },
+  typingIndicator: {
+    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  typingText: {
+    ...typography.caption,
+    fontStyle: 'italic',
   },
   // 메시지 콘텐츠 래퍼 스타일
   messageContentWrapper: {

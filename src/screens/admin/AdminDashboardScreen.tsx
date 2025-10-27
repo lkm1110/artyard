@@ -362,6 +362,14 @@ export const AdminDashboardScreen = () => {
         />
 
         <MenuButton
+          title="Settlement Management"
+          description="Approve or reject artist settlements"
+          icon="💰"
+          color="#10B981"
+          onPress={() => navigation.navigate('SettlementManagement' as never)}
+        />
+
+        <MenuButton
           title="Platform Analytics"
           description="Detailed statistics and insights"
           icon="📊"
