@@ -48,27 +48,22 @@ export const AdminManagementScreen = () => {
     try {
       setLoading(true);
 
-      // is_admin = true인 사용자 조회
+      // is_admin = true인 사용자 조회 (handle만 사용)
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, handle, created_at, is_admin')
         .eq('is_admin', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // 이메일 정보도 함께 가져오기
-      const adminsWithEmail = await Promise.all(
-        (data || []).map(async (profile) => {
-          const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
-          return {
-            ...profile,
-            email: authData?.user?.email || 'Unknown',
-          };
-        })
-      );
+      // email 대신 handle 사용
+      const adminsData = (data || []).map((profile) => ({
+        ...profile,
+        email: `${profile.handle}@artyard.com`, // 이메일은 표시용으로만
+      }));
 
-      setAdmins(adminsWithEmail);
+      setAdmins(adminsData);
     } catch (error: any) {
       console.error('관리자 목록 로드 실패:', error);
       Alert.alert('Error', 'Failed to load admin list');
@@ -79,40 +74,33 @@ export const AdminManagementScreen = () => {
 
   const handleSearchUser = async () => {
     if (!searchEmail.trim()) {
-      Alert.alert('Notice', 'Please enter email address');
+      Alert.alert('Notice', 'Please enter handle or email');
       return;
     }
 
     try {
       setSearching(true);
 
-      // auth.users에서 이메일로 검색
-      const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+      // profiles 테이블에서 handle로 검색 (이메일 대신)
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, handle, created_at, is_admin')
+        .ilike('handle', `%${searchEmail}%`);
 
-      if (usersError) throw usersError;
+      if (error) throw error;
 
-      const matchedUsers = users?.users.filter(u => 
-        u.email?.toLowerCase().includes(searchEmail.toLowerCase())
-      ) || [];
-
-      if (matchedUsers.length === 0) {
-        Alert.alert('Notice', 'No users found with that email');
+      if (!profiles || profiles.length === 0) {
+        Alert.alert('Notice', 'No users found with that handle');
         setSearchResults([]);
         return;
       }
 
-      // profiles 정보 가져오기
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', matchedUsers.map(u => u.id));
-
-      const results = matchedUsers.map(u => ({
-        id: u.id,
-        email: u.email || 'Unknown',
-        handle: profiles?.find(p => p.id === u.id)?.handle || 'Unknown',
-        created_at: u.created_at,
-        is_admin: profiles?.find(p => p.id === u.id)?.is_admin || false,
+      const results = profiles.map(p => ({
+        id: p.id,
+        email: `${p.handle}@artyard.com`, // 표시용
+        handle: p.handle,
+        created_at: p.created_at,
+        is_admin: p.is_admin || false,
       }));
 
       setSearchResults(results);

@@ -38,7 +38,6 @@ interface Settlement {
   created_at: string;
   artist: {
     handle: string;
-    email: string;
     avatar_url?: string;
   };
 }
@@ -63,7 +62,7 @@ export const SettlementManagementScreen = () => {
         .from('settlements')
         .select(`
           *,
-          artist:profiles!settlements_artist_id_fkey(handle, email, avatar_url)
+          artist:profiles!settlements_artist_id_fkey(handle, avatar_url)
         `)
         .order('created_at', { ascending: false });
 
@@ -192,7 +191,7 @@ export const SettlementManagementScreen = () => {
             @{item.artist.handle}
           </Text>
           <Text style={[styles.artistEmail, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-            {item.artist.email}
+            {item.transaction_count} transactions
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
