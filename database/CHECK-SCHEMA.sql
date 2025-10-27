@@ -59,16 +59,24 @@ ORDER BY c.relname;
 
 -- 6. 각 테이블의 RLS 정책 확인
 SELECT 
-    schemaname,
-    tablename,
-    policyname,
-    permissive,
-    roles,
-    cmd,
-    qual,
-    with_check
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND tablename IN ('transactions', 'likes', 'bookmarks', 'settlements')
-ORDER BY tablename, policyname;
+    n.nspname AS schema_name,
+    c.relname AS table_name,
+    p.polname AS policy_name,
+    CASE p.polpermissive WHEN true THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END AS permissive,
+    p.polroles::regrole[] AS roles,
+    CASE p.polcmd 
+        WHEN 'r' THEN 'SELECT'
+        WHEN 'a' THEN 'INSERT'
+        WHEN 'w' THEN 'UPDATE'
+        WHEN 'd' THEN 'DELETE'
+        WHEN '*' THEN 'ALL'
+    END AS command,
+    pg_get_expr(p.polqual, p.polrelid) AS using_expression,
+    pg_get_expr(p.polwithcheck, p.polrelid) AS with_check_expression
+FROM pg_policy p
+JOIN pg_class c ON p.polrelid = c.oid
+JOIN pg_namespace n ON c.relnamespace = n.oid
+WHERE n.nspname = 'public'
+  AND c.relname IN ('transactions', 'likes', 'bookmarks', 'settlements')
+ORDER BY c.relname, p.polname;
 
