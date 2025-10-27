@@ -243,6 +243,9 @@ export const ChallengeDetailScreen = () => {
       <ScrollView>
         {/* 헤더 */}
         <View style={[styles.header, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+          </TouchableOpacity>
           <View style={styles.headerTop}>
             <Text style={[styles.topic, { color: colors.primary }]}>#{challenge.topic}</Text>
             <View style={[
@@ -437,6 +440,13 @@ const styles = StyleSheet.create({
   header: {
     padding: spacing.lg,
     marginBottom: spacing.md,
+  },
+  backButton: {
+    marginBottom: spacing.sm,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   headerTop: {
     flexDirection: 'row',

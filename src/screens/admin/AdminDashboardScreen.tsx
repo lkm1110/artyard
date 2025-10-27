@@ -241,6 +241,9 @@ export const AdminDashboardScreen = () => {
     >
       {/* 헤더 */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+        </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
           🛡️ Admin Dashboard
         </Text>
@@ -407,6 +410,13 @@ const styles = StyleSheet.create({
   header: {
     padding: spacing.lg,
     paddingTop: spacing.xl,
+  },
+  backButton: {
+    marginBottom: spacing.md,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   headerTitle: {
     fontSize: 28,

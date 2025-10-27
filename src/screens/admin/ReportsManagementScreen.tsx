@@ -61,12 +61,12 @@ export const ReportsManagementScreen = () => {
     try {
       setLoading(true);
 
+      // 1. 먼저 reports 가져오기
       let query = supabase
         .from('reports')
         .select(`
           *,
-          reporter:profiles!reports_reporter_id_fkey(handle),
-          artwork:artworks(title, image_urls)
+          reporter:profiles!reports_reporter_id_fkey(handle)
         `)
         .order('created_at', { ascending: false });
 
@@ -74,11 +74,33 @@ export const ReportsManagementScreen = () => {
         query = query.eq('status', 'pending');
       }
 
-      const { data, error } = await query;
+      const { data: reportsData, error } = await query;
 
       if (error) throw error;
 
-      setReports(data || []);
+      // 2. artwork 정보가 필요한 reports의 artwork 정보 가져오기
+      const reportsWithArtworks = await Promise.all(
+        (reportsData || []).map(async (report) => {
+          if (report.target_type === 'artwork') {
+            const { data: artworkData } = await supabase
+              .from('artworks')
+              .select('title, images')
+              .eq('id', report.target_id)
+              .single();
+            
+            return {
+              ...report,
+              artwork: artworkData || null,
+            };
+          }
+          return {
+            ...report,
+            artwork: null,
+          };
+        })
+      );
+
+      setReports(reportsWithArtworks);
     } catch (error: any) {
       console.error('신고 목록 로드 실패:', error);
       Alert.alert('Error', 'Failed to load reports');

@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { getDashboardSummary } from '../services/analyticsService';
 import {
   DashboardSummary,
@@ -23,6 +24,7 @@ import {
 const { width } = Dimensions.get('window');
 
 export const ArtistDashboardScreen = () => {
+  const navigation = useNavigation();
   const [period, setPeriod] = useState<AnalyticsPeriod>('weekly');
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +55,14 @@ export const ArtistDashboardScreen = () => {
   
   return (
     <ScrollView style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Artist Dashboard</Text>
+      </View>
+
       {/* 기간 선택 */}
       <View style={styles.periodSelector}>
         {(['daily', 'weekly', 'monthly'] as AnalyticsPeriod[]).map((p) => (
@@ -212,6 +222,26 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerContainer: {
+    padding: 16,
+    paddingTop: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    backgroundColor: '#FFFFFF',
+  },
+  backButton: {
+    marginBottom: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#E91E63',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
   },
   
   // 기간 선택

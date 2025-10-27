@@ -14,6 +14,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import { Screen } from '../components/Screen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -41,6 +42,7 @@ interface Settlement {
 }
 
 export const MySettlementsScreen = () => {
+  const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
   const [settlements, setSettlements] = useState<Settlement[]>([]);
@@ -228,6 +230,16 @@ export const MySettlementsScreen = () => {
   return (
     <Screen>
       <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+            My Settlements
+          </Text>
+        </View>
+
         {/* Summary */}
         <View style={[styles.summary, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
           <Text style={[styles.summaryTitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
@@ -274,6 +286,21 @@ export const MySettlementsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerContainer: {
+    padding: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  backButton: {
+    marginBottom: spacing.sm,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerTitle: {
+    ...typography.h2,
+    fontWeight: '700',
   },
   summary: {
     padding: spacing.xl,

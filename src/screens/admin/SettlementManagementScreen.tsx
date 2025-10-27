@@ -300,6 +300,9 @@ export const SettlementManagementScreen = () => {
       <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
         {/* Header */}
         <View style={styles.topHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+          </TouchableOpacity>
           <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>
             💰 Settlement Management
           </Text>
@@ -369,6 +372,13 @@ const styles = StyleSheet.create({
   topHeader: {
     padding: spacing.lg,
     paddingBottom: spacing.md,
+  },
+  backButton: {
+    marginBottom: spacing.sm,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   title: {
     ...typography.h2,

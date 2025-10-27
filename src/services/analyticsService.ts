@@ -97,31 +97,55 @@ export const getDashboardSummary = async (
     const totalViews = views?.length || 0;
     const uniqueVisitors = new Set(views?.map(v => v.viewer_id).filter(Boolean)).size;
     
-    // 3. 인게이지먼트 통계
-    const { data: likes } = await supabase
-      .from('likes')
-      .select('id')
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString())
-      .in('artwork_id', artworkIds);
+    // 3. 인게이지먼트 통계 (에러 무시)
+    let totalLikes = 0;
+    let totalComments = 0;
+    let totalBookmarks = 0;
     
-    const { data: comments } = await supabase
-      .from('comments')
-      .select('id')
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString())
-      .in('artwork_id', artworkIds);
+    try {
+      const { data: likes, error: likesError } = await supabase
+        .from('likes')
+        .select('id')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .in('artwork_id', artworkIds);
+      
+      if (!likesError) {
+        totalLikes = likes?.length || 0;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch likes:', error);
+    }
     
-    const { data: bookmarks } = await supabase
-      .from('bookmarks')
-      .select('id')
-      .gte('created_at', start.toISOString())
-      .lte('created_at', end.toISOString())
-      .in('artwork_id', artworkIds);
+    try {
+      const { data: comments, error: commentsError } = await supabase
+        .from('comments')
+        .select('id')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .in('artwork_id', artworkIds);
+      
+      if (!commentsError) {
+        totalComments = comments?.length || 0;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch comments:', error);
+    }
     
-    const totalLikes = likes?.length || 0;
-    const totalComments = comments?.length || 0;
-    const totalBookmarks = bookmarks?.length || 0;
+    try {
+      const { data: bookmarks, error: bookmarksError } = await supabase
+        .from('bookmarks')
+        .select('id')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .in('artwork_id', artworkIds);
+      
+      if (!bookmarksError) {
+        totalBookmarks = bookmarks?.length || 0;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch bookmarks:', error);
+    }
     
     const engagementRate = totalViews > 0 
       ? Math.round(((totalLikes + totalComments + totalBookmarks) / totalViews) * 100)
