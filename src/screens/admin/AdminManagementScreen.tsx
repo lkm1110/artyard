@@ -309,7 +309,7 @@ export const AdminManagementScreen = () => {
 
           <View style={styles.modalContent}>
             <Text style={[styles.inputLabel, { color: isDark ? colors.darkText : colors.text }]}>
-              Search by Email
+              Search by Handle (Username)
             </Text>
 
             <View style={styles.searchContainer}>
@@ -322,11 +322,11 @@ export const AdminManagementScreen = () => {
                     borderColor: isDark ? colors.darkBorder : colors.border,
                   },
                 ]}
-                placeholder="Enter email address..."
+                placeholder="Enter username (e.g., kangmin)"
                 placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
                 value={searchEmail}
                 onChangeText={setSearchEmail}
-                keyboardType="email-address"
+                keyboardType="default"
                 autoCapitalize="none"
               />
 
