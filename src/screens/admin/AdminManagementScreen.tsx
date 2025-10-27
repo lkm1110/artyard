@@ -202,29 +202,7 @@ export const AdminManagementScreen = () => {
 
       console.log('✅ 관리자 제거 성공!');
 
-      // 관리자 액션 로그 (선택사항)
-      try {
-        const { data: logData, error: logError } = await supabase.from('admin_actions').insert({
-          admin_id: user?.id,
-          action_type: 'admin_removed' as any,
-          target_type: 'user',
-          target_id: userId,
-          reason: 'Admin removed',
-        });
-        
-        if (logError) {
-          console.error('❌ 액션 로그 에러 상세:', {
-            code: logError.code,
-            message: logError.message,
-            details: logError.details,
-            hint: logError.hint,
-          });
-        } else {
-          console.log('✅ 액션 로그 저장 성공');
-        }
-      } catch (logError) {
-        console.warn('⚠️ 액션 로그 저장 실패 (무시):', logError);
-      }
+      // admin_actions 로그 기능 제거 (CHECK constraint 문제로 비활성화)
 
       alert(`Success: "${handle}" has been removed from administrators`);
       loadAdmins();
