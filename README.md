@@ -253,7 +253,9 @@ npm run web
 
 ## 📄 라이센스
 
-이 프로젝트는 MIT 라이센스 하에 있습니다.
+Copyright (c) 2025 ArtYard Team. All rights reserved.
+
+이 프로젝트는 ArtYard의 소유이며, 무단 복제, 배포, 수정을 금지합니다.
 
 ## 📞 문의
 
