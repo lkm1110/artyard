@@ -204,7 +204,8 @@ export const ChatScreen: React.FC = () => {
       console.log('🔴 Unsubscribing from chat:', chatId);
       channel.unsubscribe();
     };
-  }, [chatId, user?.id, markAsRead]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, user?.id]); // markAsRead는 dependency에서 제외 (무한 루프 방지)
 
   // 채팅방 입장 시 자동 읽음 처리
   useEffect(() => {
@@ -212,7 +213,8 @@ export const ChatScreen: React.FC = () => {
       console.log('📖 채팅방 입장 - 자동 읽음 처리:', chatId);
       markAsRead(chatId);
     }
-  }, [chatId, user, markAsRead]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, user?.id]); // markAsRead는 dependency에서 제외 (무한 루프 방지)
 
   // 타이핑 브로드캐스트
   const broadcastTyping = useCallback((isTyping: boolean) => {

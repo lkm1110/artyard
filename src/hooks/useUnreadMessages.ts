@@ -109,9 +109,17 @@ export const useMarkChatAsRead = () => {
       const success = await markChatAsRead(chatId);
       
       if (success) {
-        // Invalidate cache to trigger automatic refresh
-        queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
-        queryClient.invalidateQueries({ queryKey: ['unreadMessages'] });
+        // 강력한 캐시 무효화 - 모든 관련 쿼리 즉시 새로고침
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['unreadCount'], refetchType: 'all' }),
+          queryClient.invalidateQueries({ queryKey: ['unreadMessages'], refetchType: 'all' }),
+          queryClient.refetchQueries({ queryKey: ['unreadCount', user?.id], type: 'all' }),
+        ]);
+
+        // 즉시 카운트를 0으로 설정 (optimistic update)
+        queryClient.setQueryData(['unreadCount', user?.id], 0);
+        
+        console.log('✅ Chat read status updated and cache invalidated');
       }
       
       return success;
