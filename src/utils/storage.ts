@@ -1,19 +1,46 @@
 /**
- * 크로스 플랫폼 저장소 유틸리티
+ * 크로스 플랫폼 저장소 유틸리티 (Supabase 호환)
  * 웹: localStorage 사용
- * 모바일: SecureStore 사용
+ * 모바일: AsyncStorage 사용 (Supabase는 동기적 storage를 기대함)
  */
 
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const isWeb = Platform.OS === 'web';
 
+// 메모리 캐시 (동기적 접근을 위해)
+let memoryCache: { [key: string]: string } = {};
+let cacheInitialized = false;
+
+// 앱 시작 시 캐시 초기화
+const initializeCache = async () => {
+  if (cacheInitialized || isWeb) return;
+  
+  try {
+    // Supabase 세션 키만 미리 로드
+    const sessionKey = 'sb-bkvycanciimgyftdtqpx-auth-token';
+    const value = await AsyncStorage.getItem(sessionKey);
+    if (value) {
+      memoryCache[sessionKey] = value;
+    }
+    cacheInitialized = true;
+    console.log('✅ Storage cache initialized');
+  } catch (error) {
+    console.warn('Cache initialization failed:', error);
+  }
+};
+
+// 즉시 초기화 시작
+if (!isWeb) {
+  initializeCache();
+}
+
 export const storage = {
   /**
-   * 값을 저장합니다
+   * 값을 저장합니다 (동기적으로 반환)
    */
-  async setItem(key: string, value: string): Promise<void> {
+  setItem(key: string, value: string): void {
     try {
       if (isWeb) {
         // 웹 환경: localStorage 사용
@@ -21,8 +48,12 @@ export const storage = {
           window.localStorage.setItem(key, value);
         }
       } else {
-        // 네이티브 환경: SecureStore 사용
-        await SecureStore.setItemAsync(key, value);
+        // 네이티브 환경: 메모리 캐시 + AsyncStorage
+        memoryCache[key] = value;
+        // 백그라운드에서 저장
+        AsyncStorage.setItem(key, value).catch((error) => {
+          console.warn(`저장 실패 (${key}):`, error);
+        });
       }
     } catch (error) {
       console.warn(`저장 실패 (${key}):`, error);
@@ -30,9 +61,9 @@ export const storage = {
   },
 
   /**
-   * 값을 가져옵니다
+   * 값을 가져옵니다 (동기적으로 반환)
    */
-  async getItem(key: string): Promise<string | null> {
+  getItem(key: string): string | null {
     try {
       if (isWeb) {
         // 웹 환경: localStorage 사용
@@ -41,8 +72,22 @@ export const storage = {
         }
         return null;
       } else {
-        // 네이티브 환경: SecureStore 사용
-        return await SecureStore.getItemAsync(key);
+        // 네이티브 환경: 메모리 캐시에서 반환
+        const cached = memoryCache[key];
+        
+        // 캐시에 없으면 백그라운드에서 로드
+        if (cached === undefined) {
+          AsyncStorage.getItem(key).then((value) => {
+            if (value) {
+              memoryCache[key] = value;
+            }
+          }).catch((error) => {
+            console.warn(`읽기 실패 (${key}):`, error);
+          });
+          return null;
+        }
+        
+        return cached;
       }
     } catch (error) {
       console.warn(`읽기 실패 (${key}):`, error);
@@ -51,9 +96,9 @@ export const storage = {
   },
 
   /**
-   * 값을 삭제합니다
+   * 값을 삭제합니다 (동기적으로 반환)
    */
-  async removeItem(key: string): Promise<void> {
+  removeItem(key: string): void {
     try {
       if (isWeb) {
         // 웹 환경: localStorage 사용
@@ -61,8 +106,12 @@ export const storage = {
           window.localStorage.removeItem(key);
         }
       } else {
-        // 네이티브 환경: SecureStore 사용
-        await SecureStore.deleteItemAsync(key);
+        // 네이티브 환경: 메모리 캐시 + AsyncStorage
+        delete memoryCache[key];
+        // 백그라운드에서 삭제
+        AsyncStorage.removeItem(key).catch((error) => {
+          console.warn(`삭제 실패 (${key}):`, error);
+        });
       }
     } catch (error) {
       console.warn(`삭제 실패 (${key}):`, error);
