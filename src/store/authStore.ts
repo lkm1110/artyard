@@ -43,15 +43,23 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       if (session?.user) {
         // 프로필 정보 가져오기 또는 생성
-        let { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
 
+        // 프로필 조회 에러 로그
+        if (profileError) {
+          console.error('❌ 프로필 조회 에러:', profileError.code, profileError.message);
+          console.log('User ID:', session.user.id);
+          console.log('Email:', session.user.email);
+        }
+
         // 프로필이 없으면 새로 생성
         if (!profile && session.user) {
-          console.log('프로필이 없어서 새로 생성합니다:', session.user.id);
+          console.log('⚠️  프로필이 없어서 새로 생성합니다:', session.user.id);
+          console.log('📧 Email:', session.user.email);
           const newProfile = {
             id: session.user.id,
             handle: session.user.user_metadata?.full_name || 
@@ -71,12 +79,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             .single();
 
           if (createError) {
-            console.error('프로필 생성 오류:', createError);
+            console.error('❌ 프로필 생성 오류:', createError.code, createError.message);
+            console.log('생성하려던 프로필:', newProfile);
           } else {
             profile = createdProfile;
-            console.log('프로필 생성 성공:', profile);
+            console.log('✅ 프로필 생성 성공:', profile?.handle, profile?.email);
           }
         }
+
+        console.log('🔐 인증 상태 설정:', {
+          hasProfile: !!profile,
+          handle: profile?.handle,
+          email: session.user.email,
+        });
 
         set({
           user: profile,
@@ -98,16 +113,26 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         console.log('인증 상태 변경:', event, session?.user?.id);
 
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🔑 SIGNED_IN 이벤트 발생:', session.user.email);
+          
           // 로그인시 프로필 정보 가져오기 또는 생성
-          let { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
+          // 프로필 조회 에러 로그
+          if (profileError) {
+            console.error('❌ [SIGNED_IN] 프로필 조회 에러:', profileError.code, profileError.message);
+          } else if (profile) {
+            console.log('✅ [SIGNED_IN] 프로필 조회 성공:', profile.handle);
+          }
+
           // 프로필이 없으면 새로 생성
           if (!profile && session.user) {
-            console.log('로그인 이벤트: 프로필이 없어서 새로 생성합니다:', session.user.id);
+            console.log('⚠️  [SIGNED_IN] 프로필이 없어서 새로 생성합니다:', session.user.id);
+            console.log('📧 Email:', session.user.email);
             const newProfile = {
               id: session.user.id,
               handle: session.user.user_metadata?.full_name || 
@@ -127,10 +152,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
               .single();
 
             if (createError) {
-              console.error('로그인 이벤트: 프로필 생성 오류:', createError);
+              console.error('❌ [SIGNED_IN] 프로필 생성 오류:', createError.code, createError.message);
+              console.log('생성하려던 프로필:', newProfile);
             } else {
               profile = createdProfile;
-              console.log('로그인 이벤트: 프로필 생성 성공:', profile);
+              console.log('✅ [SIGNED_IN] 프로필 생성 성공:', profile?.handle);
             }
           }
 
