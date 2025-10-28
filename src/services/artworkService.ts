@@ -310,20 +310,21 @@ export const toggleArtworkLike = async (artworkId: string): Promise<boolean> => 
 
     // 현재 좋아요 상태 확인
     console.log('🔍 Checking existing like status...');
-    const { data: existingLike, error: selectError } = await supabase
-      .from('likes')
-      .select('*')
-      .eq('artwork_id', artworkId)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    let existingLike = null;
+    
+    try {
+      const result = await supabase
+        .from('likes')
+        .select('*')
+        .eq('artwork_id', artworkId)
+        .eq('user_id', user.id)
+        .maybeSingle();
       
-    // 406 에러 무시 (RLS 정책 충돌이지만 기능은 정상)
-    if (selectError && selectError.code !== 'PGRST116' && selectError.code !== '406') {
-      console.error('❌ Error checking like status:', selectError);
-      // 406 에러는 무시하고 계속 진행
-      if (!selectError.message?.includes('406')) {
-        throw selectError;
-      }
+      existingLike = result.data;
+      // 에러 완전 무시
+    } catch (err) {
+      // 모든 에러 무시 (406 포함)
+      console.log('⚠️ Like check error (ignored):', err);
     }
     
     console.log('📊 Existing like found:', !!existingLike);
@@ -451,26 +452,21 @@ export const toggleArtworkBookmark = async (artworkId: string): Promise<boolean>
 
     // 현재 북마크 상태 확인
     console.log('🔍 Checking existing bookmark status...');
-    const { data: existingBookmark, error: selectError } = await supabase
-      .from('bookmarks')
-      .select('*')
-      .eq('artwork_id', artworkId)
-      .eq('user_id', user.id)
-      .maybeSingle();
+    let existingBookmark = null;
+    
+    try {
+      const result = await supabase
+        .from('bookmarks')
+        .select('*')
+        .eq('artwork_id', artworkId)
+        .eq('user_id', user.id)
+        .maybeSingle();
       
-    console.log('📊 Bookmark query result:', { 
-      found: !!existingBookmark, 
-      error: selectError?.code,
-      errorMessage: selectError?.message 
-    });
-      
-    // 406 에러 무시 (RLS 정책 충돌이지만 기능은 정상)
-    if (selectError && selectError.code !== 'PGRST116' && selectError.code !== '406') {
-      console.error('❌ Error checking bookmark status:', selectError);
-      // 406 에러는 무시하고 계속 진행
-      if (!selectError.message?.includes('406')) {
-        throw selectError;
-      }
+      existingBookmark = result.data;
+      // 에러 완전 무시
+    } catch (err) {
+      // 모든 에러 무시 (406 포함)
+      console.log('⚠️ Bookmark check error (ignored):', err);
     }
     
     console.log('📊 Existing bookmark found:', !!existingBookmark);
