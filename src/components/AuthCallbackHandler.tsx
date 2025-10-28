@@ -215,6 +215,9 @@ export const AuthCallbackHandler: React.FC = () => {
                   if (sessionError) {
                     debugLog('❌ 세션 설정 실패: ' + sessionError.message, 'error');
                     debugLog('❌ 에러 상태: ' + (sessionError.status || 'unknown'), 'error');
+                    debugLog('❌ 에러 코드: ' + (sessionError.code || 'unknown'), 'error');
+                    debugLog('❌ 에러 이름: ' + (sessionError.name || 'unknown'), 'error');
+                    debugLog('❌ 전체 에러 정보: ' + JSON.stringify(sessionError).substring(0, 200), 'error');
                     debugLog('🔓 JWT 디코딩으로 오프라인 로그인 시도...', 'warning');
                     
                     // JWT 토큰 디코딩해서 사용자 정보 추출
