@@ -93,14 +93,19 @@ export const getFollowStatus = async (userId: string): Promise<FollowStats> => {
     // 현재 사용자가 해당 사용자를 팔로우하는지 확인
     let isFollowing = false;
     if (user && user.id !== userId) {
-      const { data } = await supabase
-        .from('follows')
-        .select('id')
-        .eq('follower_id', user.id)
-        .eq('following_id', userId)
-        .single();
-      
-      isFollowing = !!data;
+      try {
+        const { data } = await supabase
+          .from('follows')
+          .select('id')
+          .eq('follower_id', user.id)
+          .eq('following_id', userId)
+          .maybeSingle();
+        
+        isFollowing = !!data;
+      } catch (err) {
+        // 406 에러 무시
+        isFollowing = false;
+      }
     }
 
     return {
