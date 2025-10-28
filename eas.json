@@ -22,6 +22,9 @@
       "android": {
         "buildType": "app-bundle",
         "image": "latest"
+      },
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=4096"
       }
     },
     "production-apk": {
