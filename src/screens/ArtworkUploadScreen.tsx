@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 200, // 하단 버튼 공간 확보 (증가)
+    paddingBottom: 350, // 하단 버튼 공간 확보 (안드로이드 네비게이션 바 고려)
   },
   sectionTitle: {
     ...typography.heading,
