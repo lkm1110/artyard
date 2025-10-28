@@ -32,6 +32,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "kangmin.lim89@gmail.com",
+        "ascAppId": "6753962694",
+        "appleTeamId": "9T69A85KY2"
+      }
+    }
   }
 }
