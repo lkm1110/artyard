@@ -196,9 +196,9 @@ ON messages FOR SELECT
 USING (
   auth.uid() = sender_id OR 
   auth.uid() IN (
-    SELECT user1_id FROM chats WHERE id = chat_id
+    SELECT a FROM chats WHERE id = chat_id
     UNION
-    SELECT user2_id FROM chats WHERE id = chat_id
+    SELECT b FROM chats WHERE id = chat_id
   )
 );
 
@@ -208,9 +208,9 @@ ON messages FOR INSERT
 WITH CHECK (
   auth.uid() = sender_id AND
   auth.uid() IN (
-    SELECT user1_id FROM chats WHERE id = chat_id
+    SELECT a FROM chats WHERE id = chat_id
     UNION
-    SELECT user2_id FROM chats WHERE id = chat_id
+    SELECT b FROM chats WHERE id = chat_id
   )
 );
 
@@ -230,22 +230,22 @@ ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
 -- 본인이 참여한 채팅만 조회 가능
 CREATE POLICY "chats_select_own"
 ON chats FOR SELECT
-USING (auth.uid() = user1_id OR auth.uid() = user2_id);
+USING (auth.uid() = a OR auth.uid() = b);
 
 -- 본인이 참여자인 채팅만 생성 가능
 CREATE POLICY "chats_insert_own"
 ON chats FOR INSERT
-WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
+WITH CHECK (auth.uid() = a OR auth.uid() = b);
 
 -- 본인이 참여한 채팅만 업데이트 가능
 CREATE POLICY "chats_update_own"
 ON chats FOR UPDATE
-USING (auth.uid() = user1_id OR auth.uid() = user2_id);
+USING (auth.uid() = a OR auth.uid() = b);
 
 -- 본인이 참여한 채팅만 삭제 가능
 CREATE POLICY "chats_delete_own"
 ON chats FOR DELETE
-USING (auth.uid() = user1_id OR auth.uid() = user2_id);
+USING (auth.uid() = a OR auth.uid() = b);
 
 -- ============================================
 -- STEP 5: transactions - 본인 관련 거래만
