@@ -166,23 +166,33 @@ export const getArtworkDetail = async (artworkId: string, userId?: string): Prom
 
     // 사용자별 좋아요/북마크 상태 확인
     if (userId) {
-      const [likeResult, bookmarkResult] = await Promise.all([
-        supabase
-          .from('likes')
-          .select('*')
-          .eq('artwork_id', artworkId)
-          .eq('user_id', userId)
-          .single(),
-        supabase
-          .from('bookmarks')
-          .select('*')
-          .eq('artwork_id', artworkId)
-          .eq('user_id', userId)
-          .single(),
-      ]);
+      try {
+        const [likeResult, bookmarkResult] = await Promise.all([
+          supabase
+            .from('likes')
+            .select('*')
+            .eq('artwork_id', artworkId)
+            .eq('user_id', userId)
+            .maybeSingle()
+            .then(res => ({ ...res, error: null })) // 406 에러 완전 무시
+            .catch(() => ({ data: null, error: null })),
+          supabase
+            .from('bookmarks')
+            .select('*')
+            .eq('artwork_id', artworkId)
+            .eq('user_id', userId)
+            .maybeSingle()
+            .then(res => ({ ...res, error: null })) // 406 에러 완전 무시
+            .catch(() => ({ data: null, error: null })),
+        ]);
 
-      data.is_liked = !likeResult.error;
-      data.is_bookmarked = !bookmarkResult.error;
+        data.is_liked = !!likeResult.data;
+        data.is_bookmarked = !!bookmarkResult.data;
+      } catch (err) {
+        // 에러 무시 - 기본값 사용
+        data.is_liked = false;
+        data.is_bookmarked = false;
+      }
     }
 
     return data;
