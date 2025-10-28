@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // 하단 버튼 공간 확보
+    paddingBottom: 200, // 하단 버튼 공간 확보 (증가)
   },
   sectionTitle: {
     ...typography.heading,

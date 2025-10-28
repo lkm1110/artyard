@@ -10,6 +10,7 @@ import {
   useColorScheme,
   TouchableOpacity,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -106,7 +107,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
         <View style={styles.headerRight} />
       </View>
 
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {user ? (
           <View style={styles.profileInfo}>
             <View style={[
@@ -248,7 +253,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
             </>
           )}
         </View>
-      </View>
+      </ScrollView>
     </Screen>
   );
 };
@@ -284,8 +289,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
+    paddingBottom: 100, // 하단 여백 확보
   },
   profileInfo: {
     alignItems: 'center',
