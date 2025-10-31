@@ -6,9 +6,15 @@ import { supabase } from './supabase';
 import { useAuthStore } from '../store/authStore';
 
 /**
- * 이미지 압축 유틸리티
+ * 이미지 압축 유틸리티 (웹 전용)
  */
 const compressImage = async (file: Blob, quality: number = 0.8, maxWidth: number = 1920): Promise<Blob> => {
+  // 웹 환경이 아니거나 document가 없으면 원본 반환
+  if (typeof document === 'undefined' || typeof Image === 'undefined') {
+    console.log('⚠️ Canvas API not available (mobile), skipping compression');
+    return file;
+  }
+
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
@@ -36,6 +42,11 @@ const compressImage = async (file: Blob, quality: number = 0.8, maxWidth: number
         'image/jpeg',
         quality
       );
+    };
+    
+    img.onerror = () => {
+      console.warn('⚠️ Image compression failed, using original');
+      resolve(file);
     };
     
     img.src = URL.createObjectURL(file);
@@ -134,7 +145,7 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
         const fileName = `${user.id}/${timestamp}_${randomId}.jpg`;
         console.log('📝 Generated filename:', fileName);
 
-        let fileData: Blob | File;
+        let fileData: Blob | File | ArrayBuffer;
 
         console.log('🔄 Converting image to blob...');
         console.log('📋 Image URI details:', {
@@ -161,32 +172,38 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
         } else {
           // 파일 URI (모바일에서 촬영/선택한 경우)
           console.log('📱 Processing mobile URI');
-          console.log('⏳ Fetching mobile URI data...');
-          const response = await fetch(imageUri);
-          console.log('✅ Fetch response received, converting to blob...');
-          fileData = await response.blob();
-          console.log('✅ URI to blob conversion complete, size:', fileData.size, 'bytes');
+          console.log('⏳ Reading file from URI...');
           
-          // 큰 이미지 압축 (1MB 이상일 경우)
-          if (fileData.size > 1024 * 1024) {
-            console.log('📉 Large image detected, compressing...');
-            fileData = await compressImage(fileData, 0.8, 1920); // 80% 품질, 최대 1920px
-            console.log('✅ Image compressed to:', fileData.size, 'bytes');
+          // React Native에서는 ArrayBuffer를 직접 사용 (Blob polyfill 문제 회피)
+          try {
+            const response = await fetch(imageUri);
+            console.log('✅ Fetch response received');
+            
+            // ArrayBuffer로 변환 (Supabase Storage가 ArrayBuffer를 지원함)
+            fileData = await response.arrayBuffer();
+            console.log('✅ ArrayBuffer conversion complete, size:', fileData.byteLength, 'bytes');
+            
+          } catch (error) {
+            console.error('❌ Failed to convert URI to ArrayBuffer:', error);
+            throw new Error(`Failed to read image file: ${error}`);
           }
         }
 
         console.log('📊 File data details:', {
-          size: fileData.size,
-          type: fileData.type,
-          validSize: fileData.size > 0
+          size: fileData instanceof ArrayBuffer ? fileData.byteLength : fileData.size,
+          type: fileData instanceof ArrayBuffer ? 'ArrayBuffer (image/jpeg)' : fileData.type,
+          validSize: (fileData instanceof ArrayBuffer ? fileData.byteLength : fileData.size) > 0
         });
 
+        // contentType 결정 (ArrayBuffer는 type이 없으므로 명시적으로 설정)
+        const contentType = fileData instanceof ArrayBuffer ? 'image/jpeg' : (fileData.type || 'image/jpeg');
+        
         console.log('📝 Uploading to storage path:', fileName);
         console.log('🪣 Storage bucket: artworks');
         console.log('📤 Upload options:', {
           cacheControl: '3600',
           upsert: false,
-          contentType: fileData.type
+          contentType: contentType
         });
 
         console.log('⏳ Starting Supabase Storage upload...');
@@ -203,7 +220,7 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
                 .upload(fileName, fileData, {
                   cacheControl: '3600',
                   upsert: false,
-                  contentType: fileData.type || 'image/jpeg',
+                  contentType: contentType,
                 });
 
               const timeoutPromise = new Promise((_, reject) =>

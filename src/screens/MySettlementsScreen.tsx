@@ -231,13 +231,26 @@ export const MySettlementsScreen = () => {
     <Screen>
       <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
         {/* Header */}
-        <View style={styles.headerContainer}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+        <View style={[
+          styles.headerContainer,
+          { 
+            backgroundColor: isDark ? colors.darkCard : colors.card,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          }
+        ]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+              ←
+            </Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
             My Settlements
           </Text>
+          <View style={styles.headerSpacer} />
         </View>
 
         {/* Summary */}
@@ -288,19 +301,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerContainer: {
-    padding: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    zIndex: 1000,
   },
   backButton: {
-    marginBottom: spacing.sm,
+    padding: spacing.sm,
+    marginLeft: -spacing.sm,
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  backIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   headerTitle: {
-    ...typography.h2,
-    fontWeight: '700',
+    ...typography.h3,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40,
   },
   summary: {
     padding: spacing.xl,

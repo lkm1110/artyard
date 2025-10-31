@@ -297,21 +297,33 @@ export const AdminDashboardScreen = () => {
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
-    >
+    <View style={{ flex: 1 }}>
       {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+      <View style={[
+        styles.header,
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
+      ]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
+          </Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          🛡️ Admin Dashboard
+          Admin Dashboard
         </Text>
-        <Text style={[styles.headerSubtitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-          Platform management & analytics
-        </Text>
+        <View style={styles.headerSpacer} />
       </View>
+      
+      <ScrollView
+        style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+      >
 
       {/* 통계 카드 */}
       <View style={styles.statsGrid}>
@@ -500,6 +512,7 @@ export const AdminDashboardScreen = () => {
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
+    </View>
   );
 };
 
@@ -517,23 +530,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   header: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    zIndex: 1000,
   },
   backButton: {
-    marginBottom: spacing.md,
+    padding: spacing.sm,
+    marginLeft: -spacing.sm,
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  backIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: spacing.xs,
+    ...typography.h3,
+    fontWeight: '600',
   },
-  headerSubtitle: {
-    fontSize: 14,
+  headerSpacer: {
+    width: 40,
   },
   statsGrid: {
     flexDirection: 'row',

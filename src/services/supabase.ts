@@ -5,41 +5,81 @@
 import { createClient } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Platform } from 'react-native';
-import { storage } from '../utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 환경 변수에서 설정값 가져오기
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
 
-// Supabase 클라이언트 생성 (크로스 플랫폼 세션 저장 설정 포함)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: {
+// 크로스 플랫폼 Storage 설정
+const createStorage = () => {
+  if (Platform.OS === 'web') {
+    // 웹 환경에서는 localStorage 사용
+    return {
       async getItem(key: string) {
         try {
-          return await storage.getItem(key);
+          if (typeof window !== 'undefined' && window.localStorage) {
+            return window.localStorage.getItem(key);
+          }
+          return null;
         } catch {
           return null;
         }
       },
       async setItem(key: string, value: string) {
         try {
-          await storage.setItem(key, value);
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem(key, value);
+          }
         } catch {
           // 실패시 무시
         }
       },
       async removeItem(key: string) {
         try {
-          await storage.removeItem(key);
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.removeItem(key);
+          }
         } catch {
           // 실패시 무시
         }
       },
-    },
+    };
+  } else {
+    // 네이티브 환경에서는 AsyncStorage 직접 사용
+    return {
+      async getItem(key: string) {
+        try {
+          return await AsyncStorage.getItem(key);
+        } catch {
+          return null;
+        }
+      },
+      async setItem(key: string, value: string) {
+        try {
+          await AsyncStorage.setItem(key, value);
+        } catch {
+          // 실패시 무시
+        }
+      },
+      async removeItem(key: string) {
+        try {
+          await AsyncStorage.removeItem(key);
+        } catch {
+          // 실패시 무시
+        }
+      },
+    };
+  }
+};
+
+// Supabase 클라이언트 생성 (올바른 비동기 Storage 사용)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: createStorage(),
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true, // 웹에서 OAuth 콜백 처리를 위해 활성화
+    detectSessionInUrl: Platform.OS === 'web', // 웹에서만 활성화
     flowType: 'pkce', // PKCE 플로우 사용으로 보안 강화
   },
 });

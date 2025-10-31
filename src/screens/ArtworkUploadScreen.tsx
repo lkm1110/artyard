@@ -175,7 +175,7 @@ export const ArtworkUploadScreen: React.FC = () => {
 
   // 웹용 파일 선택
   const pickImageFromWeb = useCallback(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
     const input = document.createElement('input');
     input.type = 'file';
@@ -755,7 +755,11 @@ export const ArtworkUploadScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Text style={[styles.cancelButtonText, { color: isDark ? colors.darkText : colors.text }]}>
+            <Text 
+              style={[styles.cancelButtonText, { color: isDark ? colors.darkText : colors.text }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               Cancel
             </Text>
           </TouchableOpacity>
@@ -773,7 +777,13 @@ export const ArtworkUploadScreen: React.FC = () => {
             disabled={isUploading}
             activeOpacity={0.8}
           >
-            <Text style={styles.uploadButtonText}>
+            <Text 
+              style={styles.uploadButtonText}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              adjustsFontSizeToFit={true}
+              minimumFontScale={0.85}
+            >
               {isUploading ? 'Uploading...' : 'Upload Artwork'}
             </Text>
           </TouchableOpacity>
@@ -786,27 +796,33 @@ export const ArtworkUploadScreen: React.FC = () => {
               <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
                 Select Medium
               </Text>
-              {MATERIAL_OPTIONS.map((material) => (
-                <TouchableOpacity
-                  key={material}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    updateField('material', material);
-                    setShowMaterialPicker(false);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[
-                    styles.pickerOptionText,
-                    { 
-                      color: formData.material === material ? colors.primary : (isDark ? colors.darkText : colors.text),
-                      fontWeight: formData.material === material ? '600' : '400',
-                    }
-                  ]}>
-                    {material}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <ScrollView 
+                style={styles.pickerScrollView}
+                showsVerticalScrollIndicator={true}
+                bounces={false}
+              >
+                {MATERIAL_OPTIONS.map((material) => (
+                  <TouchableOpacity
+                    key={material}
+                    style={styles.pickerOption}
+                    onPress={() => {
+                      updateField('material', material);
+                      setShowMaterialPicker(false);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[
+                      styles.pickerOptionText,
+                      { 
+                        color: formData.material === material ? colors.primary : (isDark ? colors.darkText : colors.text),
+                        fontWeight: formData.material === material ? '600' : '400',
+                      }
+                    ]}>
+                      {material}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowMaterialPicker(false)}
@@ -827,27 +843,33 @@ export const ArtworkUploadScreen: React.FC = () => {
               <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
                 Select Category
               </Text>
-              {CATEGORY_OPTIONS.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    updateField('category', category);
-                    setShowCategoryPicker(false);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[
-                    styles.pickerOptionText,
-                    { 
-                      color: formData.category === category ? colors.primary : (isDark ? colors.darkText : colors.text),
-                      fontWeight: formData.category === category ? '600' : '400',
-                    }
-                  ]}>
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <ScrollView 
+                style={styles.pickerScrollView}
+                showsVerticalScrollIndicator={true}
+                bounces={false}
+              >
+                {CATEGORY_OPTIONS.map((category) => (
+                  <TouchableOpacity
+                    key={category}
+                    style={styles.pickerOption}
+                    onPress={() => {
+                      updateField('category', category);
+                      setShowCategoryPicker(false);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[
+                      styles.pickerOptionText,
+                      { 
+                        color: formData.category === category ? colors.primary : (isDark ? colors.darkText : colors.text),
+                        fontWeight: formData.category === category ? '600' : '400',
+                      }
+                    ]}>
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowCategoryPicker(false)}
@@ -1023,9 +1045,13 @@ const styles = StyleSheet.create({
   },
   pickerModal: {
     width: screenWidth * 0.8,
-    maxHeight: screenWidth * 1.2,
+    maxHeight: screenWidth * 1.2, // 최대 높이 제한
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
+    overflow: 'hidden', // 스크롤 가능하도록
+  },
+  pickerScrollView: {
+    maxHeight: screenWidth * 0.9, // 모달 내용이 스크롤 가능하도록
   },
   modalTitle: {
     ...typography.heading,
@@ -1059,17 +1085,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    paddingBottom: spacing.xl + spacing.lg, // 하단 네비게이션을 피하기 위해 추가 여백
+    paddingBottom: spacing.lg, // 적절한 하단 여백
     borderTopWidth: 1,
     gap: spacing.md,
   },
   bottomButton: {
     flex: 1,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md + 6, // 패딩 더 증가
+    paddingHorizontal: spacing.md, // 좌우 패딩 증가
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 50, // 고정 높이로 변경
+    minHeight: 56, // 최소 높이 더 증가
+    overflow: 'hidden', // 텍스트가 밖으로 나가지 않도록
     ...shadows.sm,
   },
   cancelButton: {
@@ -1082,12 +1110,18 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     ...typography.button,
+    fontSize: 15, // 폰트 크기 명시
     fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20, // 라인 높이 명시
   },
   uploadButtonText: {
     ...typography.button,
+    fontSize: 15, // 폰트 크기 명시
     color: colors.white,
     fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20, // 라인 높이 명시
   },
   // 사이즈 입력 필드 관련 스타일
   sizeRow: {

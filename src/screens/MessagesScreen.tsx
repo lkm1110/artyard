@@ -192,22 +192,36 @@ export const MessagesScreen: React.FC = () => {
     <Screen style={styles.container}>
       <View style={[
         styles.header,
-        { borderBottomColor: isDark ? colors.darkBorder : colors.border }
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
       ]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
+          </Text>
+        </TouchableOpacity>
         <Text style={[
           styles.headerTitle,
           { color: isDark ? colors.darkText : colors.text }
         ]}>
           Messages
         </Text>
-        {chats.length > 0 && (
-          <Text style={[
-            styles.chatCount,
-            { color: isDark ? colors.darkTextMuted : colors.textMuted }
-          ]}>
-            {chats.length} chat{chats.length === 1 ? '' : 's'}
-          </Text>
-        )}
+        <View style={styles.headerSpacer}>
+          {chats.length > 0 && (
+            <Text style={[
+              styles.chatCount,
+              { color: isDark ? colors.darkTextMuted : colors.textMuted }
+            ]}>
+              {chats.length}
+            </Text>
+          )}
+        </View>
       </View>
 
       <FlatList
@@ -241,10 +255,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
+    // backgroundColor와 borderBottomColor는 동적으로 설정됨
+    zIndex: 1000,
+  },
+  backButton: {
+    padding: spacing.sm,
+    marginLeft: -spacing.sm,
+  },
+  backIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   headerTitle: {
-    ...typography.h2,
-    fontWeight: 'bold',
+    ...typography.h3,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40, // backButton과 동일한 너비로 중앙 정렬
+    alignItems: 'flex-end',
   },
   chatCount: {
     ...typography.caption,

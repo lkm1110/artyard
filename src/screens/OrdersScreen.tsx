@@ -288,16 +288,32 @@ export const OrdersScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
       {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+      <View style={[
+        styles.header,
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
+      ]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
+          </Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
           My Orders
         </Text>
-        <Text style={[styles.headerSubtitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-          {orders.length} total orders
-        </Text>
+        <View style={styles.headerSpacer}>
+          {orders.length > 0 && (
+            <Text style={[styles.orderCount, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+              {orders.length}
+            </Text>
+          )}
+        </View>
       </View>
 
       {/* 필터 */}
@@ -385,23 +401,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    zIndex: 1000,
   },
   backButton: {
-    marginBottom: spacing.md,
+    padding: spacing.sm,
+    marginLeft: -spacing.sm,
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerTitle: {
+  backIcon: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: spacing.xs,
   },
-  headerSubtitle: {
-    fontSize: 14,
+  headerTitle: {
+    ...typography.h3,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40,
+    alignItems: 'flex-end',
+  },
+  orderCount: {
+    ...typography.caption,
+    fontWeight: '500',
   },
   filterContainer: {
     flexDirection: 'row',

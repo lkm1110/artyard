@@ -15,7 +15,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
-import { ModernFilterModal } from './ModernFilterModal';
 import { ArtworkCard } from './ArtworkCard';
 import { Button } from './Button';
 import { searchArtworksAdvanced } from '../services/advancedFilterService';
@@ -43,7 +42,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<AdvancedFilter>({});
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
   
   // 검색 실행
   useEffect(() => {
@@ -82,11 +80,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
     } finally {
       setIsSearching(false);
     }
-  };
-
-  const handleFilterApply = (filter: AdvancedFilter) => {
-    setCurrentFilter(filter);
-    setFilterModalVisible(false);
   };
 
   const handleArtworkPress = (artwork: ExtendedArtwork) => {
@@ -164,23 +157,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               </TouchableOpacity>
             )}
           </View>
-          
-          {/* 고급 필터 버튼 */}
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              { backgroundColor: isDark ? colors.darkCard : colors.card }
-            ]}
-            onPress={() => setFilterModalVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={[
-              styles.filterIcon,
-              { color: isDark ? colors.darkText : colors.text }
-            ]}>
-              📊
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* 검색 결과 영역 */}
@@ -270,14 +246,6 @@ export const SearchModal: React.FC<SearchModalProps> = ({
           )}
         </View>
       </View>
-      
-      {/* 고급 필터 모달 */}
-      <ModernFilterModal
-        visible={filterModalVisible}
-        onClose={() => setFilterModalVisible(false)}
-        onApplyFilter={handleFilterApply}
-        initialFilter={currentFilter}
-      />
     </Modal>
   );
 };

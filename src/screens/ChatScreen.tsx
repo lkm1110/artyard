@@ -608,8 +608,41 @@ export const ChatScreen: React.FC = () => {
                 'Chat Options',
                 `Options for conversation with ${otherUser?.handle || 'this user'}`,
                 [
-                  { text: 'View Profile', onPress: () => console.log('View profile') },
-                  { text: 'Report User', style: 'destructive', onPress: () => console.log('Report user') },
+                  { 
+                    text: 'View Profile', 
+                    onPress: () => {
+                      console.log('Navigating to profile:', otherUser?.id);
+                      if (otherUser?.id) {
+                        navigation.navigate('Profile' as any, { userId: otherUser.id });
+                      }
+                    }
+                  },
+                  { 
+                    text: 'Report User', 
+                    style: 'destructive', 
+                    onPress: () => {
+                      console.log('Report user:', otherUser?.id);
+                      Alert.alert(
+                        'Report User',
+                        'Please provide a reason for reporting this user.',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          { 
+                            text: 'Spam', 
+                            onPress: () => console.log('Reported as spam') 
+                          },
+                          { 
+                            text: 'Inappropriate Content', 
+                            onPress: () => console.log('Reported as inappropriate') 
+                          },
+                          { 
+                            text: 'Other', 
+                            onPress: () => console.log('Reported as other') 
+                          },
+                        ]
+                      );
+                    }
+                  },
                   { text: 'Cancel', style: 'cancel' },
                 ]
               );

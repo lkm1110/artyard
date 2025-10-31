@@ -11,13 +11,16 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getActiveChallenges, getChallenges } from '../services/challengeService';
 import { Challenge, getChallengeStatusLabel } from '../types/complete-system';
+import { colors, spacing, typography, borderRadius } from '../constants/theme';
 
 export const ChallengesScreen = () => {
   const navigation = useNavigation();
+  const isDark = useColorScheme() === 'dark';
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'active' | 'ended' | 'all'>('active');
@@ -51,9 +54,9 @@ export const ChallengesScreen = () => {
     const diffMs = end.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return '종료';
-    if (diffDays === 0) return '오늘 마감';
-    return `${diffDays}일 남음`;
+    if (diffDays < 0) return 'Ended';
+    if (diffDays === 0) return 'Ends today';
+    return `${diffDays} days left`;
   };
   
   const renderChallenge = ({ item }: { item: Challenge }) => {
@@ -87,15 +90,15 @@ export const ChallengesScreen = () => {
         
         <View style={styles.challengeStats}>
           <View style={styles.stat}>
-            <Text style={styles.statLabel}>참여자</Text>
-            <Text style={styles.statValue}>{item.participants_count}명</Text>
+            <Text style={styles.statLabel}>Participants</Text>
+            <Text style={styles.statValue}>{item.participants_count}</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statLabel}>작품</Text>
-            <Text style={styles.statValue}>{item.entries_count}개</Text>
+            <Text style={styles.statLabel}>Entries</Text>
+            <Text style={styles.statValue}>{item.entries_count}</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statLabel}>기간</Text>
+            <Text style={styles.statLabel}>Duration</Text>
             <Text style={[
               styles.statValue,
               !isActive && styles.statValueEnded,
@@ -116,30 +119,47 @@ export const ChallengesScreen = () => {
   
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E91E63" />
+      <View style={[styles.loadingContainer, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
   
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
       {/* Header */}
-      <View style={styles.headerContainer}>
+      <View style={[
+        styles.headerContainer,
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
+      ]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
+          </Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Challenges</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+          Challenges
+        </Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* 필터 */}
-      <View style={styles.filterContainer}>
+      <View style={[
+        styles.filterContainer,
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
+      ]}>
         <TouchableOpacity
           style={[styles.filterButton, filter === 'active' && styles.filterButtonActive]}
           onPress={() => setFilter('active')}
         >
           <Text style={[styles.filterText, filter === 'active' && styles.filterTextActive]}>
-            진행 중
+            Active
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -147,7 +167,7 @@ export const ChallengesScreen = () => {
           onPress={() => setFilter('ended')}
         >
           <Text style={[styles.filterText, filter === 'ended' && styles.filterTextActive]}>
-            종료됨
+            Ended
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -155,7 +175,7 @@ export const ChallengesScreen = () => {
           onPress={() => setFilter('all')}
         >
           <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-            전체
+            All
           </Text>
         </TouchableOpacity>
       </View>
@@ -169,9 +189,11 @@ export const ChallengesScreen = () => {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>🏆</Text>
-            <Text style={styles.emptyTitle}>Challenge가 없습니다</Text>
-            <Text style={styles.emptySubtitle}>
-              곧 새로운 Challenge가 시작됩니다!
+            <Text style={[styles.emptyTitle, { color: isDark ? colors.darkText : colors.text }]}>
+              No Challenges Available
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+              New challenges will be starting soon!
             </Text>
           </View>
         }
@@ -183,7 +205,7 @@ export const ChallengesScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor는 동적으로 설정됨
   },
   loadingContainer: {
     flex: 1,
@@ -191,38 +213,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerContainer: {
-    padding: 16,
-    paddingTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    zIndex: 1000,
   },
   backButton: {
-    marginBottom: 8,
+    padding: spacing.sm,
+    marginLeft: -spacing.sm,
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E91E63',
+  backIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    ...typography.h3,
+    fontWeight: '600',
+    // color는 동적으로 설정됨
+  },
+  headerSpacer: {
+    width: 40, // backButton과 동일한 너비로 중앙 정렬
   },
   
   // 필터
   filterContainer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    // backgroundColor와 borderBottomColor는 동적으로 설정됨
   },
   filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#F5F5F5',
+    marginRight: spacing.sm,
   },
   filterButtonActive: {
     backgroundColor: '#E91E63',
@@ -340,12 +370,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    // color는 동적으로 설정됨
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#999',
+    // color는 동적으로 설정됨
   },
 });
 

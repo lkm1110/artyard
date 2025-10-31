@@ -5,7 +5,7 @@
 
 import * as AuthSession from 'expo-auth-session';
 import { makeRedirectUri } from 'expo-auth-session';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 
 // 환경 변수
@@ -157,7 +157,7 @@ const handleSocialSignIn = async (provider: 'naver' | 'kakao', userData: any, ac
       timestamp: Date.now(),
     };
     
-    await SecureStore.setItemAsync('social_session', JSON.stringify(sessionData));
+    await AsyncStorage.setItem('social_session', JSON.stringify(sessionData));
     
     // TODO: 실제 구현시에는 Supabase에 커스텀 토큰으로 로그인 처리
     // 또는 서버에서 JWT 토큰 생성하여 Supabase 로그인
@@ -175,7 +175,7 @@ const handleSocialSignIn = async (provider: 'naver' | 'kakao', userData: any, ac
  */
 export const getSocialSession = async () => {
   try {
-    const sessionString = await SecureStore.getItemAsync('social_session');
+    const sessionString = await AsyncStorage.getItem('social_session');
     if (sessionString) {
       return JSON.parse(sessionString);
     }
@@ -191,7 +191,7 @@ export const getSocialSession = async () => {
  */
 export const signOutSocial = async () => {
   try {
-    await SecureStore.deleteItemAsync('social_session');
+    await AsyncStorage.removeItem('social_session');
   } catch (error) {
     console.error('소셜 로그아웃 오류:', error);
   }

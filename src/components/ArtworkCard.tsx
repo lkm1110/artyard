@@ -3,7 +3,7 @@
  * 피드에서 사용되는 작품 정보 카드
  */
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   StyleSheet,
   useColorScheme,
   Dimensions,
+  ScrollView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import type { Artwork } from '../types';
@@ -26,7 +29,7 @@ interface ArtworkCardProps {
 }
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - (spacing.lg * 2);
+const CARD_WIDTH = width; // 화면 전체 너비
 const IMAGE_HEIGHT = CARD_WIDTH * 0.75; // 4:3 비율
 
 export const ArtworkCard: React.FC<ArtworkCardProps> = ({
@@ -38,6 +41,14 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
   onShare,
 }) => {
   const isDark = useColorScheme() === 'dark';
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / CARD_WIDTH);
+    setCurrentImageIndex(index);
+  };
 
   const cardStyle = [
     styles.container,
@@ -49,14 +60,53 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
 
   return (
     <TouchableOpacity style={cardStyle} onPress={onPress} activeOpacity={0.9}>
-      {/* 작품 이미지 */}
+      {/* 작품 이미지 슬라이더 */}
       <View style={styles.imageContainer}>
         {artwork.images && artwork.images.length > 0 ? (
-          <Image 
-            source={{ uri: artwork.images[0] }} 
-            style={styles.image}
-            resizeMode="cover"
-          />
+          <>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              style={styles.imageScrollView}
+            >
+              {artwork.images.map((imageUrl, index) => (
+                <Image 
+                  key={index}
+                  source={{ uri: imageUrl }} 
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+            
+            {/* 이미지 개수 및 페이지 표시 */}
+            {artwork.images.length > 1 && (
+              <View style={styles.imageCount}>
+                <Text style={styles.imageCountText}>
+                  {currentImageIndex + 1}/{artwork.images.length}
+                </Text>
+              </View>
+            )}
+            
+            {/* 페이지 인디케이터 (점) */}
+            {artwork.images.length > 1 && (
+              <View style={styles.paginationDots}>
+                {artwork.images.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.dot,
+                      index === currentImageIndex && styles.dotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+          </>
         ) : (
           <View style={[
             styles.placeholderImage,
@@ -67,15 +117,6 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               { color: isDark ? colors.darkTextMuted : colors.textMuted }
             ]}>
               No Image
-            </Text>
-          </View>
-        )}
-        
-        {/* 이미지 개수 표시 */}
-        {artwork.images && artwork.images.length > 1 && (
-          <View style={styles.imageCount}>
-            <Text style={styles.imageCountText}>
-              1/{artwork.images.length}
             </Text>
           </View>
         )}
@@ -222,18 +263,23 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: spacing.lg,
+    marginHorizontal: 0, // 화면 꽉 채우기
     marginVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
+    borderRadius: 0, // 모서리 둥글기 제거
     overflow: 'hidden',
   },
   imageContainer: {
     position: 'relative',
     height: IMAGE_HEIGHT,
+    overflow: 'hidden',
+  },
+  imageScrollView: {
+    width: CARD_WIDTH,
+    height: IMAGE_HEIGHT,
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: CARD_WIDTH,
+    height: IMAGE_HEIGHT,
   },
   placeholderImage: {
     width: '100%',
@@ -257,6 +303,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: typography.caption.fontSize,
     fontWeight: '500',
+  },
+  paginationDots: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    marginHorizontal: 2,
+  },
+  dotActive: {
+    backgroundColor: '#FFFFFF',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   content: {
     padding: spacing.lg,

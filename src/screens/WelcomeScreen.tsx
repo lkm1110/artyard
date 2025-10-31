@@ -45,7 +45,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
             styles.subtitle,
             { color: isDark ? colors.darkTextMuted : colors.textMuted }
           ]}>
-            The art community for college students{'\n'}
+            The art community for artists{'\n'}
             Share and discover amazing artworks
           </Text>
         </View>

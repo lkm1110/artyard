@@ -6,12 +6,15 @@
 import React, { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import Constants from 'expo-constants';
 import { queryClient } from './src/utils/queryClient';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import AIOrchestrationService from './src/services/ai/aiOrchestrationService';
-import { DebugLogger } from './src/components/DebugLogger';
 import { PermissionsHandler } from './src/components/PermissionsHandler';
 import { PushNotificationConsent } from './src/components/PushNotificationConsent';
+
+// Expo Go 환경 체크
+const isExpoGo = Constants.appOwnership === 'expo';
 
 export default function App() {
   // AI 시스템 초기화
@@ -55,9 +58,9 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <StatusBar style="auto" />
       <PermissionsHandler />
-      <PushNotificationConsent />
+      {/* Expo Go에서는 푸시 알림 미지원 (SDK 53+) */}
+      {!isExpoGo && <PushNotificationConsent />}
       <RootNavigator />
-      <DebugLogger />
     </QueryClientProvider>
   );
 }

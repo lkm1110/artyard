@@ -96,7 +96,7 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
       console.log('📤 공유 시작:', artwork.title);
       
       // 공유할 메시지 구성
-      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Join the college art community: https://artyard.app`;
+      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Join the art community: https://artyard.app`;
       
       const shareOptions = {
         message: shareMessage,
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {
-    padding: 16,
+    paddingVertical: 0, // 화면 꽉 채우기 위해 padding 제거
   },
   emptyList: {
     flex: 1,

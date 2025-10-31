@@ -246,6 +246,28 @@ export const NotificationsScreen: React.FC = () => {
 
   return (
     <Screen>
+      {/* 헤더 (뒤로가기 버튼 포함) */}
+      <View style={[
+        styles.screenHeader,
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? colors.darkBorder : colors.border,
+        }
+      ]}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={[styles.backButtonText, { color: colors.primary }]}>
+            ← Back
+          </Text>
+        </TouchableOpacity>
+        <Text style={[styles.screenTitle, { color: isDark ? colors.darkText : colors.text }]}>
+          Notifications
+        </Text>
+      </View>
+      
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
@@ -276,6 +298,27 @@ export const NotificationsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  screenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    gap: spacing.md,
+  },
+  backButton: {
+    paddingVertical: spacing.xs,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  screenTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    flex: 1,
+  },
   emptyContainer: {
     flex: 1,
   },

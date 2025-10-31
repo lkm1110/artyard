@@ -3,7 +3,13 @@
  */
 
 import { Platform, Linking } from 'react-native';
+import Constants from 'expo-constants';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase';
+
+// WebBrowser 세션 완료 처리 (iOS에서 필요)
+WebBrowser.maybeCompleteAuthSession();
 
 // OAuth 제공자별 설정
 const OAUTH_CONFIGS = {
@@ -32,11 +38,19 @@ const createSupabaseOAuthUrl = (provider: string, options?: { scope?: string }) 
   let nativeRedirectUri: string;
   
   if (Platform.OS === 'ios' || Platform.OS === 'android') {
-    // 모바일: Deep Link 사용
-    nativeRedirectUri = 'artyard://auth-callback';
+    // 모바일: 개발에서는 exp scheme, 프로덕션에서는 artyard scheme
+    if (__DEV__ && Constants.expoConfig?.hostUri) {
+      const hostUri = Constants.expoConfig.hostUri;
+      nativeRedirectUri = `exp://${hostUri}/auth-callback`;
+      console.log('🔧 개발 환경, exp scheme 사용:', nativeRedirectUri);
+    } else {
+      nativeRedirectUri = 'artyard://auth-callback';
+      console.log('🏗️ 프로덕션 환경, artyard scheme 사용:', nativeRedirectUri);
+    }
   } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    // 웹: 현재 도메인 사용
+    // 웹: 현재 도메인 사용  
     nativeRedirectUri = window.location.origin;
+    console.log('🌐 웹 환경 감지, window.location.origin 사용:', nativeRedirectUri);
   } else {
     // 기본값: Supabase 콜백
     nativeRedirectUri = `${supabaseUrl}/auth/v1/callback`;
@@ -46,6 +60,9 @@ const createSupabaseOAuthUrl = (provider: string, options?: { scope?: string }) 
   console.log('🔗 Supabase URL:', supabaseUrl);
   console.log('🔄 Redirect URI:', nativeRedirectUri);
   console.log('📱 Platform:', Platform.OS);
+  console.log('🔧 __DEV__:', __DEV__);
+  console.log('🔧 Constants.expoConfig?.hostUri:', Constants.expoConfig?.hostUri);
+  console.log('🔧 typeof window:', typeof window);
   
   const params = new URLSearchParams({
     provider: provider,
@@ -65,7 +82,7 @@ const createSupabaseOAuthUrl = (provider: string, options?: { scope?: string }) 
 };
 
 /**
- * 네이티브 Google OAuth
+ * 네이티브 Google OAuth (Expo AuthSession 사용)
  */
 export const signInWithGoogleNative = async () => {
   try {
@@ -83,21 +100,145 @@ export const signInWithGoogleNative = async () => {
       return { data, error };
     }
 
-    // 네이티브에서는 OAuth URL을 직접 생성해서 브라우저로 열기
-    console.log('📱 Opening Google OAuth in Safari...');
+    // 네이티브에서는 AuthSession 사용
+    console.log('📱 Using Expo AuthSession for Google OAuth...');
     
-    const oauthUrl = createSupabaseOAuthUrl('google');
-    console.log('🌐 OAuth URL:', oauthUrl);
+    // 1. Redirect URI 생성 (Expo Go에서는 exp:// scheme 사용)
+    const redirectUri = __DEV__ 
+      ? AuthSession.makeRedirectUri({
+          scheme: undefined, // Expo Go의 기본 exp:// scheme 사용
+          path: 'auth-callback',
+        })
+      : AuthSession.makeRedirectUri({
+          scheme: 'artyard',
+          path: 'auth-callback',
+        });
     
-    // Safari에서 OAuth 페이지 열기
-    const canOpen = await Linking.canOpenURL(oauthUrl);
-    if (canOpen) {
-      await Linking.openURL(oauthUrl);
-      console.log('✅ Safari opened with Google OAuth URL');
-      return { data: { url: oauthUrl }, error: null };
-    } else {
-      throw new Error('Cannot open OAuth URL');
+    console.log('🔗 AuthSession Redirect URI:', redirectUri);
+    console.log('🔍 __DEV__:', __DEV__);
+    
+    // 2. Supabase OAuth URL 생성
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUri,
+        skipBrowserRedirect: true,
+      },
+    });
+    
+    if (error || !data?.url) {
+      console.error('❌ OAuth URL 생성 실패:', error);
+      return { data: null, error: error || new Error('No OAuth URL generated') };
     }
+    
+    console.log('🌐 OAuth URL:', data.url);
+    console.log('🔗 Expected redirect back to:', redirectUri);
+    
+    // 3. AuthSession으로 브라우저 열기 (자동으로 앱으로 돌아옴)
+    console.log('⏳ Opening browser with AuthSession...');
+    
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectUri
+      );
+      
+      console.log('📱 AuthSession result type:', result.type);
+      console.log('📱 AuthSession full result:', JSON.stringify(result));
+      
+      if (result.type === 'success' && result.url) {
+        console.log('✅ OAuth 성공! Callback URL:', result.url);
+        
+        // URL에서 code 추출
+        try {
+          const url = new URL(result.url);
+          const code = url.searchParams.get('code');
+          const error = url.searchParams.get('error');
+          const errorDescription = url.searchParams.get('error_description');
+          
+          if (error) {
+            console.error('❌ OAuth 에러:', error, errorDescription);
+            return { data: null, error: new Error(`OAuth error: ${error} - ${errorDescription}`) };
+          }
+          
+          if (!code) {
+            console.error('❌ Authorization code가 없습니다');
+            return { data: null, error: new Error('No authorization code received') };
+          }
+          
+          console.log('🔑 Authorization code 받음:', code.substring(0, 20) + '...');
+          
+          // Code를 세션으로 교환 (타임아웃 추가)
+          console.log('🔄 [Google] exchangeCodeForSession 호출 시작...');
+          
+          // 타임아웃 Promise 생성 (10초)
+          const timeoutPromise = new Promise<{ data: any; error: any }>((_, reject) => {
+            setTimeout(() => reject(new Error('exchangeCodeForSession timeout (10s)')), 10000);
+          });
+          
+          // exchangeCodeForSession과 타임아웃 경쟁
+          let sessionData, sessionError;
+          try {
+            const result = await Promise.race([
+              supabase.auth.exchangeCodeForSession(code),
+              timeoutPromise
+            ]);
+            sessionData = result.data;
+            sessionError = result.error;
+          } catch (timeoutError: any) {
+            console.error('❌ [Google] exchangeCodeForSession 타임아웃!');
+            console.error('❌ [Google] 타임아웃 에러:', timeoutError.message);
+            
+            // 타임아웃이지만 SIGNED_IN 이벤트가 발생했을 수 있으므로 계속 진행
+            // authStore의 onAuthStateChange가 처리함
+            console.log('⚠️ [Google] 타임아웃이지만 onAuthStateChange가 처리할 것입니다.');
+            return { data: null, error: timeoutError };
+          }
+          
+          if (sessionError) {
+            console.error('❌ [Google] 세션 교환 실패:', sessionError);
+            console.error('❌ [Google] Error code:', sessionError.code);
+            console.error('❌ [Google] Error message:', sessionError.message);
+            console.error('❌ [Google] Error details:', JSON.stringify(sessionError));
+            return { data: null, error: sessionError };
+          }
+          
+          if (!sessionData || !sessionData.session) {
+            console.error('❌ [Google] 세션 데이터가 없습니다');
+            return { data: null, error: new Error('No session data received') };
+          }
+          
+          console.log('🎉 [Google] 로그인 성공!', sessionData.user?.email);
+          console.log('✅ [Google] Session ID:', sessionData.session.access_token.substring(0, 20) + '...');
+          
+          // ⚠️ authStore.initialize() 제거 - SIGNED_IN 이벤트가 자동으로 처리
+          // 중복 호출을 방지하여 더 빠르고 부드러운 로그인 경험 제공
+          console.log('✅ [Google] onAuthStateChange가 자동으로 처리합니다.');
+          
+          return { data: sessionData, error: null };
+          
+        } catch (urlError) {
+          console.error('❌ URL 파싱 에러:', urlError);
+          return { data: null, error: urlError as Error };
+        }
+      }
+      
+      // dismiss, cancel, locked 등
+      console.error('❌ OAuth 실패 또는 취소:', result.type);
+      
+      if (result.type === 'dismiss') {
+        console.error('🚫 브라우저가 OAuth 완료 전에 닫혔습니다');
+        console.error('💡 Supabase Redirect URL에 다음 URL이 등록되어 있는지 확인하세요:');
+        console.error('   ', redirectUri);
+      }
+      
+      return { data: null, error: new Error(`OAuth ${result.type}`) };
+      
+    } catch (browserError) {
+      console.error('❌ AuthSession 에러:', browserError);
+      return { data: null, error: browserError as Error };
+    }
+    
   } catch (error) {
     console.error('❌ Google OAuth error:', error);
     return { data: null, error: error as Error };
@@ -168,20 +309,124 @@ export const signInWithFacebookNative = async () => {
       return { data, error };
     }
 
-    // 네이티브에서는 OAuth URL을 직접 생성해서 브라우저로 열기
-    console.log('📱 Opening Facebook OAuth in Safari...');
+    // 네이티브에서는 AuthSession 사용
+    console.log('📱 Using Expo AuthSession for Facebook OAuth...');
     
-    const oauthUrl = createSupabaseOAuthUrl('facebook');
-    console.log('🌐 Facebook OAuth URL:', oauthUrl);
+    // 1. Expo Go용 redirect URI 생성 (exp:// scheme)
+    const expRedirectUri = __DEV__ 
+      ? AuthSession.makeRedirectUri({
+          scheme: undefined, // Expo Go의 기본 exp:// scheme 사용
+          path: 'auth-callback',
+        })
+      : 'artyard://auth-callback';
     
-    // Safari에서 OAuth 페이지 열기
-    const canOpen = await Linking.canOpenURL(oauthUrl);
-    if (canOpen) {
-      await Linking.openURL(oauthUrl);
-      console.log('✅ Safari opened with Facebook OAuth URL');
-      return { data: { url: oauthUrl }, error: null };
-    } else {
-      throw new Error('Cannot open Facebook OAuth URL');
+    console.log('🔗 Expo Redirect URI:', expRedirectUri);
+    
+    // 2. Supabase OAuth URL 생성 (exp:// URI로 redirect)
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        redirectTo: expRedirectUri, // exp:// URL로 변경!
+        skipBrowserRedirect: true,
+      },
+    });
+    
+    if (error || !data?.url) {
+      console.error('❌ Facebook OAuth URL 생성 실패:', error);
+      return { data: null, error: error || new Error('No OAuth URL generated') };
+    }
+    
+    console.log('🌐 Facebook OAuth URL:', data.url);
+    console.log('🔗 Expected redirect back to:', expRedirectUri);
+    
+    // 3. AuthSession으로 브라우저 열기 (exp:// URL로 돌아옴)
+    console.log('⏳ Opening browser with AuthSession...');
+    
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        expRedirectUri // exp:// URL 사용!
+      );
+      
+      console.log('📱 AuthSession result type:', result.type);
+      console.log('📱 AuthSession full result:', JSON.stringify(result));
+      
+      if (result.type === 'success' && result.url) {
+        console.log('✅ Facebook OAuth 성공! Callback URL:', result.url);
+        
+        // URL에서 code 추출
+        try {
+          const url = new URL(result.url);
+          const code = url.searchParams.get('code');
+          const error = url.searchParams.get('error');
+          const errorDescription = url.searchParams.get('error_description');
+          
+          if (error) {
+            console.error('❌ Facebook OAuth 에러:', error, errorDescription);
+            return { data: null, error: new Error(`OAuth error: ${error} - ${errorDescription}`) };
+          }
+          
+          if (!code) {
+            console.error('❌ Authorization code 없음');
+            return { data: null, error: new Error('No authorization code received') };
+          }
+          
+          console.log('🔑 Authorization code 받음:', code.substring(0, 20) + '...');
+          console.log('🔄 [Facebook] exchangeCodeForSession 호출 시작...');
+          
+          // 타임아웃 Promise 생성 (10초)
+          const timeoutPromise = new Promise<{ data: any; error: any }>((_, reject) => {
+            setTimeout(() => reject(new Error('exchangeCodeForSession timeout (10s)')), 10000);
+          });
+          
+          // exchangeCodeForSession과 타임아웃 경쟁
+          let sessionData, sessionError;
+          try {
+            const result = await Promise.race([
+              supabase.auth.exchangeCodeForSession(code),
+              timeoutPromise
+            ]);
+            sessionData = result.data;
+            sessionError = result.error;
+          } catch (timeoutError: any) {
+            console.error('❌ [Facebook] exchangeCodeForSession 타임아웃!');
+            console.error('❌ [Facebook] 타임아웃 에러:', timeoutError.message);
+            console.log('⚠️ [Facebook] 타임아웃이지만 onAuthStateChange가 처리할 것입니다.');
+            return { data: null, error: timeoutError };
+          }
+          
+          if (sessionError) {
+            console.error('❌ [Facebook] 세션 교환 실패:', sessionError);
+            console.error('❌ [Facebook] Error code:', sessionError.code);
+            console.error('❌ [Facebook] Error message:', sessionError.message);
+            console.error('❌ [Facebook] Error details:', JSON.stringify(sessionError));
+            return { data: null, error: sessionError };
+          }
+          
+          if (!sessionData || !sessionData.session) {
+            console.error('❌ [Facebook] 세션 데이터가 없습니다');
+            return { data: null, error: new Error('No session data received') };
+          }
+          
+          console.log('🎉 [Facebook] 로그인 성공!', sessionData.user?.email);
+          console.log('✅ [Facebook] Session ID:', sessionData.session.access_token.substring(0, 20) + '...');
+          console.log('✅ [Facebook] onAuthStateChange가 자동으로 처리합니다.');
+          
+          return { data: sessionData, error: null };
+        } catch (urlError) {
+          console.error('❌ [Facebook] URL 파싱 실패:', urlError);
+          return { data: null, error: urlError as Error };
+        }
+      } else if (result.type === 'cancel') {
+        console.log('❌ [Facebook] 사용자가 취소함');
+        return { data: null, error: new Error('User cancelled') };
+      } else {
+        console.error('❌ [Facebook] AuthSession 실패:', result.type);
+        return { data: null, error: new Error(`AuthSession failed: ${result.type}`) };
+      }
+    } catch (browserError) {
+      console.error('❌ [Facebook] 브라우저 열기 실패:', browserError);
+      return { data: null, error: browserError as Error };
     }
   } catch (error) {
     console.error('❌ Facebook OAuth error:', error);
@@ -190,7 +435,7 @@ export const signInWithFacebookNative = async () => {
 };
 
 /**
- * 네이티브 Apple OAuth
+ * 네이티브 Apple OAuth (Expo AuthSession 사용)
  */
 export const signInWithAppleNative = async () => {
   try {
@@ -208,21 +453,122 @@ export const signInWithAppleNative = async () => {
       return { data, error };
     }
 
-    // 네이티브에서는 OAuth URL을 직접 생성해서 브라우저로 열기
-    console.log('📱 Opening Apple OAuth in Safari...');
+    // 네이티브에서는 AuthSession 사용
+    console.log('📱 Using Expo AuthSession for Apple OAuth...');
     
-    const oauthUrl = createSupabaseOAuthUrl('apple');
-    console.log('🌐 Apple OAuth URL:', oauthUrl);
+    // 1. Redirect URI 생성 (Expo Go에서는 exp:// scheme 사용)
+    const redirectUri = __DEV__ 
+      ? AuthSession.makeRedirectUri({
+          scheme: undefined, // Expo Go의 기본 exp:// scheme 사용
+          path: 'auth-callback',
+        })
+      : AuthSession.makeRedirectUri({
+          scheme: 'artyard',
+          path: 'auth-callback',
+        });
     
-    // Safari에서 OAuth 페이지 열기
-    const canOpen = await Linking.canOpenURL(oauthUrl);
-    if (canOpen) {
-      await Linking.openURL(oauthUrl);
-      console.log('✅ Safari opened with Apple OAuth URL');
-      return { data: { url: oauthUrl }, error: null };
-    } else {
-      throw new Error('Cannot open Apple OAuth URL');
+    console.log('🔗 AuthSession Redirect URI:', redirectUri);
+    console.log('🔍 __DEV__:', __DEV__);
+    
+    // 2. Supabase OAuth URL 생성
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: redirectUri,
+        skipBrowserRedirect: true,
+      },
+    });
+    
+    if (error || !data?.url) {
+      console.error('❌ Apple OAuth URL 생성 실패:', error);
+      return { data: null, error: error || new Error('No OAuth URL generated') };
     }
+    
+    console.log('🌐 Apple OAuth URL:', data.url);
+    console.log('🔗 Expected redirect back to:', redirectUri);
+    
+    // 3. AuthSession으로 브라우저 열기 (자동으로 앱으로 돌아옴)
+    console.log('⏳ Opening browser with AuthSession...');
+    
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectUri
+      );
+      
+      console.log('📱 AuthSession result type:', result.type);
+      console.log('📱 AuthSession full result:', JSON.stringify(result));
+      
+      if (result.type === 'success' && result.url) {
+        console.log('✅ Apple OAuth 성공! Callback URL:', result.url);
+        
+        // URL에서 code 추출
+        try {
+          const url = new URL(result.url);
+          const code = url.searchParams.get('code');
+          const error = url.searchParams.get('error');
+          const errorDescription = url.searchParams.get('error_description');
+          
+          if (error) {
+            console.error('❌ Apple OAuth 에러:', error, errorDescription);
+            return { data: null, error: new Error(`OAuth error: ${error} - ${errorDescription}`) };
+          }
+          
+          if (!code) {
+            console.error('❌ Authorization code가 없습니다');
+            return { data: null, error: new Error('No authorization code received') };
+          }
+          
+          console.log('🔑 Authorization code 받음:', code.substring(0, 20) + '...');
+          
+          // Code를 세션으로 교환
+          console.log('🔄 [Apple] exchangeCodeForSession 호출 시작...');
+          const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (sessionError) {
+            console.error('❌ [Apple] 세션 교환 실패:', sessionError);
+            console.error('❌ [Apple] Error code:', sessionError.code);
+            console.error('❌ [Apple] Error message:', sessionError.message);
+            console.error('❌ [Apple] Error details:', JSON.stringify(sessionError));
+            return { data: null, error: sessionError };
+          }
+          
+          if (!sessionData || !sessionData.session) {
+            console.error('❌ [Apple] 세션 데이터가 없습니다');
+            return { data: null, error: new Error('No session data received') };
+          }
+          
+          console.log('🎉 [Apple] 로그인 성공!', sessionData.user?.email);
+          console.log('✅ [Apple] Session ID:', sessionData.session.access_token.substring(0, 20) + '...');
+          
+          // ⚠️ authStore.initialize() 제거 - SIGNED_IN 이벤트가 자동으로 처리
+          // 중복 호출을 방지하여 더 빠르고 부드러운 로그인 경험 제공
+          console.log('✅ [Apple] onAuthStateChange가 자동으로 처리합니다.');
+          
+          return { data: sessionData, error: null };
+          
+        } catch (urlError) {
+          console.error('❌ URL 파싱 에러:', urlError);
+          return { data: null, error: urlError as Error };
+        }
+      }
+      
+      // dismiss, cancel, locked 등
+      console.error('❌ Apple OAuth 실패 또는 취소:', result.type);
+      
+      if (result.type === 'dismiss') {
+        console.error('🚫 브라우저가 OAuth 완료 전에 닫혔습니다');
+        console.error('💡 Supabase Redirect URL에 다음 URL이 등록되어 있는지 확인하세요:');
+        console.error('   ', redirectUri);
+      }
+      
+      return { data: null, error: new Error(`OAuth ${result.type}`) };
+      
+    } catch (browserError) {
+      console.error('❌ AuthSession 에러:', browserError);
+      return { data: null, error: browserError as Error };
+    }
+    
   } catch (error) {
     console.error('❌ Apple OAuth error:', error);
     return { data: null, error: error as Error };

@@ -18,6 +18,7 @@ import {
   Alert,
   Share,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import AIOrchestrationService from '../services/ai/aiOrchestrationService';
 import { useColorScheme } from 'react-native';
@@ -243,7 +244,7 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('📤 공유 시작:', artwork.title);
       
       // 공유할 메시지 구성
-      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Join the college art community: https://artyard.app`;
+      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Join the art community: https://artyard.app`;
       
       const shareOptions = {
         message: shareMessage,
@@ -379,22 +380,22 @@ export const ArtworkDetailScreen: React.FC = () => {
       ? window.confirm(`Are you sure you want to delete "${artwork.title}"? This action cannot be undone.`)
       : await new Promise<boolean>((resolve) => {
           Alert.alert(
-            '🗑️ 작품 삭제',
-            `"${artwork.title}" 작품을 정말 삭제하시겠어요?\n\n⚠️ 삭제된 작품은 복구할 수 없습니다.`,
+            'Delete Artwork',
+            `Are you sure you want to delete "${artwork.title}"?\n\n⚠️ Deleted artworks cannot be recovered.`,
             [
               { 
-                text: '취소', 
+                text: 'Cancel', 
                 style: 'cancel',
                 onPress: () => {
-                  console.log('❌ 사용자가 삭제 취소');
+                  console.log('❌ User canceled deletion');
                   resolve(false);
                 }
               },
               {
-                text: '🗑️ 삭제하기',
+                text: 'Delete',
                 style: 'destructive',
                 onPress: () => {
-                  console.log('🔥 사용자가 삭제 확인');
+                  console.log('🔥 User confirmed deletion');
                   resolve(true);
                 },
               },
@@ -512,51 +513,25 @@ export const ArtworkDetailScreen: React.FC = () => {
 
     if (artwork.author_id === user.id) {
       console.log('⚠️ User clicking on own artwork');
-      // Alert.alert('Info', 'This is your own artwork!');
-      // return;
       console.log('🧪 Test mode: Allow chat with own artwork');
     }
 
-    // Platform-specific confirmation dialog
-    const confirmed = Platform.OS === 'web' 
-      ? confirm(`💬 Start Chat\n\nWould you like to chat about "${artwork.title}"?\n\n✅ Confirm - Go to chat\n❌ Cancel - Go back`)
-      : await new Promise<boolean>(resolve => {
-          Alert.alert(
-            '💬 Chat with Artist',
-            `Would you like to start a conversation with ${artwork.artist?.handle || artwork.artist?.nickname || 'this artist'}?\n\nYou can learn more about "${artwork.title}" or make a purchase inquiry.`,
-            [
-              { 
-                text: 'Cancel', 
-                style: 'cancel', 
-                onPress: () => resolve(false) 
-              },
-              { 
-                text: '💬 Start Chat', 
-                onPress: () => resolve(true) 
-              },
-            ]
-          );
-        });
-
-    console.log('🔍 User selection:', confirmed);
-
-    if (confirmed) {
-      try {
-        console.log('🔍 Chat creation params:', { otherUserId: artwork.author_id });
-        const chatData = await createOrFindChatMutation.mutateAsync(artwork.author_id);
-        
-        console.log('🔍 Chat data:', chatData);
-        console.log('🔍 Chat ID:', chatData.id);
-        console.log('🔍 Other user info:', chatData.other_user);
-        
-        navigation.navigate('Chat' as never, { 
-          chatId: chatData.id,
-          otherUser: chatData.other_user 
-        } as never);
-      } catch (error) {
-        console.error('채팅방 생성/찾기 실패:', error);
-        Alert.alert('Error', 'Failed to start chat. Please try again.');
-      }
+    // 팝업 없이 바로 채팅으로 이동
+    try {
+      console.log('🔍 Chat creation params:', { otherUserId: artwork.author_id });
+      const chatData = await createOrFindChatMutation.mutateAsync(artwork.author_id);
+      
+      console.log('🔍 Chat data:', chatData);
+      console.log('🔍 Chat ID:', chatData.id);
+      console.log('🔍 Other user info:', chatData.other_user);
+      
+      navigation.navigate('Chat' as never, { 
+        chatId: chatData.id,
+        otherUser: chatData.other_user 
+      } as never);
+    } catch (error) {
+      console.error('채팅방 생성/찾기 실패:', error);
+      Alert.alert('Error', 'Failed to start chat. Please try again.');
     }
   }, [artwork, user, navigation, createOrFindChatMutation]);
 
@@ -642,27 +617,27 @@ export const ArtworkDetailScreen: React.FC = () => {
                       ? window.confirm('Are you sure you want to delete this comment?')
                       : (() => {
                           Alert.alert(
-                            '🗑️ 댓글 삭제',
-                            '이 댓글을 정말 삭제하시겠어요?\n\n삭제된 댓글은 복구할 수 없습니다.',
+                            'Delete Comment',
+                            'Are you sure you want to delete this comment?\n\nDeleted comments cannot be recovered.',
                             [
                               { 
-                                text: '취소', 
+                                text: 'Cancel', 
                                 style: 'cancel',
-                                onPress: () => console.log('❌ 댓글 삭제 취소')
+                                onPress: () => console.log('❌ Comment deletion canceled')
                               },
                               {
-                                text: '🗑️ 삭제하기',
+                                text: 'Delete',
                                 style: 'destructive',
                                 onPress: () => {
-                                  console.log('🔥 댓글 삭제 확인 - API 호출 시작');
+                                  console.log('🔥 Comment deletion confirmed - Starting API call');
                                   try {
                                     deleteCommentMutation.mutate({
                                       commentId: item.id,
                                       artworkId: artwork.id,
                                     });
-                                    console.log('✅ 댓글 삭제 mutation 호출 완료');
+                                    console.log('✅ Comment deletion mutation called');
                                   } catch (error) {
-                                    console.error('💥 댓글 삭제 mutation 실패:', error);
+                                    console.error('💥 Comment deletion mutation failed:', error);
                                   }
                                 },
                               },
@@ -1171,7 +1146,7 @@ export const ArtworkDetailScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               {createCommentMutation.isPending ? (
-                <LoadingSpinner size="small" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <Text style={styles.submitButtonText}>Post</Text>
               )}
@@ -1337,7 +1312,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     alignItems: 'center',
     marginVertical: spacing.md,
-    ...shadows.medium,
+    ...shadows.md,
   },
   purchaseButtonText: {
     color: '#FFFFFF',
@@ -1696,8 +1671,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
     minWidth: 60,
+    minHeight: 40, // 최소 높이 지정
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden', // 내용이 버튼 밖으로 나가지 않도록
   },
   submitButtonText: {
     color: colors.white,

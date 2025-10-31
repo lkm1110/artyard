@@ -12,17 +12,20 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  useColorScheme,
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
 import { createPaymentIntent } from '../services/transactionService';
 import { formatPrice } from '../types/complete-system';
+import { colors, spacing, typography, borderRadius } from '../constants/theme';
 
 const CURRENCY = 'USD';
 
 export const CheckoutScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
+  const isDark = useColorScheme() === 'dark';
   
   const { artworkId } = route.params as { artworkId: string };
   
@@ -188,10 +191,34 @@ export const CheckoutScreen = () => {
   const totalAmount = artworkPrice + shippingFee + platformFee;
   
   return (
-    <ScrollView style={styles.container}>
-      {/* Artwork Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Summary</Text>
+    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+      {/* Header */}
+      <View style={[
+        styles.header,
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
+      ]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
+          </Text>
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+          Purchase Artwork
+        </Text>
+        <View style={styles.headerSpacer} />
+      </View>
+      
+      <ScrollView style={styles.scrollView}>
+        {/* Artwork Info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Summary</Text>
         <View style={styles.artworkInfo}>
           {artwork.image_urls && artwork.image_urls[0] && (
             <Image
@@ -337,13 +364,42 @@ export const CheckoutScreen = () => {
         </Text>
       </View>
     </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor는 동적으로 설정됨
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    // backgroundColor와 borderBottomColor는 동적으로 설정됨
+    zIndex: 1000,
+  },
+  backButton: {
+    padding: spacing.sm,
+    marginLeft: -spacing.sm,
+  },
+  backIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  headerTitle: {
+    ...typography.h3,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40, // backButton과 동일한 너비로 중앙 정렬
+  },
+  scrollView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

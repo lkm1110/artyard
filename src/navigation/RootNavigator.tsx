@@ -10,7 +10,7 @@ import { useColorScheme } from 'react-native';
 import { colors } from '../constants/theme';
 import { useAuthStore } from '../store/authStore';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { storage } from '../utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 네비게이션 및 스크린 import
 import { TabNavigator } from './TabNavigator';
@@ -31,7 +31,8 @@ import { AddressFormScreen } from '../screens/AddressFormScreen';
 import { ChallengesScreen } from '../screens/ChallengesScreen';
 import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { ArtistDashboardScreen } from '../screens/ArtistDashboardScreen';
-import { AuthCallbackHandler } from '../components/AuthCallbackHandler';
+// OAuth 콜백은 nativeOAuth.ts의 AuthSession이 처리하므로 AuthCallbackHandler 비활성화
+// import { AuthCallbackHandlerSimple as AuthCallbackHandler } from '../components/AuthCallbackHandler.simple';
 
 // Admin screens
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
@@ -58,8 +59,17 @@ const Stack = createNativeStackNavigator();
 
 export const RootNavigator: React.FC = () => {
   const isDark = useColorScheme() === 'dark';
-  const { isAuthenticated, isLoading, initialize } = useAuthStore();
+  const { isAuthenticated, isLoading, initialize, user } = useAuthStore();
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
+
+  // 인증 상태 변경 감지 로그
+  useEffect(() => {
+    console.log('🔍 [RootNavigator] 상태 변경 감지:');
+    console.log('  - isAuthenticated:', isAuthenticated);
+    console.log('  - isLoading:', isLoading);
+    console.log('  - isFirstTime:', isFirstTime);
+    console.log('  - user:', user?.handle || 'null');
+  }, [isAuthenticated, isLoading, isFirstTime, user]);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -68,7 +78,7 @@ export const RootNavigator: React.FC = () => {
         await initialize();
         
         // 첫 방문 여부 확인
-        const hasSeenWelcome = await storage.getItem('hasSeenWelcome');
+        const hasSeenWelcome = await AsyncStorage.getItem('hasSeenWelcome');
         setIsFirstTime(!hasSeenWelcome);
       } catch (error) {
         console.error('앱 초기화 오류:', error);
@@ -81,7 +91,7 @@ export const RootNavigator: React.FC = () => {
 
   const handleWelcomeComplete = async () => {
     try {
-      await storage.setItem('hasSeenWelcome', 'true');
+      await AsyncStorage.setItem('hasSeenWelcome', 'true');
       setIsFirstTime(false);
     } catch (error) {
       console.error('환영 화면 완료 저장 오류:', error);
@@ -126,14 +136,19 @@ export const RootNavigator: React.FC = () => {
 
   return (
     <NavigationContainer theme={theme}>
-      {/* OAuth 콜백 핸들러 (웹에서만 작동) */}
-      <AuthCallbackHandler />
+      {/* OAuth 콜백은 nativeOAuth.ts의 AuthSession이 자동으로 처리 */}
       {/* Push Notification Handler */}
       <PushNotificationHandler />
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
+          // 화면 전환 시 배경색 유지 (깜빡임 방지)
+          contentStyle: {
+            backgroundColor: isDark ? colors.darkBg : colors.bg,
+          },
+          // 화면 전환 애니메이션 최적화
+          animationTypeForReplace: 'push',
         }}
       >
         {isFirstTime ? (

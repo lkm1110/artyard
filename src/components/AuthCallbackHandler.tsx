@@ -8,24 +8,12 @@ import { Platform, Linking, AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/authStore';
 import { debugLog } from './DebugLogger';
-import { storage } from '../utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// JWT 토큰 디코딩 헬퍼 (네트워크 없이 사용자 정보 추출)
+// JWT 토큰 디코딩 완전 비활성화 (오프라인 로그인 차단)
 const decodeJWT = (token: string) => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    debugLog('❌ JWT 디코딩 실패: ' + error, 'error');
-    return null;
-  }
+  debugLog('🚫 JWT 디코딩 차단됨 - 오프라인 로그인 방지', 'error');
+  return null; // 항상 null 반환하여 오프라인 로그인 차단
 };
 
 export const AuthCallbackHandler: React.FC = () => {
@@ -87,9 +75,18 @@ export const AuthCallbackHandler: React.FC = () => {
         // Deep Link URL 처리 함수
         const handleUrl = async (url: string) => {
           console.log('🔗 Received deep link URL:', url);
+          
+          // OAuth 콜백 체크 (AuthSession이 자동으로 처리하므로 완전히 무시)
+          if (url && (url.includes('/auth-callback') || url.includes('code=') || url.includes('access_token='))) {
+            console.log('⏭️ OAuth 콜백 무시 - AuthSession이 처리합니다');
+            return; // AuthSession에 완전히 위임
+          }
+          
           debugLog('🔗 Deep Link 수신: ' + url, 'info');
           
-          if (url && (url.includes('artyard://') || url.includes('auth-callback'))) {
+          debugLog('🔍 URL 분석: ' + url, 'info');
+          
+          if (false) { // OAuth 콜백 처리 완전 비활성화
             debugLog('🔄 OAuth 콜백 감지!', 'info');
             
             // OAuth 콜백 파라미터 파싱
@@ -133,11 +130,62 @@ export const AuthCallbackHandler: React.FC = () => {
                 
                 try {
                   debugLog('🔄 토큰 교환 시도 중...', 'info');
-                  const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                  debugLog('🔑 사용할 Code: ' + code.substring(0, 20) + '...', 'info');
+                  debugLog('🌐 Supabase URL: ' + supabase.supabaseUrl, 'info');
+                  
+                  // 네트워크 연결 상태 확인
+                  try {
+                    const networkTest = await fetch('https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/', {
+                      method: 'HEAD',
+                      timeout: 5000
+                    });
+                    debugLog('🌐 네트워크 상태: ' + (networkTest.ok ? '✅ 연결됨' : '❌ 문제있음'), networkTest.ok ? 'success' : 'error');
+                  } catch (netErr: any) {
+                    debugLog('❌ 네트워크 테스트 실패: ' + netErr.message, 'error');
+                  }
+                  
+                  // 타임아웃이 있는 토큰 교환 시도
+                  const exchangePromise = supabase.auth.exchangeCodeForSession(code);
+                  const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('토큰 교환 타임아웃 (15초)')), 15000)
+                  );
+                  
+                  let exchangeResult;
+                  try {
+                    exchangeResult = await Promise.race([exchangePromise, timeoutPromise]) as any;
+                  } catch (networkError: any) {
+                    debugLog('❌ 네트워크 호출 자체 실패: ' + networkError.message, 'error');
+                    console.error('Network call failed:', networkError);
+                    alert('네트워크 연결 실패: ' + networkError.message);
+                    return;
+                  }
+                  
+                  const { data, error: exchangeError } = exchangeResult;
+                  
+                  debugLog('📊 교환 결과 data:', 'info');
+                  console.log('Exchange result data:', data);
+                  debugLog('📊 교환 결과 error:', 'info');
+                  console.log('Exchange result error:', exchangeError);
+                  
+                  // Supabase API 상태 확인
+                  debugLog('🔍 Supabase 연결 상태 확인 중...', 'info');
+                  try {
+                    const healthCheck = await fetch('https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/', {
+                      method: 'HEAD',
+                      headers: {
+                        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
+                      }
+                    });
+                    debugLog('🌐 Supabase 상태: ' + healthCheck.status + ' ' + healthCheck.statusText, 'info');
+                  } catch (healthError: any) {
+                    debugLog('❌ Supabase 연결 테스트 실패: ' + healthError.message, 'error');
+                  }
                   
                   if (exchangeError) {
                     debugLog('❌ Code 교환 실패: ' + exchangeError.message, 'error');
-                    debugLog('❌ 에러: ' + (exchangeError.status || 'unknown'), 'error');
+                    debugLog('❌ 에러 상태: ' + (exchangeError.status || 'unknown'), 'error');
+                    debugLog('❌ 에러 코드: ' + (exchangeError.__isAuthError ? 'AuthError' : 'Other'), 'error');
+                    debugLog('❌ 전체 에러 객체: ' + JSON.stringify(exchangeError), 'error');
                     
                     // 재시도 로직
                     debugLog('🔄 3초 후 재시도...', 'warning');
@@ -169,11 +217,59 @@ export const AuthCallbackHandler: React.FC = () => {
                   }
                 } catch (err: any) {
                   debugLog('❌ 예외 발생: ' + (err.message || String(err)), 'error');
+                  console.error('토큰 교환 전체 에러:', err);
+                  
+                  // 네트워크 에러 - 오프라인 로그인 방지
+                  if (err.message?.includes('network') || err.message?.includes('타임아웃') || err.message?.includes('request')) {
+                    debugLog('❌ 네트워크 에러로 인한 로그인 실패', 'error');
+                    debugLog('🚫 오프라인 로그인 방지 - 다시 시도 필요', 'warning');
+                    
+                    // 오프라인 로그인을 방지하기 위해 저장된 세션 정리
+                    try {
+                      await AsyncStorage.removeItem('sb-bkvycanciimgyftdtqpx-auth-token');
+                      debugLog('🗑️ 기존 세션 정리 완료', 'info');
+                    } catch {
+                      // 정리 실패는 무시
+                    }
+                    
+                    // 사용자에게 네트워크 에러 알림
+                    alert('인터넷 연결을 확인하고 다시 로그인해주세요.');
+                    return;
+                  }
                 }
               } else if (accessToken && refreshToken) {
-                // 직접 토큰이 전달된 경우
-                debugLog('✅ Access Token 감지!', 'info');
+                // 직접 토큰이 전달된 경우 - 서버 검증 필수
+                debugLog('🔍 Access Token 감지, 서버 검증 시작...', 'info');
                 debugLog('Token 길이: ' + accessToken.length, 'info');
+                
+                // 🚫 오프라인 로그인 방지: 반드시 서버와 통신하여 토큰 유효성 검증
+                try {
+                  debugLog('🌐 토큰 유효성 서버 검증 중...', 'info');
+                  
+                  // Supabase API를 통한 실제 토큰 검증
+                  const tokenValidation = await fetch(`https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/user`, {
+                    headers: {
+                      'Authorization': `Bearer ${accessToken}`,
+                      'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
+                    }
+                  });
+                  
+                  if (!tokenValidation.ok) {
+                    debugLog('❌ 토큰 검증 실패: ' + tokenValidation.status, 'error');
+                    alert('토큰이 유효하지 않습니다. 다시 로그인해주세요.');
+                    return;
+                  }
+                  
+                  const validatedUser = await tokenValidation.json();
+                  debugLog('✅ 서버 토큰 검증 성공!', 'success');
+                  debugLog('👤 검증된 사용자: ' + validatedUser.email, 'success');
+                  
+                } catch (validationError: any) {
+                  debugLog('❌ 서버 검증 실패: ' + validationError.message, 'error');
+                  debugLog('🚫 오프라인 로그인 차단 - 서버 통신 필수', 'warning');
+                  alert('서버 연결 실패. 인터넷 연결을 확인하고 다시 로그인해주세요.');
+                  return;
+                }
                 
                 // Supabase가 사용하는 올바른 키로 저장
                 const supabaseStorageKey = 'sb-bkvycanciimgyftdtqpx-auth-token';
@@ -187,7 +283,7 @@ export const AuthCallbackHandler: React.FC = () => {
                     user: null, // 나중에 Supabase가 채움
                   };
                   
-                  await storage.setItem(supabaseStorageKey, JSON.stringify(sessionData));
+                  await AsyncStorage.setItem(supabaseStorageKey, JSON.stringify(sessionData));
                   debugLog('💾 Supabase 키로 저장 완료!', 'success');
                   debugLog('🔑 저장 키: ' + supabaseStorageKey, 'info');
                 } catch (storageError: any) {
@@ -218,78 +314,22 @@ export const AuthCallbackHandler: React.FC = () => {
                     debugLog('❌ 에러 코드: ' + (sessionError.code || 'unknown'), 'error');
                     debugLog('❌ 에러 이름: ' + (sessionError.name || 'unknown'), 'error');
                     debugLog('❌ 전체 에러 정보: ' + JSON.stringify(sessionError).substring(0, 200), 'error');
-                    debugLog('🔓 JWT 디코딩으로 오프라인 로그인 시도...', 'warning');
                     
-                    // JWT 토큰 디코딩해서 사용자 정보 추출
-                    const decodedToken = decodeJWT(accessToken);
+                    // 🚫 오프라인 로그인 완전 차단
+                    debugLog('🚫 세션 설정 실패로 인한 로그인 중단', 'error');
+                    debugLog('🚫 오프라인 로그인 차단 - 서버 연결 필수', 'warning');
                     
-                    if (decodedToken) {
-                      debugLog('✅ JWT 디코딩 성공!', 'success');
-                      debugLog('👤 사용자 ID: ' + decodedToken.sub, 'info');
-                      debugLog('📧 이메일: ' + (decodedToken.email || 'N/A'), 'info');
-                      
-                      // 수동으로 세션 객체 생성
-                      const manualSession = {
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                        expires_at: decodedToken.exp,
-                        expires_in: 3600,
-                        token_type: 'bearer',
-                        user: {
-                          id: decodedToken.sub,
-                          email: decodedToken.email,
-                          user_metadata: decodedToken.user_metadata || {},
-                          app_metadata: decodedToken.app_metadata || {},
-                          aud: decodedToken.aud,
-                          created_at: decodedToken.created_at || new Date().toISOString(),
-                        },
-                      };
-                      
-                      // authStore에 직접 세션 설정
-                      setSession(manualSession);
-                      debugLog('💾 수동 세션 설정 완료!', 'success');
-                      
-                      // 프로필 정보 가져오기 시도 (네트워크 있으면)
-                      let profileSet = false;
-                      try {
-                        const { data: profile } = await supabase
-                          .from('profiles')
-                          .select('*')
-                          .eq('id', decodedToken.sub)
-                          .single();
-                        
-                        if (profile) {
-                          setUser(profile);
-                          debugLog('✅ 프로필 로드 성공!', 'success');
-                          profileSet = true;
-                        }
-                      } catch (profileError) {
-                        debugLog('⚠️ 프로필 로드 실패 - 기본 프로필 생성', 'warning');
-                      }
-                      
-                      // 프로필을 못 가져왔으면 기본 프로필로 로그인
-                      if (!profileSet) {
-                        const basicProfile = {
-                          id: decodedToken.sub,
-                          handle: decodedToken.email?.split('@')[0] || 'user_' + decodedToken.sub.slice(0, 8),
-                          school: 'Unknown',
-                          department: 'Unknown',
-                          bio: 'Welcome to ArtYard!',
-                          avatar_url: null,
-                          is_verified_school: false,
-                        };
-                        setUser(basicProfile);
-                        debugLog('✅ 기본 프로필로 로그인!', 'success');
-                      }
-                      
-                      setLoading(false);
-                      debugLog('🎉 오프라인 로그인 완료!', 'success');
-                      return;
-                    } else {
-                      debugLog('❌ JWT 디코딩 실패 - initialize() 시도', 'error');
-                      await initialize();
-                      return;
+                    // 기존 세션 정리
+                    try {
+                      await AsyncStorage.removeItem('sb-bkvycanciimgyftdtqpx-auth-token');
+                      debugLog('🗑️ 기존 세션 정리 완료', 'info');
+                    } catch {
+                      // 정리 실패는 무시
                     }
+                    
+                    // 사용자에게 명확한 에러 알림
+                    alert('서버 연결에 실패했습니다. 인터넷 연결을 확인하고 다시 로그인해주세요.');
+                    return; // 로그인 프로세스 완전 중단
                   } else if (data?.session) {
                     debugLog('✅ 로그인 성공!', 'success');
                     debugLog('👤 ' + (data.session.user.email || 'Unknown'), 'success');

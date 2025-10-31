@@ -56,55 +56,13 @@ export const LoginScreen: React.FC = () => {
     
     checkAppleAuth();
     
-    // 네이티브 환경에서 AppState 변경 감지 (웹 → 앱 전환 시 세션 체크)
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      if (Platform.OS === 'web') return;
-      
-      console.log('🔍 LoginScreen AppState 변경:', nextAppState);
-      
-      if (nextAppState === 'active') {
-        console.log('🔄 앱이 포그라운드로 돌아옴 - LoginScreen에서 세션 확인...');
-        
-        try {
-          // 잠시 기다린 후 세션 확인
-          setTimeout(async () => {
-            const { data: { session }, error } = await supabase.auth.getSession();
-            console.log('📊 LoginScreen 포그라운드 세션 확인:', { 
-              session: !!session, 
-              user: session?.user?.id,
-              provider: session?.user?.app_metadata?.provider
-            });
-            
-            if (session) {
-              console.log('✅ LoginScreen에서 로그인 감지! 자동으로 메인 화면으로 이동...');
-              // showAlert 제거 - 자동으로 전환됨
-              
-              // 추가로 세션 재확인 (안전장치)
-              setTimeout(async () => {
-                const { data: { session: doubleCheck } } = await supabase.auth.getSession();
-                if (doubleCheck) {
-                  console.log('✅ 이중 확인: 로그인 상태 확실함');
-                }
-              }, 3000);
-            }
-          }, 1500);
-        } catch (error) {
-          console.error('❌ LoginScreen 포그라운드 세션 확인 오류:', error);
-        }
-      }
-    };
-    
-    let appStateSubscription: any = null;
-    if (Platform.OS !== 'web') {
-      console.log('📱 LoginScreen AppState 리스너 등록...');
-      appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
-    }
+    // ⚠️ AppState 리스너 임시 비활성화
+    // nativeOAuth.ts와 authStore가 로그인을 자동으로 처리하므로 불필요
+    // 이 리스너가 간섭할 수 있어서 비활성화
+    console.log('📱 LoginScreen AppState 리스너는 비활성화됨 (authStore가 자동 처리)');
     
     return () => {
-      if (appStateSubscription) {
-        appStateSubscription.remove();
-        console.log('📱 LoginScreen AppState 리스너 정리 완료');
-      }
+      // 정리 작업 없음
     };
   }, []);
 
@@ -206,7 +164,7 @@ export const LoginScreen: React.FC = () => {
           styles.subtitle,
           { color: isDark ? colors.darkTextMuted : colors.textMuted }
         ]}>
-          Join the college art community
+          Join the art community
           {'\n'}
           Share and discover amazing artworks
         </Text>

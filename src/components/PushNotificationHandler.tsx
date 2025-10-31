@@ -6,9 +6,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { setupNotificationListeners, clearBadgeCount } from '../services/pushNotificationService';
 import { useAuthStore } from '../store/authStore';
+
+// Expo Go 환경 체크
+const isExpoGo = Constants.appOwnership === 'expo';
 
 export const PushNotificationHandler: React.FC = () => {
   const navigation = useNavigation();
@@ -17,6 +21,12 @@ export const PushNotificationHandler: React.FC = () => {
   const responseListener = useRef<any>();
 
   useEffect(() => {
+    // Expo Go 환경 체크 (SDK 53+에서 푸시 알림 미지원)
+    if (isExpoGo) {
+      console.log('⚠️ Notification listeners not available in Expo Go');
+      return;
+    }
+
     // 웹 환경에서는 푸시 알림 핸들러 설정하지 않음
     if (Platform.OS === 'web') {
       console.log('🌐 Push notification handler skipped on web');

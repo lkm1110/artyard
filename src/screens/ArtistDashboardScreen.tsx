@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  useColorScheme,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getDashboardSummary } from '../services/analyticsService';
@@ -20,14 +21,24 @@ import {
   formatPrice,
   formatNumber,
 } from '../types/complete-system';
+import { colors, spacing, typography, borderRadius } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 
 export const ArtistDashboardScreen = () => {
   const navigation = useNavigation();
+  const isDark = useColorScheme() === 'dark';
   const [period, setPeriod] = useState<AnalyticsPeriod>('weekly');
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // 새로고침 상태 (탭 전환시)
+  
+  // 데이터 캐시 (기간별로 저장)
+  const [cache, setCache] = useState<Record<AnalyticsPeriod, DashboardSummary | null>>({
+    daily: null,
+    weekly: null,
+    monthly: null,
+  });
   
   useEffect(() => {
     loadData();
@@ -35,36 +46,79 @@ export const ArtistDashboardScreen = () => {
   
   const loadData = async () => {
     try {
-      setLoading(true);
+      // 캐시된 데이터가 있으면 먼저 표시
+      if (cache[period]) {
+        setData(cache[period]);
+        setLoading(false);
+        setRefreshing(true); // 백그라운드 새로고침
+      } else {
+        setLoading(true);
+      }
+      
       const summary = await getDashboardSummary(period);
       setData(summary);
+      
+      // 캐시 업데이트
+      setCache(prev => ({
+        ...prev,
+        [period]: summary,
+      }));
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
   
-  if (loading || !data) {
+  // 초기 로딩일 때만 로딩 화면 표시
+  if (loading && !data) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E91E63" />
+      <View style={[styles.loadingContainer, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+  
+  // 데이터가 없으면 로딩 화면 (타입 가드)
+  if (!data) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
   
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
       {/* Header */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+      <View style={[
+        styles.headerContainer,
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
+      ]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
+          </Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Artist Dashboard</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+          Artist Dashboard
+        </Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       {/* 기간 선택 */}
-      <View style={styles.periodSelector}>
+      <View style={[
+        styles.periodSelector,
+        { backgroundColor: isDark ? colors.darkCard : colors.card }
+      ]}>
         {(['daily', 'weekly', 'monthly'] as AnalyticsPeriod[]).map((p) => (
           <TouchableOpacity
             key={p}
@@ -73,13 +127,18 @@ export const ArtistDashboardScreen = () => {
               period === p && styles.periodButtonActive,
             ]}
             onPress={() => setPeriod(p)}
+            disabled={refreshing && period === p}
           >
-            <Text style={[
-              styles.periodText,
-              period === p && styles.periodTextActive,
-            ]}>
-              {p === 'daily' ? 'Daily' : p === 'weekly' ? 'Weekly' : 'Monthly'}
-            </Text>
+            {refreshing && period === p ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text style={[
+                styles.periodText,
+                period === p && styles.periodTextActive,
+              ]}>
+                {p === 'daily' ? 'Daily' : p === 'weekly' ? 'Weekly' : 'Monthly'}
+              </Text>
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -216,7 +275,7 @@ export const ArtistDashboardScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    // backgroundColor는 동적으로 설정됨
   },
   loadingContainer: {
     flex: 1,
@@ -224,24 +283,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerContainer: {
-    padding: 16,
-    paddingTop: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    backgroundColor: '#FFFFFF',
+    zIndex: 1000,
   },
   backButton: {
-    marginBottom: 8,
+    padding: spacing.sm,
+    marginLeft: -spacing.sm,
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#E91E63',
+  backIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    ...typography.h3,
+    fontWeight: '600',
+  },
+  headerSpacer: {
+    width: 40,
   },
   
   // 기간 선택
@@ -249,7 +313,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     gap: 8,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor는 동적으로 설정됨
   },
   periodButton: {
     flex: 1,

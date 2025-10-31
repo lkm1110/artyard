@@ -11,6 +11,7 @@ import {
   StyleSheet,
   useColorScheme,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
@@ -141,8 +142,12 @@ export const SimpleFilterModal: React.FC<Props> = ({
           </TouchableOpacity>
         </View>
 
-        {/* 필터 내용 */}
-        <View style={styles.content}>
+        {/* 필터 내용 (스크롤 가능) */}
+        <ScrollView 
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+        >
           
           {/* 가격 필터 */}
           <View style={styles.section}>
@@ -333,7 +338,7 @@ export const SimpleFilterModal: React.FC<Props> = ({
             </View>
           </View>
           
-        </View>
+        </ScrollView>
 
         {/* 하단 버튼 */}
         <View style={[

@@ -9,14 +9,23 @@ import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 import { supabase } from './supabase';
 
-// 알림 핸들러 설정
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Expo Go 환경 체크
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// 알림 핸들러 설정 (Expo Go가 아닌 경우에만)
+if (!isExpoGo) {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch (error) {
+    console.log('⚠️ Push notifications not available in Expo Go');
+  }
+}
 
 /**
  * Push Token 등록
@@ -25,20 +34,27 @@ export const registerForPushNotifications = async (userId: string): Promise<stri
   try {
     console.log('🔔 Starting push notification registration...');
 
-    // 1. 웹 환경 체크 (웹에서는 푸시 알림 비활성화)
+    // 1. Expo Go 환경 체크
+    if (isExpoGo) {
+      console.log('⚠️ Push notifications are not available in Expo Go (SDK 53+)');
+      console.log('ℹ️ Please use a development build for push notifications');
+      return null;
+    }
+
+    // 2. 웹 환경 체크 (웹에서는 푸시 알림 비활성화)
     if (Platform.OS === 'web') {
       console.log('🌐 Push notifications are disabled on web (VAPID key required)');
       console.log('ℹ️ Use in-app notifications instead on web');
       return null;
     }
 
-    // 2. 실제 디바이스 체크
+    // 3. 실제 디바이스 체크
     if (!Device.isDevice) {
       console.warn('⚠️ Push notifications only work on physical devices');
       return null;
     }
 
-    // 2. 권한 요청
+    // 4. 권한 요청
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     
@@ -55,7 +71,7 @@ export const registerForPushNotifications = async (userId: string): Promise<stri
       return null;
     }
 
-    // 3. Push Token 발급
+    // 5. Push Token 발급
     const projectId = Constants.expoConfig?.extra?.eas?.projectId || 
                      Constants.easConfig?.projectId;
     
@@ -71,7 +87,7 @@ export const registerForPushNotifications = async (userId: string): Promise<stri
     const pushToken = tokenData.data;
     console.log('✅ Push Token generated:', pushToken);
 
-    // 4. Supabase에 저장
+    // 6. Supabase에 저장
     const { error } = await supabase
       .from('push_tokens')
       .upsert({
@@ -157,22 +173,33 @@ export const setupNotificationListeners = (
   onNotification?: (notification: Notifications.Notification) => void,
   onNotificationResponse?: (response: Notifications.NotificationResponse) => void
 ) => {
-  // 앱이 foreground일 때 알림 수신
-  const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
-    console.log('🔔 Notification received:', notification);
-    onNotification?.(notification);
-  });
+  // Expo Go에서는 리스너 설정 불가
+  if (isExpoGo) {
+    console.log('⚠️ Notification listeners not available in Expo Go');
+    return () => {}; // no-op cleanup function
+  }
 
-  // 알림 클릭 시
-  const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
-    console.log('👆 Notification clicked:', response);
-    onNotificationResponse?.(response);
-  });
+  try {
+    // 앱이 foreground일 때 알림 수신
+    const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
+      console.log('🔔 Notification received:', notification);
+      onNotification?.(notification);
+    });
 
-  return () => {
-    Notifications.removeNotificationSubscription(notificationListener);
-    Notifications.removeNotificationSubscription(responseListener);
-  };
+    // 알림 클릭 시
+    const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log('👆 Notification clicked:', response);
+      onNotificationResponse?.(response);
+    });
+
+    return () => {
+      notificationListener.remove();
+      responseListener.remove();
+    };
+  } catch (error) {
+    console.log('⚠️ Could not setup notification listeners:', error);
+    return () => {}; // no-op cleanup function
+  }
 };
 
 /**
@@ -225,8 +252,17 @@ export const clearBadgeCount = async () => {
  * 알림 권한 확인
  */
 export const checkNotificationPermission = async (): Promise<boolean> => {
-  const { status } = await Notifications.getPermissionsAsync();
-  return status === 'granted';
+  try {
+    // Expo Go에서는 푸시 알림 사용 불가
+    if (isExpoGo) {
+      return false;
+    }
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  } catch (error) {
+    console.log('⚠️ Could not check notification permission:', error);
+    return false;
+  }
 };
 
 /**

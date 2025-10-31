@@ -108,14 +108,13 @@ export const HomeScreen: React.FC = () => {
           { borderBottomColor: isDark ? colors.darkCard : colors.card }
         ]}>
           <View style={styles.headerTop}>
-            <Text style={[
-              styles.title,
-              { color: isDark ? colors.darkText : colors.text }
-            ]}>
-              ArtYard
-            </Text>
-            
-            <View style={styles.headerActions}>
+            <View style={styles.headerLeft}>
+              <Text style={[
+                styles.title,
+                { color: isDark ? colors.darkText : colors.text }
+              ]}>
+                ArtYard
+              </Text>
               {isAuthenticated && (
                 <Text style={[
                   styles.welcomeText,
@@ -124,7 +123,9 @@ export const HomeScreen: React.FC = () => {
                   Hello, {user?.handle || 'Artist'}!
                 </Text>
               )}
-              
+            </View>
+            
+            <View style={styles.headerActions}>
               <TouchableOpacity
                 style={[
                   styles.iconOnlyButton,
@@ -195,7 +196,7 @@ export const HomeScreen: React.FC = () => {
               styles.adText,
               { color: isDark ? colors.darkTextMuted : colors.textMuted }
             ]}>
-              📢 College Art Community - Ad Space
+              📢 Art Community - Ad Space
             </Text>
           </View>
           
@@ -281,18 +282,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    flex: 1,
+  },
   title: {
     fontSize: typography.title.fontSize,
     fontWeight: typography.title.fontWeight,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   welcomeText: {
     fontSize: typography.caption.fontSize,
     fontWeight: '500',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   actionButton: {
     padding: spacing.xs,

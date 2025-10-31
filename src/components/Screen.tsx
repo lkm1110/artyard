@@ -74,6 +74,7 @@ export const Screen: React.FC<ScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: 'transparent', // 부모의 배경색 상속
   },
   container: {
     flex: 1,
