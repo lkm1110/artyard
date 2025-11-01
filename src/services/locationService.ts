@@ -76,6 +76,47 @@ export interface LocationInfo {
   timestamp: number;
 }
 
+/**
+ * 한국어 지명을 영어로 번역
+ */
+const translateLocationToEnglish = (text: string | undefined): string | undefined => {
+  if (!text) return text;
+
+  const translations: Record<string, string> = {
+    '대한민국': 'South Korea', '한국': 'South Korea',
+    '서울특별시': 'Seoul', '서울': 'Seoul',
+    '부산광역시': 'Busan', '부산': 'Busan',
+    '대구광역시': 'Daegu', '대구': 'Daegu',
+    '인천광역시': 'Incheon', '인천': 'Incheon',
+    '광주광역시': 'Gwangju', '광주': 'Gwangju',
+    '대전광역시': 'Daejeon', '대전': 'Daejeon',
+    '울산광역시': 'Ulsan', '울산': 'Ulsan',
+    '세종특별자치시': 'Sejong', '세종': 'Sejong',
+    '경기도': 'Gyeonggi', '경기': 'Gyeonggi',
+    '강원도': 'Gangwon', '강원': 'Gangwon',
+    '충청북도': 'North Chungcheong', '충북': 'North Chungcheong',
+    '충청남도': 'South Chungcheong', '충남': 'South Chungcheong',
+    '전라북도': 'North Jeolla', '전북': 'North Jeolla',
+    '전라남도': 'South Jeolla', '전남': 'South Jeolla',
+    '경상북도': 'North Gyeongsang', '경북': 'North Gyeongsang',
+    '경상남도': 'South Gyeongsang', '경남': 'South Gyeongsang',
+    '제주특별자치도': 'Jeju', '제주': 'Jeju',
+    // 경기도 주요 도시
+    '수원시': 'Suwon', '수원': 'Suwon',
+    '성남시': 'Seongnam', '성남': 'Seongnam',
+    '고양시': 'Goyang', '고양': 'Goyang',
+    '용인시': 'Yongin', '용인': 'Yongin',
+    '부천시': 'Bucheon', '부천': 'Bucheon',
+    '안산시': 'Ansan', '안산': 'Ansan',
+    '남양주시': 'Namyangju', '남양주': 'Namyangju',
+    '화성시': 'Hwaseong', '화성': 'Hwaseong',
+    '평택시': 'Pyeongtaek', '평택': 'Pyeongtaek',
+    '의정부시': 'Uijeongbu', '의정부': 'Uijeongbu',
+  };
+
+  return translations[text] || text;
+};
+
 export interface LocationPermissionResult {
   granted: boolean;
   canAskAgain: boolean;
@@ -171,11 +212,11 @@ export const getCurrentLocation = async (options?: {
         if (reverseGeocode && reverseGeocode.length > 0) {
           const address = reverseGeocode[0];
           addressInfo = {
-            country: address.country,
-            state: address.region,
-            city: address.city,
-            district: address.district,
-            street: address.street,
+            country: translateLocationToEnglish(address.country),
+            state: translateLocationToEnglish(address.region?.trim()), // 공백 제거 및 영어 변환
+            city: translateLocationToEnglish(address.city),
+            district: translateLocationToEnglish(address.district),
+            street: address.street, // 거리명은 그대로 유지
             name: address.name,
             postalCode: address.postalCode,
           };
@@ -195,7 +236,7 @@ export const getCurrentLocation = async (options?: {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
       accuracy: location.coords.accuracy,
-      timestamp: location.timestamp,
+      timestamp: Math.floor(location.timestamp), // iOS float → integer 변환
       ...addressInfo,
     };
 
@@ -224,22 +265,22 @@ export const askForLocationConsent = (): Promise<boolean> => {
     if (Platform.OS === 'web') {
       // 웹에서는 간단한 confirm 대화상자
       const consent = window.confirm(
-        '작품에 위치 정보를 추가하시겠어요?\n\n위치 정보를 추가하면 다른 사용자들이 작품이 어디서 만들어졌는지 알 수 있어요.'
+        'Would you like to add location information to your artwork?\n\nAdding location helps other users see where your artwork was created.'
       );
       resolve(consent);
     } else {
       // 모바일에서는 React Native Alert
       Alert.alert(
-        '📍 위치 정보 추가',
-        '작품에 위치 정보를 추가하시겠어요?\n\n위치 정보를 추가하면 다른 사용자들이 작품이 어디서 만들어졌는지 알 수 있습니다.',
+        '📍 Add Location',
+        'Would you like to add location information to your artwork?\n\nAdding location helps other users see where your artwork was created.',
         [
           {
-            text: '건너뛰기',
+            text: 'Skip',
             style: 'cancel',
             onPress: () => resolve(false),
           },
           {
-            text: '📍 위치 추가',
+            text: '📍 Add Location',
             onPress: () => resolve(true),
           },
         ]

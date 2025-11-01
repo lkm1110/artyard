@@ -154,15 +154,17 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
           numberOfLines={2}
         >
           {artwork.description}
-          {(artwork.location_city || artwork.location_country) && (
-            <Text style={{ color: colors.accent, fontWeight: '500' }}>
-              {'\n📍 '}{artwork.location_city && artwork.location_country 
-                ? `${artwork.location_city}, ${artwork.location_country}`
-                : artwork.location_full || 'Unknown Location'
-              }
-            </Text>
-          )}
         </Text>
+
+        {/* 위치 정보 (별도 줄) */}
+        {(artwork.location_city || artwork.location_country || artwork.location_full) && (
+          <Text style={[
+            styles.location,
+            { color: colors.accent }
+          ]}>
+            📍 {artwork.location_city || ''}{artwork.location_city && artwork.location_state ? ', ' : ''}{artwork.location_state || ''}{(artwork.location_city || artwork.location_state) && artwork.location_country ? ', ' : ''}{artwork.location_country || artwork.location_full || ''}
+          </Text>
+        )}
 
         {/* 작품 상세 정보 */}
         <View style={styles.detailsRow}>

@@ -115,14 +115,6 @@ export const HomeScreen: React.FC = () => {
               ]}>
                 ArtYard
               </Text>
-              {isAuthenticated && (
-                <Text style={[
-                  styles.welcomeText,
-                  { color: isDark ? colors.darkTextMuted : colors.textMuted }
-                ]}>
-                  Hello, {user?.handle || 'Artist'}!
-                </Text>
-              )}
             </View>
             
             <View style={styles.headerActions}>
@@ -285,21 +277,16 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
     flex: 1,
   },
   title: {
     fontSize: typography.title.fontSize,
     fontWeight: typography.title.fontWeight,
   },
-  welcomeText: {
-    fontSize: typography.caption.fontSize,
-    fontWeight: '500',
-  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 2, // 아이콘 간격 좁힘
   },
   actionButton: {
     padding: spacing.xs,

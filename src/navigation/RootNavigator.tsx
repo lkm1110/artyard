@@ -59,7 +59,7 @@ const Stack = createNativeStackNavigator();
 
 export const RootNavigator: React.FC = () => {
   const isDark = useColorScheme() === 'dark';
-  const { isAuthenticated, isLoading, initialize, user } = useAuthStore();
+  const { isAuthenticated, isLoading, initialize, user, session } = useAuthStore();
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
 
   // 인증 상태 변경 감지 로그
@@ -69,7 +69,20 @@ export const RootNavigator: React.FC = () => {
     console.log('  - isLoading:', isLoading);
     console.log('  - isFirstTime:', isFirstTime);
     console.log('  - user:', user?.handle || 'null');
-  }, [isAuthenticated, isLoading, isFirstTime, user]);
+    console.log('  - session:', !!session);
+    
+    // 세션은 있지만 프로필이 없고 로딩중이 아닌 경우 → 앱 reload
+    if (session && !user && !isLoading && !isAuthenticated) {
+      console.log('⚠️ [RootNavigator] 세션 있지만 프로필 없음 - 앱 새로고침 필요');
+      console.log('💡 [RootNavigator] 1초 후 자동으로 앱을 새로고침합니다...');
+      
+      // 1초 후 자동으로 initialize 재실행
+      setTimeout(() => {
+        console.log('🔄 [RootNavigator] 앱 새로고침 중...');
+        initialize();
+      }, 1000);
+    }
+  }, [isAuthenticated, isLoading, isFirstTime, user, session, initialize]);
 
   useEffect(() => {
     const initializeApp = async () => {

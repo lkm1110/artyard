@@ -168,38 +168,22 @@ export const signInWithGoogleNative = async () => {
           
           console.log('🔑 Authorization code 받음:', code.substring(0, 20) + '...');
           
-          // Code를 세션으로 교환 (타임아웃 추가)
+          // Code를 세션으로 교환 (타임아웃 없음 - onAuthStateChange가 처리)
           console.log('🔄 [Google] exchangeCodeForSession 호출 시작...');
-          
-          // 타임아웃 Promise 생성 (10초)
-          const timeoutPromise = new Promise<{ data: any; error: any }>((_, reject) => {
-            setTimeout(() => reject(new Error('exchangeCodeForSession timeout (10s)')), 10000);
-          });
-          
-          // exchangeCodeForSession과 타임아웃 경쟁
-          let sessionData, sessionError;
-          try {
-            const result = await Promise.race([
-              supabase.auth.exchangeCodeForSession(code),
-              timeoutPromise
-            ]);
-            sessionData = result.data;
-            sessionError = result.error;
-          } catch (timeoutError: any) {
-            console.error('❌ [Google] exchangeCodeForSession 타임아웃!');
-            console.error('❌ [Google] 타임아웃 에러:', timeoutError.message);
-            
-            // 타임아웃이지만 SIGNED_IN 이벤트가 발생했을 수 있으므로 계속 진행
-            // authStore의 onAuthStateChange가 처리함
-            console.log('⚠️ [Google] 타임아웃이지만 onAuthStateChange가 처리할 것입니다.');
-            return { data: null, error: timeoutError };
-          }
-          
+          console.log('⏰ [Google] 시작 시간:', new Date().toISOString());
+          const startTime = Date.now();
+
+          const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+
+          const endTime = Date.now();
+          const duration = ((endTime - startTime) / 1000).toFixed(2);
+          console.log('⏱️ [Google] exchangeCodeForSession 완료! 소요 시간:', duration, '초');
+          console.log('⏰ [Google] 종료 시간:', new Date().toISOString());
+
           if (sessionError) {
             console.error('❌ [Google] 세션 교환 실패:', sessionError);
             console.error('❌ [Google] Error code:', sessionError.code);
             console.error('❌ [Google] Error message:', sessionError.message);
-            console.error('❌ [Google] Error details:', JSON.stringify(sessionError));
             return { data: null, error: sessionError };
           }
           

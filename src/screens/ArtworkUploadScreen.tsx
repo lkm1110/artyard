@@ -930,13 +930,16 @@ const styles = StyleSheet.create({
   },
   imageSection: {
     padding: spacing.md,
+    overflow: 'visible', // X 버튼이 잘리지 않도록
   },
   imageScrollContainer: {
     paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.md, // 위아래 여백 추가로 X 버튼 공간 확보
   },
   imageContainer: {
     position: 'relative',
     marginRight: spacing.md,
+    overflow: 'visible', // X 버튼이 잘리지 않도록
   },
   uploadedImage: {
     width: 120,
@@ -945,19 +948,26 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: -10, // 조금 더 위로
+    right: -10, // 조금 더 오른쪽으로
+    width: 28, // 크기 약간 증가
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.danger,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000', // 그림자 추가로 더 잘 보이게
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+    zIndex: 10, // 다른 요소 위에 표시
   },
   removeImageText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14, // 크기 증가
+    fontWeight: '700',
+    lineHeight: 14, // 중앙 정렬
   },
   addImageButton: {
     width: 120,
@@ -994,10 +1004,13 @@ const styles = StyleSheet.create({
   input: {
     ...typography.body,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingTop: Platform.OS === 'ios' ? spacing.md : spacing.md, // iOS 텍스트 정렬
+    paddingBottom: Platform.OS === 'ios' ? spacing.md : spacing.md,
     borderRadius: borderRadius.md,
     borderWidth: 1,
     minHeight: 44,
+    textAlignVertical: 'center', // 텍스트 세로 중앙 정렬 (Android)
+    includeFontPadding: false, // Android 폰트 패딩 제거
   },
   textArea: {
     ...typography.body,

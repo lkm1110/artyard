@@ -81,9 +81,6 @@ USING (auth.uid() = id);
 -- handle 검색을 위한 인덱스 추가
 CREATE INDEX IF NOT EXISTS idx_profiles_handle ON profiles(handle);
 
--- email 검색을 위한 인덱스 추가 (있으면 생략)
-CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
-
 -- 6. 최종 확인
 SELECT 
   policyname,
@@ -104,7 +101,7 @@ BEGIN
   RAISE NOTICE '✅ profiles 테이블 RLS 정책이 최적화되었습니다.';
   RAISE NOTICE '✅ SELECT 정책: 모든 프로필 공개 (true) - 가장 빠른 정책';
   RAISE NOTICE '✅ INSERT/UPDATE/DELETE: 본인 프로필만 가능';
-  RAISE NOTICE '✅ 인덱스 추가: handle, email';
+  RAISE NOTICE '✅ 인덱스 추가: handle';
   RAISE NOTICE '⚠️  앱을 재시작하고 다시 로그인해주세요.';
 END $$;
 

@@ -6,10 +6,14 @@ import { createClient } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// 환경 변수에서 설정값 가져오기
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+// app.json의 extra에서 설정값 가져오기
+const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://bkvycanciimgyftdtqpx.supabase.co';
+const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY';
+
+console.log('🔍 [Supabase] URL:', supabaseUrl);
+console.log('🔍 [Supabase] Anon Key:', supabaseAnonKey.substring(0, 20) + '...');
 
 // 크로스 플랫폼 Storage 설정
 const createStorage = () => {
