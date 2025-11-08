@@ -35,13 +35,15 @@ const { width: screenWidth } = Dimensions.get('window');
 
 interface FormData {
   title: string;
+  artistName: string;
   description: string;
   material: Material;
   category: string;
   sizeWidth: string;
   sizeHeight: string;
   year: number;
-  edition: string;
+  edition: 'Original' | 'Limited' | 'Copy';
+  editionNumber: string; // e.g., "1/300"
   price: string;
   images: string[];
   location?: LocationInfo;
@@ -77,13 +79,15 @@ export const ArtworkUploadScreen: React.FC = () => {
 
   const [formData, setFormData] = useState<FormData>({
     title: '',
+    artistName: user?.handle || '',
     description: '',
     material: 'Illustration',
     category: 'Painting',
     sizeWidth: '',
     sizeHeight: '',
     year: new Date().getFullYear(),
-    edition: '',
+    edition: 'Original',
+    editionNumber: '',
     price: '',
     images: [],
   });
@@ -96,28 +100,16 @@ export const ArtworkUploadScreen: React.FC = () => {
   // 실제 업로드 훅
   const uploadArtworkMutation = useUploadArtwork();
 
-  const requestPermissions = useCallback(async () => {
-    // 카메라 권한 요청
-    const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-    const mediaLibraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (cameraPermission.status !== 'granted' || mediaLibraryPermission.status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'ArtYard needs camera and photo library access to upload artwork images. Please enable permissions in your device settings.',
-        [{ text: 'OK' }]
-      );
-      return false;
-    }
-
-    return true;
-  }, []);
-
   const pickImageFromCamera = useCallback(async () => {
-    const hasPermissions = await requestPermissions();
-    if (!hasPermissions) return;
-
     try {
+      // 시스템 권한 요청 (시스템 다이얼로그만 표시)
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (permission.status !== 'granted') {
+        // 권한 거부 시 아무 작업도 하지 않음 (Apple 요구사항)
+        return;
+      }
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -137,13 +129,18 @@ export const ArtworkUploadScreen: React.FC = () => {
       console.error('카메라 에러:', error);
       Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
-  }, [requestPermissions]);
+  }, []);
 
   const pickImageFromGallery = useCallback(async () => {
-    const hasPermissions = await requestPermissions();
-    if (!hasPermissions) return;
-
     try {
+      // 시스템 권한 요청 (시스템 다이얼로그만 표시)
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permission.status !== 'granted') {
+        // 권한 거부 시 아무 작업도 하지 않음 (Apple 요구사항)
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -229,8 +226,16 @@ export const ArtworkUploadScreen: React.FC = () => {
 
     if (!formData.title.trim()) {
       newErrors.title = 'Title is required';
+    } else if (formData.title.trim().length < 2) {
+      newErrors.title = 'Title must be at least 2 characters';
     } else if (formData.title.length > 100) {
       newErrors.title = 'Title must be less than 100 characters';
+    }
+
+    if (!formData.artistName.trim()) {
+      newErrors.artistName = 'Artist name is required';
+    } else if (formData.artistName.length > 100) {
+      newErrors.artistName = 'Artist name must be less than 100 characters';
     }
 
     if (!formData.description.trim()) {
@@ -251,8 +256,16 @@ export const ArtworkUploadScreen: React.FC = () => {
       newErrors.sizeHeight = 'Height must be between 1-9999 cm';
     }
 
-    if (!formData.edition.trim()) {
-      newErrors.edition = 'Edition is required';
+    if (formData.edition === 'Limited' && !formData.editionNumber.trim()) {
+      newErrors.editionNumber = 'Edition number required (e.g., 1/300)';
+    }
+
+    if (!formData.price.trim()) {
+      newErrors.price = 'Price is required';
+    } else if (parseFloat(formData.price) <= 0) {
+      newErrors.price = 'Price must be greater than 0';
+    } else if (parseFloat(formData.price) > 100000000) {
+      newErrors.price = 'Price cannot exceed $100,000,000';
     }
 
     if (formData.images.length === 0) {
@@ -316,15 +329,21 @@ export const ArtworkUploadScreen: React.FC = () => {
       }
 
       console.log('💾 Step 3: Saving artwork data to database...');
+      const editionString = formData.edition === 'Limited' && formData.editionNumber
+        ? `Limited Edition ${formData.editionNumber}`
+        : formData.edition;
+      
       const artworkData = {
         title: formData.title.trim(),
+        artist_name: formData.artistName.trim(),
         description: formData.description.trim(),
         material: formData.material,
         category: formData.category,
         size: `${formData.sizeWidth}×${formData.sizeHeight}cm`,
         year: formData.year,
-        edition: formData.edition.trim(),
+        edition: editionString,
         price: formData.price,
+        sale_status: 'available', // 판매 가능 상태로 설정
         images: uploadedImageUrls,
         // 위치 정보 추가 (있는 경우에만)
         ...(locationInfo && {
@@ -525,6 +544,36 @@ export const ArtworkUploadScreen: React.FC = () => {
               )}
             </View>
 
+            {/* Artist Name */}
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
+                Artist Name *
+              </Text>
+              <Text style={[styles.helperText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                Original artist (defaults to you, change if reselling)
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: isDark ? colors.darkCard : colors.card,
+                    color: isDark ? colors.darkText : colors.text,
+                    borderColor: errors.artistName ? colors.danger : 'transparent',
+                  }
+                ]}
+                placeholder="Artist name"
+                placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                value={formData.artistName}
+                onChangeText={(text) => updateField('artistName', text)}
+                maxLength={100}
+              />
+              {errors.artistName && (
+                <Text style={[styles.errorText, { color: colors.danger }]}>
+                  {errors.artistName}
+                </Text>
+              )}
+            </View>
+
             {/* Description */}
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
@@ -669,6 +718,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                       backgroundColor: isDark ? colors.darkCard : colors.card,
                       color: isDark ? colors.darkText : colors.text,
                       borderColor: errors.year ? colors.danger : 'transparent',
+                      textAlign: 'center',
                     }
                   ]}
                   placeholder="2024"
@@ -689,24 +739,45 @@ export const ArtworkUploadScreen: React.FC = () => {
                 <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
                   Edition *
                 </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: isDark ? colors.darkCard : colors.card,
-                      color: isDark ? colors.darkText : colors.text,
-                      borderColor: errors.edition ? colors.danger : 'transparent',
-                    }
-                  ]}
-                  placeholder="e.g. Original, 1/10"
-                  placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
-                  value={formData.edition}
-                  onChangeText={(text) => updateField('edition', text)}
-                  maxLength={30}
-                />
-                {errors.edition && (
+                <View style={styles.editionOptionsContainer}>
+                  {(['Original', 'Limited', 'Copy'] as const).map((option) => (
+                    <TouchableOpacity
+                      key={option}
+                      style={[
+                        styles.editionOption,
+                        { backgroundColor: formData.edition === option ? colors.primary : (isDark ? colors.darkCard : colors.card) }
+                      ]}
+                      onPress={() => updateField('edition', option)}
+                    >
+                      <Text style={[
+                        styles.editionOptionText,
+                        { color: formData.edition === option ? '#fff' : (isDark ? colors.darkText : colors.text) }
+                      ]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {formData.edition === 'Limited' && (
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark ? colors.darkCard : colors.card,
+                        color: isDark ? colors.darkText : colors.text,
+                        borderColor: errors.editionNumber ? colors.danger : 'transparent',
+                        marginTop: spacing.sm,
+                      }
+                    ]}
+                    placeholder="e.g., 1/300"
+                    placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                    value={formData.editionNumber}
+                    onChangeText={(text) => updateField('editionNumber', text)}
+                  />
+                )}
+                {errors.editionNumber && (
                   <Text style={[styles.errorText, { color: colors.danger }]}>
-                    {errors.edition}
+                    {errors.editionNumber}
                   </Text>
                 )}
               </View>
@@ -724,6 +795,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                     backgroundColor: isDark ? colors.darkCard : colors.card,
                     color: isDark ? colors.darkText : colors.text,
                     borderColor: errors.price ? colors.danger : 'transparent',
+                    textAlign: 'center',
                   }
                 ]}
                 placeholder="Enter price (e.g., 50, 100-200, 100)"
@@ -1001,6 +1073,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.sm,
   },
+  helperText: {
+    ...typography.caption,
+    marginBottom: spacing.xs,
+    fontStyle: 'italic',
+  },
   input: {
     ...typography.body,
     paddingHorizontal: spacing.md,
@@ -1160,5 +1237,26 @@ const styles = StyleSheet.create({
     fontSize: typography.body.fontSize,
     fontWeight: '500',
     minWidth: 24,
+  },
+  // Edition 옵션 스타일
+  editionOptionsContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  editionOption: {
+    flex: 1,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.xs,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  editionOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

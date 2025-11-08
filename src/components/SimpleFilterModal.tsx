@@ -53,8 +53,8 @@ export const SimpleFilterModal: React.FC<Props> = ({
   ];
   
   // 필터 상태 (기본값 설정)
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
-  const [sizeRange, setSizeRange] = useState({ min: 10, max: 150 });
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 100000000 });
+  const [sizeRange, setSizeRange] = useState({ min: 10, max: 500 });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   useEffect(() => {
@@ -81,8 +81,8 @@ export const SimpleFilterModal: React.FC<Props> = ({
 
   const handleApplyFilter = () => {
     const filter: SimpleFilter = {
-      priceRange: priceRange.min > 0 || priceRange.max < 1000 ? priceRange : undefined,
-      sizeRange: sizeRange.min > 10 || sizeRange.max < 150 ? sizeRange : undefined,
+      priceRange: priceRange.min > 0 || priceRange.max < 100000000 ? priceRange : undefined,
+      sizeRange: sizeRange.min > 10 || sizeRange.max < 500 ? sizeRange : undefined,
       categories: selectedCategories.length > 0 ? selectedCategories : undefined,
     };
 
@@ -91,8 +91,8 @@ export const SimpleFilterModal: React.FC<Props> = ({
   };
 
   const handleResetFilter = () => {
-    setPriceRange({ min: 0, max: 1000 });
-    setSizeRange({ min: 10, max: 150 });
+    setPriceRange({ min: 0, max: 100000000 });
+    setSizeRange({ min: 10, max: 500 });
     setSelectedCategories([]);
   };
 
@@ -193,8 +193,8 @@ export const SimpleFilterModal: React.FC<Props> = ({
                 <Slider
                   style={styles.slider}
                   minimumValue={0}
-                  maximumValue={500}
-                  step={10}
+                  maximumValue={50000}
+                  step={100}
                   value={priceRange.min}
                   onValueChange={(value) => setPriceRange(prev => ({ ...prev, min: Math.round(value) }))}
                   minimumTrackTintColor={colors.primary}
@@ -208,8 +208,8 @@ export const SimpleFilterModal: React.FC<Props> = ({
                 <Slider
                   style={styles.slider}
                   minimumValue={priceRange.min}
-                  maximumValue={1000}
-                  step={10}
+                  maximumValue={100000000}
+                  step={100000}
                   value={priceRange.max}
                   onValueChange={(value) => setPriceRange(prev => ({ ...prev, max: Math.round(value) }))}
                   minimumTrackTintColor={colors.primary}
@@ -264,7 +264,7 @@ export const SimpleFilterModal: React.FC<Props> = ({
                 <Slider
                   style={styles.slider}
                   minimumValue={10}
-                  maximumValue={75}
+                  maximumValue={250}
                   step={5}
                   value={sizeRange.min}
                   onValueChange={(value) => setSizeRange(prev => ({ ...prev, min: Math.round(value) }))}
@@ -279,7 +279,7 @@ export const SimpleFilterModal: React.FC<Props> = ({
                 <Slider
                   style={styles.slider}
                   minimumValue={sizeRange.min}
-                  maximumValue={150}
+                  maximumValue={500}
                   step={5}
                   value={sizeRange.max}
                   onValueChange={(value) => setSizeRange(prev => ({ ...prev, max: Math.round(value) }))}

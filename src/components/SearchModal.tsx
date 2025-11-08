@@ -13,6 +13,7 @@ import {
   useColorScheme,
   FlatList,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
 import { ArtworkCard } from './ArtworkCard';
@@ -43,9 +44,9 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const [hasSearched, setHasSearched] = useState(false);
   const [currentFilter, setCurrentFilter] = useState<AdvancedFilter>({});
   
-  // 검색 실행
+  // 검색 실행 (최소 2글자)
   useEffect(() => {
-    if (searchQuery.length > 0) {
+    if (searchQuery.length >= 2) {
       performSearch();
     } else {
       setSearchResults([]);
@@ -85,6 +86,16 @@ export const SearchModal: React.FC<SearchModalProps> = ({
   const handleArtworkPress = (artwork: ExtendedArtwork) => {
     onArtworkPress?.(artwork.id);
     onClose();
+  };
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.length > 0 && searchQuery.length < 2) {
+      Alert.alert(
+        'Search Requirements',
+        'Please enter at least 2 characters to search.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   return (
@@ -138,6 +149,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
               placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
               value={searchQuery}
               onChangeText={onSearchChange}
+              onSubmitEditing={handleSearchSubmit}
               returnKeyType="search"
               autoFocus
               clearButtonMode="while-editing"

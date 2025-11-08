@@ -127,7 +127,7 @@
         <p>When you create an account on ArtYard, we collect:</p>
         <ul>
             <li><strong>Email address</strong> - Used for account authentication and important notifications</li>
-            <li><strong>Profile information</strong> - Including your display name, profile photo, bio, and school/department (optional)</li>
+            <li><strong>Profile information</strong> - Including your display name (username/handle), profile photo, bio, school/department (optional), and your name from social login providers (Google, Apple, Facebook) if provided</li>
             <li><strong>Authentication data</strong> - Provided by third-party OAuth services (Google, Apple, Facebook) when you sign in</li>
         </ul>
         
@@ -138,7 +138,20 @@
             <li>Your likes, bookmarks, and interactions with other users' content</li>
         </ul>
         
-        <h3>1.3 Automatically Collected Information</h3>
+        <h3>1.3 Location Information (Optional)</h3>
+        <p>When you upload artwork, you may <strong>optionally</strong> choose to include location information:</p>
+        <ul>
+            <li><strong>Approximate location</strong> - City, state/province, and country where your artwork was created</li>
+            <li><strong>GPS coordinates</strong> - Latitude and longitude (rounded to approximately 100 meters for privacy)</li>
+        </ul>
+        <p><strong>Note:</strong> Location data is only collected if you:</p>
+        <ul>
+            <li>Grant location permission when prompted by your device</li>
+            <li>Choose to add location to your artwork during upload</li>
+        </ul>
+        <p>You can always skip adding location information. Location data is <strong>never</strong> collected in the background or for any other purpose.</p>
+        
+        <h3>1.4 Automatically Collected Information</h3>
         <ul>
             <li>Device information (device type, operating system)</li>
             <li>App usage data (features used, time spent in app)</li>
@@ -148,7 +161,7 @@
         <div class="highlight">
             <strong>⚠️ Important:</strong> We do NOT collect:
             <ul style="margin-top: 10px;">
-                <li>Location data (GPS coordinates)</li>
+                <li><strong>Background location</strong> - We only collect location when you choose to add it to an artwork</li>
                 <li>Contacts from your phone</li>
                 <li>Photos from your gallery (only images you explicitly choose to upload)</li>
                 <li>Payment card information (handled securely by third-party payment processors)</li>
@@ -163,6 +176,7 @@
         <ul>
             <li>Create and manage your account</li>
             <li>Display your profile and artworks to other users</li>
+            <li>Show location information (city, state, country) on your artworks if you choose to add it</li>
             <li>Enable communication between users (messaging, comments)</li>
             <li>Process artwork sales and purchases</li>
         </ul>
@@ -193,8 +207,8 @@
         <h3>3.1 Public Information</h3>
         <p>The following information is visible to other ArtYard users:</p>
         <ul>
-            <li>Your profile information (display name, photo, bio, school)</li>
-            <li>Artworks you upload and their details</li>
+            <li>Your profile information (display name/username, name from social login, photo, bio, school)</li>
+            <li>Artworks you upload and their details (including location if you choose to add it)</li>
             <li>Comments you post</li>
             <li>Your likes and bookmarks (if you choose to make them public)</li>
         </ul>

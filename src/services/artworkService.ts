@@ -67,16 +67,11 @@ export const getArtworks = async (
       if (min > 0) {
         query = query.gte('price::numeric', min);
       }
-      if (max < 1000) {
+      if (max < 100000000) {
         query = query.lte('price::numeric', max);
       }
     }
     
-    // 크기 범위 필터 (size 문자열에서 숫자 추출 필요)
-    // size 형식: "50 x 70 cm" 또는 "50x70" 등
-    // PostgreSQL에서는 정규식으로 추출 가능하지만, 클라이언트에서 필터링하는 것이 더 안전
-    // 여기서는 간단히 구현하지 않고, 필요시 추가 가능
-
     // 페이지네이션
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -86,8 +81,27 @@ export const getArtworks = async (
 
     if (error) throw error;
 
+    // 크기 범위 필터 (클라이언트 사이드 - OR 조건)
+    let filteredData = data || [];
+    if (filter?.sizeRange) {
+      const { min, max } = filter.sizeRange;
+      filteredData = filteredData.filter(artwork => {
+        if (!artwork.size) return false;
+        
+        // size 형식: "50×70cm" 또는 "50 x 70 cm" 등에서 숫자 추출
+        const numbers = artwork.size.match(/\d+/g);
+        if (!numbers || numbers.length === 0) return false;
+        
+        // 추출된 숫자 중 하나라도 범위 내면 포함 (OR 조건)
+        return numbers.some(num => {
+          const size = parseInt(num);
+          return size >= min && size <= max;
+        });
+      });
+    }
+
     // 사용자별 좋아요/북마크 상태 조회
-    let processedData = data || [];
+    let processedData = filteredData;
     if (currentUserId && processedData.length > 0) {
       const artworkIds = processedData.map(artwork => artwork.id);
       
@@ -115,11 +129,14 @@ export const getArtworks = async (
       }));
     }
 
+    // 크기 필터를 적용했다면 실제 필터링된 개수 반환
+    const actualCount = filter?.sizeRange ? filteredData.length : (count || 0);
+    
     return {
       data: processedData,
-      count: count || 0,
+      count: actualCount,
       page,
-      has_more: (count || 0) > page * limit,
+      has_more: actualCount > page * limit,
     };
   } catch (error: any) {
     console.error('❌ 작품 목록 가져오기 오류:', error);

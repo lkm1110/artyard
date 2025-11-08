@@ -25,7 +25,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.artyard.app",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "deploymentTarget": "13.4",
       "infoPlist": {
         "CFBundleURLTypes": [
@@ -42,12 +42,11 @@
             ]
           }
         ],
-          "NSCameraUsageDescription": "ArtYard needs access to your camera to take photos of your artwork.",
-          "NSPhotoLibraryUsageDescription": "ArtYard needs access to your photo library to select artwork images.",
-          "NSMicrophoneUsageDescription": "ArtYard needs access to microphone for video recordings.",
-          "NSLocationWhenInUseUsageDescription": "ArtYard would like to add location information to your artworks so others can see where they were created.",
-          "NSLocationAlwaysAndWhenInUseUsageDescription": "ArtYard would like to add location information to your artworks so others can see where they were created.",
-          "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
+          "NSCameraUsageDescription": "Take photos of your artwork to share with the ArtYard community.",
+          "NSPhotoLibraryUsageDescription": "Select images from your photo library to upload your artwork.",
+          "NSMicrophoneUsageDescription": "Record audio for your artwork presentations.",
+          "NSLocationWhenInUseUsageDescription": "Add location information to your artworks to show where they were created.",
+          "NSLocationAlwaysAndWhenInUseUsageDescription": "Add location information to your artworks to show where they were created.",
           "LSApplicationQueriesSchemes": [
             "https",
             "http"

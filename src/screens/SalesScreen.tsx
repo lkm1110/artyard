@@ -1,5 +1,5 @@
 /**
- * My Sales Screen (Seller)
+ * My Sales Screen (Seller) - Simplified
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,419 +11,291 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useColorScheme,
-  Alert,
   Image,
-  TextInput,
-  Modal,
+  RefreshControl,
+  StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../services/supabase';
-import { useAuthStore } from '../store/authStore';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { getMySales } from '../services/transactionService';
+import { formatCurrency } from '../services/paymentService';
+import { getTransactionStatusLabel, getTransactionStatusColor } from '../types/complete-system';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
-import { formatPrice } from '../types/complete-system';
-
-interface Sale {
-  id: string;
-  amount: number;
-  platform_fee: number;
-  seller_amount: number;
-  status: string;
-  created_at: string;
-  buyer: {
-    handle: string;
-  };
-  shipping_address: any;
-  artwork: {
-    id: string;
-    title: string;
-    images: string[];
-    author_id: string;
-  };
-  tracking_number?: string;
-}
+import { Transaction } from '../types/transaction';
 
 export const SalesScreen = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
-  const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [trackingModalVisible, setTrackingModalVisible] = useState(false);
-  const [trackingNumber, setTrackingNumber] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [sales, setSales] = useState<Transaction[]>([]);
 
-  useEffect(() => {
-    loadSales();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSales();
+    }, [])
+  );
 
   const loadSales = async () => {
     try {
       setLoading(true);
-
-      // Step 1: 내 작품 ID 목록 가져오기
-      const { data: myArtworks, error: artworksError } = await supabase
-        .from('artworks')
-        .select('id')
-        .eq('author_id', user?.id);
-
-      if (artworksError) {
-        console.error('Artworks query error:', artworksError);
-        throw artworksError;
-      }
-
-      const myArtworkIds = myArtworks?.map(a => a.id) || [];
-
-      if (myArtworkIds.length === 0) {
-        setSales([]);
-        return;
-      }
-
-      // Step 2: 내 작품이 포함된 거래 조회 (단순 쿼리)
-      const { data: transactions, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*')
-        .in('artwork_id', myArtworkIds)
-        .order('created_at', { ascending: false });
-
-      if (transactionsError) {
-        console.error('Transactions query error:', transactionsError);
-        throw transactionsError;
-      }
-
-      if (!transactions || transactions.length === 0) {
-        setSales([]);
-        return;
-      }
-
-      // Step 3: 관련 데이터 병렬로 가져오기
-      const salesWithDetails = await Promise.all(
-        transactions.map(async (transaction) => {
-          try {
-            // Buyer 정보
-            let buyer = null;
-            if (transaction.buyer_id) {
-              const { data: buyerData } = await supabase
-                .from('profiles')
-                .select('handle')
-                .eq('id', transaction.buyer_id)
-                .maybeSingle();
-              
-              buyer = buyerData;
-            }
-
-            // Artwork 정보
-            let artwork = null;
-            if (transaction.artwork_id) {
-              const { data: artworkData } = await supabase
-                .from('artworks')
-                .select('id, title, images, author_id')
-                .eq('id', transaction.artwork_id)
-                .maybeSingle();
-              
-              artwork = artworkData;
-            }
-
-            // Shipping address 정보
-            let shipping_address = null;
-            if (transaction.shipping_address_id) {
-              const { data: addressData } = await supabase
-                .from('shipping_addresses')
-                .select('*')
-                .eq('id', transaction.shipping_address_id)
-                .maybeSingle();
-              
-              shipping_address = addressData;
-            }
-
-            return {
-              ...transaction,
-              buyer,
-              artwork,
-              shipping_address,
-            };
-          } catch (detailError) {
-            console.warn('Failed to load detail for sale:', transaction.id, detailError);
-            return {
-              ...transaction,
-              buyer: null,
-              artwork: null,
-              shipping_address: null,
-            };
-          }
-        })
+      const data = await getMySales();
+      
+      // 중복 제거 (ID 기준)
+      const uniqueSales = data.filter((sale, index, self) =>
+        index === self.findIndex((s) => s.id === sale.id)
       );
-
-      setSales(salesWithDetails);
-    } catch (error: any) {
-      console.error('Failed to load sales:', error);
-      // 에러가 발생해도 빈 배열로 설정하여 UI가 계속 작동하도록
-      setSales([]);
-      Alert.alert('Error', 'Failed to load sales. Please try again.');
+      
+      setSales(uniqueSales);
+    } catch (error) {
+      console.error('Error loading sales:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleAddTracking = (sale: Sale) => {
-    setSelectedSale(sale);
-    setTrackingNumber(sale.tracking_number || '');
-    setTrackingModalVisible(true);
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadSales();
   };
 
-  const handleSubmitTracking = async () => {
-    if (!trackingNumber.trim()) {
-      Alert.alert('Notice', 'Please enter tracking number');
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('transactions')
-        .update({
-          tracking_number: trackingNumber,
-          status: 'shipped',
-        })
-        .eq('id', selectedSale?.id);
-
-      if (error) throw error;
-
-      Alert.alert('Success', 'Tracking number updated');
-      setTrackingModalVisible(false);
-      loadSales();
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
+  const handleSalePress = (saleId: string) => {
+    navigation.navigate('SaleDetail' as never, { transactionId: saleId } as never);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '#F59E0B';
-      case 'completed':
-        return '#10B981';
-      case 'shipped':
-        return '#3B82F6';
-      default:
-        return colors.textMuted;
-    }
+  const handleChatWithBuyer = (buyerId: string) => {
+    navigation.navigate('Chat' as never, { userId: buyerId } as never);
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending Payment';
-      case 'processing':
-        return 'Processing';
-      case 'shipped':
-        return 'Shipped';
-      case 'delivered':
-        return 'Delivered';
-      case 'completed':
-        return 'Completed';
-      default:
-        return status;
-    }
+  const theme = {
+    bg: isDark ? colors.darkBackground : colors.white,
+    text: isDark ? colors.darkText : colors.text,
+    textSecondary: isDark ? colors.darkTextMuted : colors.textMuted,
+    card: isDark ? colors.darkCard : colors.white,
+    border: isDark ? colors.darkBorder : colors.border,
   };
 
-  const renderSale = ({ item }: { item: Sale }) => {
-    const artwork = item.artwork;
+  const renderSale = ({ item }: { item: Transaction }) => {
+    const statusColor = getTransactionStatusColor(item.status);
+    const statusLabel = getTransactionStatusLabel(item.status);
+    const isNew = item.status === 'paid';
 
     return (
-      <View
-        style={[
-          styles.saleCard,
-          { backgroundColor: isDark ? colors.darkCard : colors.card },
-        ]}
+      <TouchableOpacity
+        style={[styles.saleCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+        onPress={() => handleSalePress(item.id)}
       >
-        {/* Sale Header */}
-        <View style={styles.saleHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-              {getStatusLabel(item.status)}
+        {/* New Badge */}
+        {isNew && (
+          <View style={styles.newBadge}>
+            <Text style={styles.newBadgeText}>NEW</Text>
+          </View>
+        )}
+
+        {/* Artwork Image */}
+        {item.artwork?.image_url && (
+          <Image
+            source={{ uri: item.artwork.image_url }}
+            style={styles.artworkImage}
+          />
+        )}
+
+        <View style={styles.saleInfo}>
+          {/* Artwork Title */}
+          <Text style={[styles.artworkTitle, { color: theme.text }]} numberOfLines={1}>
+            {item.artwork?.title || 'Artwork'}
+          </Text>
+
+          {/* Buyer */}
+          <Text style={[styles.buyerName, { color: theme.textSecondary }]} numberOfLines={1}>
+            Sold to {item.buyer?.full_name || item.buyer?.handle || 'Buyer'}
+          </Text>
+
+          {/* Status Badge */}
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusText, { color: statusColor }]}>
+              {statusLabel}
             </Text>
           </View>
-          <Text style={[styles.saleDate, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-            {new Date(item.created_at).toLocaleDateString()}
-          </Text>
-        </View>
 
-        {/* 작품 정보 */}
-        <View style={styles.saleContent}>
-          {artwork && artwork.images?.[0] && (
-            <Image
-              source={{ uri: artwork.images[0] }}
-              style={styles.artworkImage}
-            />
-          )}
-
-          <View style={styles.saleInfo}>
-            <Text
-              style={[styles.artworkTitle, { color: isDark ? colors.darkText : colors.text }]}
-              numberOfLines={1}
-            >
-              {artwork?.title || 'Unknown Artwork'}
+          {/* Earnings */}
+          <View style={styles.earningsRow}>
+            <Text style={[styles.earningsLabel, { color: theme.textSecondary }]}>
+              Your Earnings:
             </Text>
-            <Text style={[styles.buyerName, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-              Buyer: {item.buyer?.handle || 'Unknown'}
+            <Text style={[styles.earningsValue, { color: colors.success }]}>
+              {formatCurrency(item.seller_amount, 'KRW')}
             </Text>
+          </View>
 
-            <View style={styles.amounts}>
-              <Text style={[styles.amountLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Total: {formatPrice(item.amount, 'USD')}
-              </Text>
-              <Text style={[styles.amountLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Platform Fee: {formatPrice(item.platform_fee || 0, 'USD')}
-              </Text>
-              <Text style={[styles.sellerAmount, { color: colors.primary }]}>
-                You Get: {formatPrice(item.seller_amount || (item.amount * 0.9), 'USD')}
-              </Text>
-            </View>
-
-            {item.tracking_number && (
-              <Text style={[styles.trackingNumber, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Tracking: {item.tracking_number}
-              </Text>
+          {/* Action Buttons */}
+          <View style={styles.actions}>
+            {item.status === 'paid' && (
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primaryLight }]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleChatWithBuyer(item.buyer_id);
+                }}
+              >
+                <Ionicons name="chatbubble" size={16} color={colors.primary} />
+                <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+                  Chat with Buyer
+                </Text>
+              </TouchableOpacity>
+            )}
+            {item.status === 'confirmed' && (
+              <View style={[styles.confirmedBadge, { backgroundColor: colors.successLight }]}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                <Text style={[styles.confirmedText, { color: colors.success }]}>
+                  Paid Out
+                </Text>
+              </View>
             )}
           </View>
         </View>
 
-        {/* 액션 */}
-        {item.status === 'processing' && (
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => handleAddTracking(item)}
-          >
-            <Text style={styles.actionButtonText}>
-              {item.tracking_number ? 'Update Tracking' : 'Add Tracking Number'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {item.status === 'shipped' && (
-          <View style={styles.shippedInfo}>
-            <Text style={[styles.shippedText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-              ✓ Shipped - Waiting for delivery confirmation
-            </Text>
-          </View>
-        )}
-      </View>
+        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+      </TouchableOpacity>
     );
   };
 
+  // Calculate total earnings
+  const totalEarnings = sales
+    .filter((sale) => sale.status === 'confirmed')
+    .reduce((sum, sale) => sum + sale.seller_amount, 0);
+
+  const pendingEarnings = sales
+    .filter((sale) => sale.status === 'paid')
+    .reduce((sum, sale) => sum + sale.seller_amount, 0);
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bg }]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <View style={[styles.header, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: theme.text }]}>←</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>My Sales</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={[styles.container, { backgroundColor: theme.bg }, styles.centerContent]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (sales.length === 0) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bg }]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <View style={[styles.header, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: theme.text }]}>←</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>My Sales</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <View style={[styles.container, { backgroundColor: theme.bg }, styles.centerContent]}>
+          <Ionicons name="cash-outline" size={80} color={colors.primary} />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            No Sales Yet
+          </Text>
+          <Text style={[styles.emptyMessage, { color: theme.textSecondary }]}>
+            Your sales will appear here when someone purchases your artwork
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-      {/* 헤더 */}
-      <View style={[
-        styles.header,
-        { 
-          backgroundColor: isDark ? colors.darkCard : colors.card,
-          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        }
-      ]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bg }]} edges={['top']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <View style={[styles.header, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
-            ←
-          </Text>
+          <Text style={[styles.backIcon, { color: theme.text }]}>←</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          My Sales
-        </Text>
-        <View style={styles.headerSpacer}>
-          {sales.length > 0 && (
-            <Text style={[styles.salesCount, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-              {sales.length}
-            </Text>
-          )}
+        <Text style={[styles.headerTitle, { color: theme.text }]}>My Sales</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+      <View style={[styles.container, { backgroundColor: theme.bg }]}>
+        {/* Earnings Summary */}
+      <View style={[styles.summaryCard, { backgroundColor: theme.card }]}>
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+            Total Earnings
+          </Text>
+          <Text style={[styles.summaryValue, { color: colors.success }]}>
+            {formatCurrency(totalEarnings, 'KRW')}
+          </Text>
+        </View>
+        <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
+        <View style={styles.summaryItem}>
+          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+            In Escrow
+          </Text>
+          <Text style={[styles.summaryValue, { color: colors.warning }]}>
+            {formatCurrency(pendingEarnings, 'KRW')}
+          </Text>
         </View>
       </View>
 
-      {/* Sales List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : sales.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-            No sales yet
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={sales}
-          renderItem={renderSale}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+      {/* Info Banner */}
+      <View style={[styles.infoBanner, { backgroundColor: colors.infoLight }]}>
+        <Ionicons name="information-circle" size={20} color={colors.info} />
+        <Text style={[styles.infoBannerText, { color: theme.text }]}>
+          Chat with buyers to arrange shipping. Payment released after delivery confirmation.
+        </Text>
+      </View>
+
+      <FlatList
+        data={sales}
+        renderItem={renderSale}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
         />
-      )}
-
-      {/* Tracking Number Modal */}
-      <Modal
-        visible={trackingModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setTrackingModalVisible(false)}
-      >
-        <View style={[styles.modalContainer, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
-              Enter Tracking Number
-            </Text>
-            <TouchableOpacity onPress={() => setTrackingModalVisible(false)}>
-              <Text style={[styles.modalClose, { color: colors.textMuted }]}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalContent}>
-            <Text style={[styles.inputLabel, { color: isDark ? colors.darkText : colors.text }]}>
-              Tracking Number
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: isDark ? colors.darkCard : colors.card,
-                  color: isDark ? colors.darkText : colors.text,
-                  borderColor: isDark ? colors.darkBorder : colors.border,
-                },
-              ]}
-              placeholder="Enter tracking number..."
-              placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
-              value={trackingNumber}
-              onChangeText={setTrackingNumber}
-            />
-
-            <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: colors.primary }]}
-              onPress={handleSubmitTracking}
-            >
-              <Text style={styles.submitButtonText}>Submit & Mark as Shipped</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+      }
+    />
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    zIndex: 1000,
   },
   backButton: {
     padding: spacing.sm,
@@ -439,146 +311,174 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
-    alignItems: 'flex-end',
   },
-  salesCount: {
-    ...typography.caption,
-    fontWeight: '500',
-  },
-  loadingContainer: {
+  container: {
     flex: 1,
+  },
+  centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: spacing.xl,
   },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-  },
-  list: {
+  summaryCard: {
+    flexDirection: 'row',
     padding: spacing.lg,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    borderRadius: borderRadius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    ...typography.caption,
+    marginBottom: spacing.xs,
+  },
+  summaryValue: {
+    ...typography.h2,
+    fontWeight: 'bold',
+  },
+  summaryDivider: {
+    width: 1,
+    marginHorizontal: spacing.md,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  infoBannerText: {
+    ...typography.caption,
+    flex: 1,
+  },
+  listContent: {
+    padding: spacing.md,
   },
   saleCard: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-  },
-  saleHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    padding: spacing.md,
     marginBottom: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    position: 'relative',
   },
-  statusBadge: {
+  newBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: colors.error,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
+    zIndex: 1,
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  saleDate: {
-    fontSize: 12,
-  },
-  saleContent: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
+  newBadgeText: {
+    ...typography.caption,
+    color: colors.white,
+    fontWeight: 'bold',
+    fontSize: 10,
   },
   artworkImage: {
     width: 80,
     height: 80,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     marginRight: spacing.md,
   },
   saleInfo: {
     flex: 1,
   },
   artworkTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.h4,
     marginBottom: spacing.xs,
   },
   buyerName: {
-    fontSize: 12,
+    ...typography.caption,
     marginBottom: spacing.sm,
   },
-  amounts: {
-    marginBottom: spacing.xs,
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
   },
-  amountLabel: {
-    fontSize: 12,
-    marginBottom: spacing.xs,
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: spacing.xs,
   },
-  sellerAmount: {
-    fontSize: 16,
+  statusText: {
+    ...typography.caption,
     fontWeight: 'bold',
   },
-  trackingNumber: {
-    fontSize: 12,
-    marginTop: spacing.xs,
+  earningsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  earningsLabel: {
+    ...typography.caption,
+    marginRight: spacing.xs,
+  },
+  earningsValue: {
+    ...typography.body,
+    fontWeight: 'bold',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   actionButton: {
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    gap: spacing.xs,
   },
   actionButtonText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  shippedInfo: {
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  shippedText: {
-    fontSize: 12,
-  },
-  modalContainer: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  modalTitle: {
-    fontSize: 20,
+    ...typography.caption,
     fontWeight: 'bold',
   },
-  modalClose: {
-    fontSize: 24,
+  confirmedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    gap: spacing.xs,
   },
-  modalContent: {
-    flex: 1,
+  confirmedText: {
+    ...typography.caption,
+    fontWeight: 'bold',
   },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+  emptyTitle: {
+    ...typography.h2,
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
-  input: {
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    fontSize: 14,
-    marginBottom: spacing.lg,
-  },
-  submitButton: {
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
+  emptyMessage: {
+    ...typography.body,
+    textAlign: 'center',
   },
 });
-

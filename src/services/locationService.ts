@@ -191,37 +191,16 @@ export const getCurrentLocation = async (options?: {
       accuracy: location.coords.accuracy
     });
 
-    // 역지오코딩 (좌표 → 주소)
+    // 역지오코딩 (좌표 → 주소) - 항상 OpenStreetMap API 사용 (영어 보장)
     let addressInfo = {};
     try {
-      if (Platform.OS === 'web') {
-        // 웹에서는 Google Maps Geocoding API 사용
-        console.log('🌐 웹 환경에서 Google Geocoding API 사용');
-        addressInfo = await getAddressFromCoordinates(
-          location.coords.latitude, 
-          location.coords.longitude
-        );
-      } else {
-        // 모바일에서는 expo-location 사용
-        console.log('📱 모바일 환경에서 expo-location 사용');
-        const reverseGeocode = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-
-        if (reverseGeocode && reverseGeocode.length > 0) {
-          const address = reverseGeocode[0];
-          addressInfo = {
-            country: translateLocationToEnglish(address.country),
-            state: translateLocationToEnglish(address.region?.trim()), // 공백 제거 및 영어 변환
-            city: translateLocationToEnglish(address.city),
-            district: translateLocationToEnglish(address.district),
-            street: address.street, // 거리명은 그대로 유지
-            name: address.name,
-            postalCode: address.postalCode,
-          };
-        }
-      }
+      // 모든 플랫폼에서 OpenStreetMap Nominatim API 사용 (영어 보장)
+      console.log('🌐 OpenStreetMap Nominatim API 사용 (영어 보장)');
+      addressInfo = await getAddressFromCoordinates(
+        location.coords.latitude, 
+        location.coords.longitude
+      );
+      
       console.log('🏠 주소 정보:', addressInfo);
     } catch (geocodeError) {
       console.warn('⚠️ 역지오코딩 실패:', geocodeError);
@@ -259,6 +238,7 @@ export const getCurrentLocation = async (options?: {
 
 /**
  * 위치 정보 수집 여부 확인 (사용자 선택)
+ * Apple 가이드라인 준수: 시스템 권한 요청만 사용
  */
 export const askForLocationConsent = (): Promise<boolean> => {
   return new Promise((resolve) => {
@@ -269,22 +249,9 @@ export const askForLocationConsent = (): Promise<boolean> => {
       );
       resolve(consent);
     } else {
-      // 모바일에서는 React Native Alert
-      Alert.alert(
-        '📍 Add Location',
-        'Would you like to add location information to your artwork?\n\nAdding location helps other users see where your artwork was created.',
-        [
-          {
-            text: 'Skip',
-            style: 'cancel',
-            onPress: () => resolve(false),
-          },
-          {
-            text: '📍 Add Location',
-            onPress: () => resolve(true),
-          },
-        ]
-      );
+      // iOS/Android: 시스템 권한 요청만 사용 (사용자 지정 Alert 제거)
+      // 사용자가 artwork 업로드 시 자동으로 시스템 권한 요청
+      resolve(true);
     }
   });
 };
@@ -299,7 +266,14 @@ export const formatLocationText = (location: LocationInfo): string => {
   if (location.state && location.state !== location.city) parts.push(location.state);
   if (location.country) parts.push(location.country);
   
-  return parts.join(', ') || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
+  // 주소 정보가 있으면 사용, 없으면 일반적인 위치만 표시
+  if (parts.length > 0) {
+    return parts.join(', ');
+  }
+  
+  // 주소를 찾지 못한 경우 (좌표만 있음)
+  // 좌표를 직접 표시하지 않고 일반적인 메시지 반환
+  return 'Location';
 };
 
 /**
