@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ArtYard - A marketplace for college student artists to showcase and sell their artwork">
+    <title>ArtYard - Artist Marketplace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 60px 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            color: #E91E63;
+            font-size: 42px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+        
+        .tagline {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+        
+        .description {
+            color: #555;
+            font-size: 16px;
+            margin-bottom: 40px;
+            line-height: 1.8;
+        }
+        
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 40px;
+        }
+        
+        .link-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: #E91E63;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .link-button:hover {
+            background-color: #C2185B;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(233, 30, 99, 0.3);
+        }
+        
+        .link-button.secondary {
+            background-color: #667eea;
+        }
+        
+        .link-button.secondary:hover {
+            background-color: #5568d3;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .footer-link {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-link:hover {
+            color: #E91E63;
+        }
+        
+        .contact {
+            margin-top: 20px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .contact a {
+            color: #E91E63;
+            text-decoration: none;
+        }
+        
+        .contact a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 40px 30px;
+            }
+            
+            h1 {
+                font-size: 32px;
+            }
+            
+            .tagline {
+                font-size: 16px;
+            }
+            
+            .description {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🎨</div>
+        <h1>ArtYard</h1>
+        <p class="tagline">Where Student Artists Shine</p>
+        
+        <p class="description">
+            ArtYard is a vibrant marketplace designed exclusively for college student artists. 
+            Showcase your creativity, connect with art lovers, and turn your passion into profit 
+            with our community-focused platform.
+        </p>
+        
+        <div class="links">
+            <a href="https://apps.apple.com/app/artyard" class="link-button" target="_blank">
+                📱 Download on App Store
+            </a>
+            <a href="https://play.google.com/store/apps/details?id=com.artyard.app" class="link-button secondary" target="_blank">
+                🤖 Get it on Google Play
+            </a>
+        </div>
+        
+        <div class="footer">
+            <div class="footer-links">
+                <a href="privacy-policy.html" class="footer-link">Privacy Policy</a>
+                <a href="data-deletion.html" class="footer-link">Data Deletion</a>
+                <a href="simple-privacy-page.html" class="footer-link">Simple Privacy</a>
+            </div>
+            
+            <div class="contact">
+                <p>Questions? Contact us at <a href="mailto:lavlna280@gmail.com">lavlna280@gmail.com</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
