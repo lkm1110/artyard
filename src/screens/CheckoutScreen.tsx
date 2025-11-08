@@ -1,8 +1,9 @@
 /**
- * Checkout Screen
+ * Checkout Screen - Simplified Marketplace Model
+ * Shipping arranged directly between buyer and seller
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,15 +13,20 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  TextInput,
+  Linking,
+  Platform,
   useColorScheme,
+  StatusBar,
 } from 'react-native';
-import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { createPaymentIntent } from '../services/transactionService';
-import { formatPrice } from '../types/complete-system';
+import { create2CheckoutPayment, formatCurrency } from '../services/paymentService';
+import { calculateFees } from '../types/transaction';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
-
-const CURRENCY = 'USD';
 
 export const CheckoutScreen = () => {
   const route = useRoute();
@@ -31,17 +37,19 @@ export const CheckoutScreen = () => {
   
   const [loading, setLoading] = useState(false);
   const [artwork, setArtwork] = useState<any>(null);
-  const [addresses, setAddresses] = useState<any[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   
-  // Load artwork info (once)
+  // Optional contact info for seller reference
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactAddress, setContactAddress] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  
   useEffect(() => {
     loadArtwork();
   }, []);
   
   const loadArtwork = async () => {
     try {
-      console.log('🎨 Loading artwork info...');
       const { data: artworkData } = await supabase
         .from('artworks')
         .select('*, author:profiles!artworks_author_id_fkey(*)')
@@ -49,112 +57,78 @@ export const CheckoutScreen = () => {
         .single();
       
       setArtwork(artworkData);
-      console.log('✅ Artwork info loaded');
-    } catch (error: any) {
-      console.error('❌ Failed to load artwork:', error);
-      Alert.alert('Error', error.message);
-    }
-  };
-  
-  // Load shipping addresses (on screen focus)
-  const loadAddresses = useCallback(async () => {
-    try {
-      console.log('📦 Loading shipping addresses...');
-      const { data: addressData } = await supabase
-        .from('shipping_addresses')
-        .select('*')
-        .order('is_default', { ascending: false });
       
-      console.log('✅ Shipping addresses loaded:', addressData?.length || 0);
-      setAddresses(addressData || []);
-      
-      // Select default address (or keep existing selection)
-      if (!selectedAddressId) {
-        const defaultAddress = addressData?.find(a => a.is_default);
-        if (defaultAddress) {
-          setSelectedAddressId(defaultAddress.id);
-          console.log('✅ Default address selected:', defaultAddress.id);
+      // Load current user's profile info for pre-filling
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, phone')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          setContactName(profile.full_name || '');
+          setContactPhone(profile.phone || '');
         }
       }
     } catch (error: any) {
-      console.error('❌ Failed to load shipping addresses:', error);
+      console.error('Error loading artwork:', error);
+      Alert.alert('Error', 'Failed to load artwork information');
     }
-  }, [selectedAddressId]);
+  };
   
-  // Refresh shipping addresses when screen focuses
-  useFocusEffect(
-    useCallback(() => {
-      console.log('🔄 CheckoutScreen focus - refreshing addresses');
-      loadAddresses();
-    }, [loadAddresses])
-  );
-  
-  const handlePayment = async () => {
+  const handlePurchase = async () => {
     try {
-      if (!selectedAddressId) {
-        Alert.alert('Notice', 'Please select a shipping address');
-        return;
-      }
-      
       if (!artwork) {
-        Alert.alert('Error', 'Unable to load artwork information.');
+        Alert.alert('Error', 'Artwork information not loaded');
         return;
       }
       
       setLoading(true);
       
-      // Calculate artwork price
-      const artworkPrice = parseFloat(artwork.price || '0');
+      // Parse sale price
+      const salePrice = parseInt(artwork.price.replace(/\D/g, ''));
       
-      // Get shipping address info
-      const selectedAddress = addresses.find(a => a.id === selectedAddressId);
-      if (!selectedAddress) {
-        Alert.alert('Error', 'Shipping address not found.');
-        setLoading(false);
-        return;
-      }
+      // Calculate fees
+      const fees = calculateFees(salePrice);
       
-      // Calculate shipping fee (USD)
-      // Domestic: $5, International: $20
-      // Free shipping for orders over $100
-      const isDomestic = selectedAddress.country === 'KR';
-      let shippingFee = 0;
-      
-      if (artworkPrice < 100) {
-        shippingFee = isDomestic ? 5 : 20;
-      }
-      
-      // Platform fee (10%)
-      const platformFee = artworkPrice * 0.10;
-      
-      // Total amount
-      const totalAmount = artworkPrice + shippingFee + platformFee;
-      
-      // Navigate to 2Checkout payment screen
-      console.log('💳 Navigating to payment:', {
-        totalAmount,
-        artworkPrice,
-        shippingFee,
-        platformFee,
-        artworkTitle: artwork.title,
+      // Create transaction
+      const { transaction_id } = await createPaymentIntent({
+        artwork_id: artworkId,
+        contact_name: contactName,
+        contact_phone: contactPhone,
+        contact_address: contactAddress,
+        delivery_notes: deliveryNotes,
       });
       
-      navigation.navigate('TwoCheckoutPayment' as never, {
-        transactionId: `temp_${Date.now()}`, // 임시 ID (실제로는 transactionService에서 생성)
-        amount: totalAmount,
-        description: `${artwork.title} by ${artwork.author.handle}`,
-        currency: CURRENCY,
-        buyerEmail: artwork.author.email || 'buyer@artyard.com',
-        buyerName: artwork.author.handle || 'Buyer',
-        artworkId: artwork.id,
-        shippingAddressId: selectedAddressId,
-        artworkPrice: artworkPrice,
-        shippingFee: shippingFee,
-        platformFee: platformFee,
-      } as never);
+      // Get user email for payment
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Create 2Checkout payment
+      const { payment_url } = await create2CheckoutPayment({
+        transaction_id,
+        amount: salePrice,
+        currency: 'USD',
+        buyer_email: user?.email || '',
+        buyer_name: contactName || 'Buyer',
+        artwork_title: artwork.title,
+      });
+      
+      // Open 2Checkout payment page
+      const supported = await Linking.canOpenURL(payment_url);
+      if (supported) {
+        await Linking.openURL(payment_url);
+      } else {
+        throw new Error('Cannot open payment page');
+      }
+      
+      // Navigate to pending screen
+      navigation.navigate('PaymentPending' as never, { transaction_id } as never);
       
     } catch (error: any) {
-      Alert.alert('Payment Error', error.message);
+      console.error('Purchase error:', error);
+      Alert.alert('Error', error.message || 'Failed to process payment');
     } finally {
       setLoading(false);
     }
@@ -162,488 +136,472 @@ export const CheckoutScreen = () => {
   
   if (!artwork) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
+      <View style={[styles.container, isDark && styles.containerDark, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
   
-  // Artwork price (USD)
-  const artworkPrice = parseFloat(artwork.price || '0');
+  const salePrice = parseInt(artwork.price.replace(/\D/g, ''));
+  const fees = calculateFees(salePrice);
   
-  // Get shipping address info
-  const selectedAddress = addresses.find(a => a.id === selectedAddressId);
-  
-  // Calculate shipping fee (USD)
-  // Domestic: $5, International: $20
-  // Free shipping for orders over $100
-  const isDomestic = selectedAddress?.country === 'KR';
-  let shippingFee = 0;
-  
-  if (artworkPrice < 100) {
-    shippingFee = isDomestic ? 5 : 20;
-  }
-  
-  // Platform fee (10%)
-  const platformFee = artworkPrice * 0.10;
-  
-  // Total amount
-  const totalAmount = artworkPrice + shippingFee + platformFee;
+  const theme = {
+    bg: isDark ? colors.darkBackground : colors.white,
+    text: isDark ? colors.darkText : colors.text,
+    textSecondary: isDark ? colors.darkTextMuted : colors.textMuted,
+    border: isDark ? colors.darkBorder : colors.border,
+    card: isDark ? colors.darkCard : colors.white,
+  };
   
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
-      {/* Header */}
-      <View style={[
-        styles.header,
-        { 
-          backgroundColor: isDark ? colors.darkCard : colors.card,
-          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        }
-      ]}>
+    <SafeAreaView 
+      style={[styles.safeArea, { backgroundColor: theme.bg }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.bg}
+      />
+      <View style={[styles.container, { backgroundColor: theme.bg }]}>
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: theme.text }]}>←</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>
+            Checkout
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Artwork Preview */}
+        <View style={[styles.artworkCard, { backgroundColor: theme.card }]}>
+          <Image source={{ uri: artwork.image_url }} style={styles.artworkImage} />
+          <View style={styles.artworkInfo}>
+            <Text style={[styles.artworkTitle, { color: theme.text }]}>
+              {artwork.title}
+            </Text>
+            <Text style={[styles.artistName, { color: theme.textSecondary }]}>
+              by {artwork.artist_name || artwork.author?.handle || 'Unknown Artist'}
+            </Text>
+          </View>
+        </View>
+        
+        {/* Price Breakdown */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Price Details
+          </Text>
+          
+          <View style={styles.priceRow}>
+            <Text style={[styles.priceLabel, { color: theme.textSecondary }]}>
+              Sale Price
+            </Text>
+            <Text style={[styles.priceValue, { color: theme.text }]}>
+              ${salePrice.toLocaleString()}
+            </Text>
+          </View>
+          
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          
+          <View style={styles.feeRow}>
+            <Text style={[styles.feeLabel, { color: theme.textSecondary }]}>
+              Platform Fee (10%)
+            </Text>
+            <Text style={[styles.feeValue, { color: theme.textSecondary }]}>
+              Included
+            </Text>
+          </View>
+          
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          
+          <View style={styles.totalRow}>
+            <Text style={[styles.totalLabel, { color: theme.text }]}>
+              Total
+            </Text>
+            <Text style={[styles.totalValue, { color: colors.primary }]}>
+              ${salePrice.toLocaleString()}
+            </Text>
+          </View>
+          
+          <View style={[styles.infoBox, { backgroundColor: theme.bg }]}>
+            <Ionicons name="information-circle" size={20} color={colors.primary} />
+            <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+              The displayed price includes a 10% platform fee. No additional charges.
+            </Text>
+          </View>
+        </View>
+        
+        {/* Seller Earnings Info */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Artist Receives
+          </Text>
+          
+          <View style={styles.earningsRow}>
+            <Text style={[styles.earningsLabel, { color: theme.textSecondary }]}>
+              After fees
+            </Text>
+            <Text style={[styles.earningsValue, { color: colors.success }]}>
+              ${fees.seller_amount.toLocaleString()}
+            </Text>
+          </View>
+          
+          <Text style={[styles.earningsNote, { color: theme.textSecondary }]}>
+            Paid after delivery confirmation
+          </Text>
+        </View>
+        
+        {/* Shipping Notice */}
+        <View style={[styles.shippingNotice, { backgroundColor: colors.warningLight }]}>
+          <Ionicons name="alert-circle" size={24} color={colors.warning} />
+          <View style={styles.shippingNoticeText}>
+            <Text style={[styles.shippingNoticeTitle, { color: colors.warning }]}>
+              Shipping Arrangement
+            </Text>
+            <Text style={[styles.shippingNoticeBody, { color: '#1F2937' }]}>
+              After payment, you'll chat with the artist to arrange shipping/delivery directly. Shipping method and costs are agreed between you and the artist.
+            </Text>
+          </View>
+        </View>
+        
+        {/* Optional Contact Info */}
+        <View style={[styles.section, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Contact Information (Optional)
+          </Text>
+          <Text style={[styles.sectionSubtitle, { color: theme.textSecondary }]}>
+            Share your contact info with the artist for delivery coordination
+          </Text>
+          
+          <TextInput
+            style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+            placeholder="Your Name"
+            placeholderTextColor={theme.textSecondary}
+            value={contactName}
+            onChangeText={setContactName}
+          />
+          
+          <TextInput
+            style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+            placeholder="Phone Number"
+            placeholderTextColor={theme.textSecondary}
+            value={contactPhone}
+            onChangeText={setContactPhone}
+            keyboardType="phone-pad"
+          />
+          
+          <TextInput
+            style={[styles.input, styles.textArea, { color: theme.text, borderColor: theme.border }]}
+            placeholder="Delivery Address (optional)"
+            placeholderTextColor={theme.textSecondary}
+            value={contactAddress}
+            onChangeText={setContactAddress}
+            multiline
+            numberOfLines={3}
+          />
+          
+          <TextInput
+            style={[styles.input, styles.textArea, { color: theme.text, borderColor: theme.border }]}
+            placeholder="Notes for artist (delivery preferences, etc.)"
+            placeholderTextColor={theme.textSecondary}
+            value={deliveryNotes}
+            onChangeText={setDeliveryNotes}
+            multiline
+            numberOfLines={2}
+          />
+        </View>
+        
+        {/* Terms Notice */}
+        <View style={[styles.termsBox, { backgroundColor: theme.card }]}>
+          <Text style={[styles.termsText, { color: theme.textSecondary }]}>
+            By purchasing, you agree that shipping is arranged directly with the artist. ArtYard facilitates payment only and is not responsible for delivery.
+          </Text>
+          <TouchableOpacity onPress={() => {
+            if (Platform.OS === 'web') {
+              window.open('https://lkm1110.github.io/artyard/terms-of-service.html', '_blank');
+            } else {
+              Linking.openURL('https://lkm1110.github.io/artyard/terms-of-service.html');
+            }
+          }}>
+            <Text style={[styles.termsLink, { color: colors.primary }]}>
+              View Terms of Service
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={{ height: 120 }} />
+      </ScrollView>
+      
+      {/* Bottom Purchase Button */}
+      <View style={[styles.bottomBar, { backgroundColor: theme.card, borderTopColor: theme.border, marginBottom: spacing.lg }]}>
+        <View style={styles.bottomInfo}>
+          <Text style={[styles.bottomLabel, { color: theme.textSecondary }]}>
+            Total Amount
+          </Text>
+          <Text style={[styles.bottomPrice, { color: theme.text }]}>
+            ${salePrice.toLocaleString()}
+          </Text>
+        </View>
+        
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
+          style={[styles.purchaseButton, loading && styles.purchaseButtonDisabled]}
+          onPress={handlePurchase}
+          disabled={loading}
         >
-          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
-            ←
-          </Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          Purchase Artwork
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
-      
-      <ScrollView style={styles.scrollView}>
-        {/* Artwork Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
-        <View style={styles.artworkInfo}>
-          {artwork.image_urls && artwork.image_urls[0] && (
-            <Image
-              source={{ uri: artwork.image_urls[0] }}
-              style={styles.artworkImage}
-            />
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <>
+              <Ionicons name="card" size={20} color={colors.white} />
+              <Text style={styles.purchaseButtonText}>Proceed to Payment</Text>
+            </>
           )}
-          <View style={styles.artworkDetails}>
-            <Text style={styles.artworkTitle}>{artwork.title}</Text>
-            <Text style={styles.artworkAuthor}>by {artwork.author.handle}</Text>
-            <Text style={styles.artworkPrice}>{formatPrice(artworkPrice, CURRENCY)}</Text>
-          </View>
-        </View>
+        </TouchableOpacity>
       </View>
-      
-      {/* Shipping Address */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Shipping Address</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('AddressForm' as never)}
-          >
-            <Text style={styles.addButton}>+ Add Address</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {addresses.length === 0 && (
-          <View style={styles.emptyAddress}>
-            <Text style={styles.emptyAddressText}>No shipping address registered</Text>
-            <TouchableOpacity
-              style={styles.emptyAddressButton}
-              onPress={() => navigation.navigate('AddressForm' as never)}
-            >
-              <Text style={styles.emptyAddressButtonText}>Add Shipping Address</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        {addresses.map((address) => (
-          <TouchableOpacity
-            key={address.id}
-            style={[
-              styles.addressItem,
-              selectedAddressId === address.id && styles.addressItemSelected,
-            ]}
-            onPress={() => setSelectedAddressId(address.id)}
-          >
-            <View style={styles.addressRadio}>
-              {selectedAddressId === address.id && (
-                <View style={styles.addressRadioInner} />
-              )}
-            </View>
-            <View style={styles.addressContent}>
-              <View style={styles.addressHeader}>
-                <Text style={styles.addressName}>{address.recipient_name}</Text>
-                {address.is_default && (
-                  <View style={styles.defaultBadge}>
-                    <Text style={styles.defaultBadgeText}>Default</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.addressPhone}>{address.phone}</Text>
-              <Text style={styles.addressText}>
-                [{address.postal_code}] {address.address}
-              </Text>
-              {address.address_detail && (
-                <Text style={styles.addressText}>{address.address_detail}</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
       </View>
-      
-      {/* Payment Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Method</Text>
-        <View style={styles.paymentInfoBox}>
-          <Text style={styles.paymentInfoTitle}>💳 2Checkout Secure Payment</Text>
-          <Text style={styles.paymentInfoText}>
-            You will be redirected to 2Checkout secure payment page.{'\n'}
-            Credit card and debit card accepted.
-          </Text>
-        </View>
-      </View>
-      
-      {/* Price Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Payment Details</Text>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Artwork Price</Text>
-          <Text style={styles.priceValue}>{formatPrice(artworkPrice, CURRENCY)}</Text>
-        </View>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Platform Fee (10%)</Text>
-          <Text style={styles.priceValue}>{formatPrice(platformFee, CURRENCY)}</Text>
-        </View>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>
-            Shipping {isDomestic ? '(Domestic)' : '(International)'}
-          </Text>
-          <Text style={styles.priceValue}>
-            {shippingFee === 0 ? 'Free' : formatPrice(shippingFee, CURRENCY)}
-          </Text>
-        </View>
-        {artworkPrice >= 100 && (
-          <Text style={styles.freeShippingNote}>
-            🎉 Free shipping over $100!
-          </Text>
-        )}
-        {artworkPrice < 100 && !isDomestic && (
-          <Text style={styles.shippingNote}>
-            💡 International shipping applies
-          </Text>
-        )}
-        <View style={[styles.priceRow, styles.totalRow]}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalValue}>{formatPrice(totalAmount, CURRENCY)}</Text>
-        </View>
-      </View>
-      
-      {/* Payment Button */}
-      <TouchableOpacity
-        style={[styles.payButton, (!loading && !selectedAddressId) && styles.payButtonDisabled]}
-        onPress={handlePayment}
-        disabled={loading || !selectedAddressId}
-      >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.payButtonText}>
-            Pay {formatPrice(totalAmount, CURRENCY)}
-          </Text>
-        )}
-      </TouchableOpacity>
-      
-      {/* Notice */}
-      <View style={styles.notice}>
-        <Text style={styles.noticeText}>
-          • Transaction will be completed automatically if no delivery confirmation within 7 days.
-        </Text>
-        <Text style={styles.noticeText}>
-          • You can raise a dispute if any problem occurs.
-        </Text>
-      </View>
-    </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    // backgroundColor는 동적으로 설정됨
+  },
+  containerDark: {
+    backgroundColor: colors.darkBackground,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    // backgroundColor와 borderBottomColor는 동적으로 설정됨
-    zIndex: 1000,
   },
   backButton: {
-    padding: spacing.sm,
-    marginLeft: -spacing.sm,
+    padding: spacing.xs,
   },
   backIcon: {
     fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    ...typography.h3,
     fontWeight: '600',
   },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+  },
   headerSpacer: {
-    width: 40, // backButton과 동일한 너비로 중앙 정렬
+    width: 40,
   },
   scrollView: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  section: {
-    padding: 20,
-    borderBottomWidth: 8,
-    borderBottomColor: '#F5F5F5',
-  },
-  sectionHeader: {
+  artworkCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  addButton: {
-    color: '#E91E63',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  
-  // Artwork info
-  artworkInfo: {
-    flexDirection: 'row',
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   artworkImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
-    backgroundColor: '#F5F5F5',
+    borderRadius: borderRadius.md,
   },
-  artworkDetails: {
+  artworkInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: spacing.md,
     justifyContent: 'center',
   },
   artworkTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    ...typography.h3,
+    marginBottom: spacing.xs,
   },
-  artworkAuthor: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
+  artistName: {
+    ...typography.body,
   },
-  artworkPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E91E63',
+  section: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  
-  // Shipping address
-  emptyAddress: {
-    padding: 40,
-    alignItems: 'center',
-    backgroundColor: '#F9F9F9',
-    borderRadius: 12,
+  sectionTitle: {
+    ...typography.h3,
+    marginBottom: spacing.xs,
   },
-  emptyAddressText: {
-    fontSize: 15,
-    color: '#999',
-    marginBottom: 16,
+  sectionSubtitle: {
+    ...typography.caption,
+    marginBottom: spacing.md,
   },
-  emptyAddressButton: {
-    backgroundColor: '#E91E63',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  emptyAddressButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  addressItem: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#F9F9F9',
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  addressItemSelected: {
-    borderColor: '#E91E63',
-    backgroundColor: '#FFF5F7',
-  },
-  addressRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#E91E63',
-    marginRight: 12,
-    marginTop: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addressRadioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#E91E63',
-  },
-  addressContent: {
-    flex: 1,
-  },
-  addressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  addressName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  defaultBadge: {
-    backgroundColor: '#E91E63',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  defaultBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  addressPhone: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  addressText: {
-    fontSize: 14,
-    color: '#333',
-    lineHeight: 20,
-  },
-  
-  // 카드 입력
-  card: {
-    backgroundColor: '#FFFFFF',
-  },
-  cardField: {
-    width: '100%',
-    height: 50,
-    marginVertical: 8,
-  },
-  
-  // 금액
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   priceLabel: {
-    fontSize: 15,
-    color: '#666',
+    ...typography.body,
   },
   priceValue: {
-    fontSize: 15,
-    fontWeight: '500',
+    ...typography.h3,
   },
-  freeShippingNote: {
-    fontSize: 13,
-    color: '#E91E63',
-    marginBottom: 12,
+  divider: {
+    height: 1,
+    marginVertical: spacing.sm,
   },
-  shippingNote: {
-    fontSize: 13,
-    color: '#FF9800',
-    marginBottom: 12,
+  feeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  feeLabel: {
+    ...typography.caption,
+  },
+  feeValue: {
+    ...typography.caption,
+    fontStyle: 'italic',
   },
   totalRow: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
   },
   totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...typography.h2,
   },
   totalValue: {
-    fontSize: 24,
+    ...typography.h1,
     fontWeight: 'bold',
-    color: '#E91E63',
   },
-  
-  // Payment button
-  payButton: {
-    backgroundColor: '#E91E63',
-    margin: 20,
-    padding: 18,
-    borderRadius: 12,
+  infoBox: {
+    flexDirection: 'row',
+    marginTop: spacing.md,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  infoText: {
+    ...typography.caption,
+    flex: 1,
+    marginLeft: spacing.sm,
+  },
+  earningsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  payButtonDisabled: {
-    opacity: 0.6,
+  earningsLabel: {
+    ...typography.body,
   },
-  payButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+  earningsValue: {
+    ...typography.h2,
     fontWeight: 'bold',
   },
-  
-  // Payment info notice
-  paymentInfoBox: {
-    backgroundColor: '#F3F8FF',
-    padding: 16,
-    borderRadius: 8,
+  earningsNote: {
+    ...typography.caption,
+    fontStyle: 'italic',
+  },
+  shippingNotice: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  shippingNoticeText: {
+    flex: 1,
+    marginLeft: spacing.sm,
+  },
+  shippingNoticeTitle: {
+    ...typography.h4,
+    fontWeight: 'bold',
+    marginBottom: spacing.xs,
+  },
+  shippingNoticeBody: {
+    ...typography.body,
+  },
+  input: {
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...typography.body,
   },
-  paymentInfoTitle: {
-    fontSize: 16,
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  termsBox: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  termsText: {
+    ...typography.caption,
+    marginBottom: spacing.sm,
+  },
+  termsLink: {
+    ...typography.caption,
     fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 8,
+    textDecorationLine: 'underline',
   },
-  paymentInfoText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+  bottomBar: {
+    borderTopWidth: 1,
+    padding: spacing.md,
   },
-  
-  // Notice
-  notice: {
-    padding: 20,
-    backgroundColor: '#F9F9F9',
+  bottomInfo: {
+    marginBottom: spacing.sm,
   },
-  noticeText: {
-    fontSize: 13,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 4,
+  bottomLabel: {
+    ...typography.caption,
+  },
+  bottomPrice: {
+    ...typography.h2,
+    fontWeight: 'bold',
+  },
+  purchaseButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+  },
+  purchaseButtonDisabled: {
+    opacity: 0.5,
+  },
+  purchaseButtonText: {
+    ...typography.button,
+    color: colors.white,
   },
 });
-

@@ -28,6 +28,7 @@ import { editMessage, deleteMessage } from '../services/chatService';
 import { Message, Profile } from '../types';
 import { supabase } from '../services/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ChatScreenProps {
   route: RouteProp<{ Chat: { chatId: string; otherUser: Profile } }>;
@@ -77,6 +78,7 @@ export const ChatScreen: React.FC = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   
   const { chatId, otherUser } = route.params;
   
@@ -94,6 +96,7 @@ export const ChatScreen: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 초기 메시지와 실시간 메시지 합치기
   const allMessages = [...messages, ...realtimeMessages.filter(
@@ -184,9 +187,9 @@ export const ChatScreen: React.FC = () => {
         if (payload.userId !== user?.id) {
           setIsTyping(payload.isTyping);
           
-          // 3초 후 자동 해제
+          // 2초 후 자동 해제
           if (payload.isTyping) {
-            setTimeout(() => setIsTyping(false), 3000);
+            setTimeout(() => setIsTyping(false), 2000);
           }
         }
       })
@@ -216,7 +219,7 @@ export const ChatScreen: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId, user?.id]); // markAsRead는 dependency에서 제외 (무한 루프 방지)
 
-  // 타이핑 브로드캐스트
+  // 타이핑 브로드캐스트 (타이머 관리 포함)
   const broadcastTyping = useCallback((isTyping: boolean) => {
     if (channelRef.current) {
       channelRef.current.send({
@@ -224,6 +227,25 @@ export const ChatScreen: React.FC = () => {
         event: 'typing',
         payload: { userId: user?.id, isTyping },
       });
+    }
+
+    // 기존 타이머 클리어
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    // 타이핑 시작 시 2초 후 자동 종료 타이머 설정
+    if (isTyping) {
+      typingTimeoutRef.current = setTimeout(() => {
+        if (channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'typing',
+            payload: { userId: user?.id, isTyping: false },
+          });
+        }
+      }, 2000);
     }
   }, [user?.id]);
 
@@ -277,25 +299,25 @@ export const ChatScreen: React.FC = () => {
       return;
     }
 
-    console.log('✅ 수정/삭제 옵션 표시');
+    console.log('✅ Message options displayed');
     Alert.alert(
-      '메시지 옵션',
+      'Message Options',
       `"${message.content.length > 30 ? message.content.substring(0, 30) + '...' : message.content}"`,
       [
-        { text: '취소', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: '수정',
+          text: 'Edit',
           onPress: () => {
-            console.log('📝 수정 모드 시작:', message.id);
+            console.log('📝 Edit mode started:', message.id);
             setEditingMessageId(message.id);
             setEditingText(message.content);
           },
         },
         {
-          text: '삭제',
+          text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            console.log('🗑️ 삭제 시작:', message.id);
+            console.log('🗑️ Delete started:', message.id);
             handleDeleteMessage(message.id);
           },
         },
@@ -327,6 +349,11 @@ export const ChatScreen: React.FC = () => {
       await editMessage(editingMessageId, editingText.trim());
       setEditingMessageId(null);
       setEditingText('');
+      
+      // 채팅 메시지 목록 강제 새로고침
+      queryClient.invalidateQueries({ queryKey: ['chatMessages', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      console.log('✅ Message edited, cache invalidated');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to edit message.');
     }
@@ -335,6 +362,11 @@ export const ChatScreen: React.FC = () => {
   const handleDeleteMessage = async (messageId: string) => {
     try {
       await deleteMessage(messageId, 'Deleted by user');
+      
+      // 채팅 메시지 목록 강제 새로고침
+      queryClient.invalidateQueries({ queryKey: ['chatMessages', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      console.log('✅ Message deleted, cache invalidated');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to delete message.');
     }
@@ -490,7 +522,7 @@ export const ChatScreen: React.FC = () => {
                 }
               ]}>
                 {formatMessageTime(item.created_at)}
-                {item.is_edited && ` • 수정됨`}
+                {item.is_edited && ` • Edited`}
               </Text>
             )}
           </View>
@@ -561,6 +593,7 @@ export const ChatScreen: React.FC = () => {
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {/* Header */}
         <View style={[styles.header, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
@@ -611,17 +644,59 @@ export const ChatScreen: React.FC = () => {
                   { 
                     text: 'View Profile', 
                     onPress: () => {
-                      console.log('Navigating to profile:', otherUser?.id);
+                      console.log('✅ Navigating to user profile:', otherUser?.id);
                       if (otherUser?.id) {
-                        navigation.navigate('Profile' as any, { userId: otherUser.id });
+                        navigation.navigate('UserArtworks' as any, { userId: otherUser.id });
                       }
+                    }
+                  },
+                  { 
+                    text: 'Delete Chat', 
+                    style: 'destructive', 
+                    onPress: () => {
+                      Alert.alert(
+                        'Delete Chat',
+                        'Are you sure you want to delete this conversation? This action cannot be undone.',
+                        [
+                          { text: 'Cancel', style: 'cancel' },
+                          {
+                            text: 'Delete',
+                            style: 'destructive',
+                            onPress: async () => {
+                              console.log('🗑️ Deleting chat:', chatId);
+                              try {
+                                // Delete all messages in the chat
+                                await supabase
+                                  .from('messages')
+                                  .delete()
+                                  .eq('chat_id', chatId);
+                                
+                                // Delete the chat itself
+                                await supabase
+                                  .from('chats')
+                                  .delete()
+                                  .eq('id', chatId);
+                                
+                                // Invalidate queries
+                                queryClient.invalidateQueries({ queryKey: ['chats'] });
+                                
+                                Alert.alert('Success', 'Chat deleted successfully');
+                                navigation.goBack();
+                              } catch (error) {
+                                console.error('❌ Failed to delete chat:', error);
+                                Alert.alert('Error', 'Failed to delete chat. Please try again.');
+                              }
+                            },
+                          },
+                        ]
+                      );
                     }
                   },
                   { 
                     text: 'Report User', 
                     style: 'destructive', 
                     onPress: () => {
-                      console.log('Report user:', otherUser?.id);
+                      console.log('⚠️ Report user:', otherUser?.id);
                       Alert.alert(
                         'Report User',
                         'Please provide a reason for reporting this user.',
@@ -629,15 +704,60 @@ export const ChatScreen: React.FC = () => {
                           { text: 'Cancel', style: 'cancel' },
                           { 
                             text: 'Spam', 
-                            onPress: () => console.log('Reported as spam') 
+                            onPress: async () => {
+                              console.log('📝 Reported as spam');
+                              try {
+                                await supabase.from('reports').insert({
+                                  reporter_id: user?.id,
+                                  reported_id: otherUser?.id,
+                                  reason: 'spam',
+                                  context: 'chat',
+                                  created_at: new Date().toISOString(),
+                                });
+                                Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+                              } catch (error) {
+                                console.error('❌ Failed to submit report:', error);
+                                Alert.alert('Error', 'Failed to submit report. Please try again.');
+                              }
+                            }
                           },
                           { 
                             text: 'Inappropriate Content', 
-                            onPress: () => console.log('Reported as inappropriate') 
+                            onPress: async () => {
+                              console.log('📝 Reported as inappropriate');
+                              try {
+                                await supabase.from('reports').insert({
+                                  reporter_id: user?.id,
+                                  reported_id: otherUser?.id,
+                                  reason: 'inappropriate_content',
+                                  context: 'chat',
+                                  created_at: new Date().toISOString(),
+                                });
+                                Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+                              } catch (error) {
+                                console.error('❌ Failed to submit report:', error);
+                                Alert.alert('Error', 'Failed to submit report. Please try again.');
+                              }
+                            }
                           },
                           { 
                             text: 'Other', 
-                            onPress: () => console.log('Reported as other') 
+                            onPress: async () => {
+                              console.log('📝 Reported as other');
+                              try {
+                                await supabase.from('reports').insert({
+                                  reporter_id: user?.id,
+                                  reported_id: otherUser?.id,
+                                  reason: 'other',
+                                  context: 'chat',
+                                  created_at: new Date().toISOString(),
+                                });
+                                Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+                              } catch (error) {
+                                console.error('❌ Failed to submit report:', error);
+                                Alert.alert('Error', 'Failed to submit report. Please try again.');
+                              }
+                            }
                           },
                         ]
                       );
@@ -703,14 +823,14 @@ export const ChatScreen: React.FC = () => {
                 styles.editModeText,
                 { color: isDark ? colors.darkText : colors.text }
               ]}>
-                ✏️ 메시지 수정 중
+                ✏️ Editing Message
               </Text>
               <TouchableOpacity onPress={cancelEdit}>
                 <Text style={[
                   styles.cancelEditText,
                   { color: colors.primary }
                 ]}>
-                  취소
+                  Cancel
                 </Text>
               </TouchableOpacity>
             </View>
@@ -743,6 +863,11 @@ export const ChatScreen: React.FC = () => {
                     broadcastTyping(false);
                   }
                 }
+              }}
+              onFocus={() => {
+                setTimeout(() => {
+                  flatListRef.current?.scrollToEnd({ animated: true });
+                }, 100);
               }}
               onBlur={() => broadcastTyping(false)}
               multiline

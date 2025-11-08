@@ -161,7 +161,7 @@ export const ArtworkUploadScreen: React.FC = () => {
       console.error('갤러리 에러:', error);
       Alert.alert('Error', 'Failed to select images. Please try again.');
     }
-  }, [requestPermissions, formData.images.length]);
+  }, [formData.images.length]);
 
   const removeImage = useCallback((index: number) => {
     setFormData(prev => ({
