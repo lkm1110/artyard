@@ -28,6 +28,7 @@ import { editMessage, deleteMessage } from '../services/chatService';
 import { Message, Profile } from '../types';
 import { supabase } from '../services/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { CustomAlert } from '../components/CustomAlert';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface ChatScreenProps {
@@ -90,10 +91,16 @@ export const ChatScreen: React.FC = () => {
   // 메시지 수정/삭제 관련 상태
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
-  
+
   const [newMessage, setNewMessage] = useState('');
   const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  
+  // CustomAlert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertButtons, setAlertButtons] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);

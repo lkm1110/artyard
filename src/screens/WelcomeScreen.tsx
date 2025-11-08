@@ -10,7 +10,9 @@ import {
   StyleSheet,
   useColorScheme,
   Image,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Screen } from '../components/Screen';
 import { Button } from '../components/Button';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
@@ -24,79 +26,84 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
 
   return (
     <Screen style={styles.container}>
-      <View style={styles.content}>
-        {/* 로고 및 타이틀 */}
-        <View style={styles.header}>
-          <View style={[
-            styles.logoContainer,
-            { backgroundColor: colors.primary }
-          ]}>
-            <Text style={styles.logoText}>🎨</Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          {/* 로고 및 타이틀 */}
+          <View style={styles.header}>
+            <View style={[
+              styles.logoContainer,
+              { backgroundColor: colors.primary }
+            ]}>
+              <Text style={styles.logoText}>🎨</Text>
+            </View>
+            
+            <Text style={[
+              styles.title,
+              { color: isDark ? colors.darkText : colors.text }
+            ]}>
+              Welcome to ArtYard!
+            </Text>
+            
+            <Text style={[
+              styles.subtitle,
+              { color: isDark ? colors.darkTextMuted : colors.textMuted }
+            ]}>
+              The art community for college students{'\n'}
+              Share and discover amazing artworks
+            </Text>
           </View>
+
+          {/* 주요 기능 소개 */}
+          <View style={styles.features}>
+            <FeatureItem
+              emoji="🎭"
+              title="Share Your Art"
+              description="Upload and share illustrations, photography, prints, crafts, and more with a vibrant community"
+              isDark={isDark}
+            />
+            
+            <FeatureItem
+              emoji="💬"
+              title="Connect & Get Feedback"
+              description="Engage with fellow artists through comments and likes, exchange valuable feedback on each other's work"
+              isDark={isDark}
+            />
+            
+            <FeatureItem
+              emoji="🛒"
+              title="Direct Trade"
+              description="Buy and sell artworks directly with artists. Fair 10% commission!"
+              isDark={isDark}
+            />
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* 시작 버튼 - 고정 위치 */}
+      <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
+        <View style={[
+          styles.bottom,
+          { backgroundColor: isDark ? colors.darkBg : colors.bg }
+        ]}>
+          <Button
+            title="Get Started"
+            onPress={onGetStarted}
+            style={styles.startButton}
+          />
           
           <Text style={[
-            styles.title,
-            { color: isDark ? colors.darkText : colors.text }
-          ]}>
-            Welcome to ArtYard!
-          </Text>
-          
-          <Text style={[
-            styles.subtitle,
+            styles.footerText,
             { color: isDark ? colors.darkTextMuted : colors.textMuted }
           ]}>
-            The art community for artists{'\n'}
-            Share and discover amazing artworks
+            to push your creativity and improve your skills{'\n'}
+            Already have an account? login to get started quickly!
           </Text>
         </View>
-
-        {/* 주요 기능 소개 */}
-        <View style={styles.features}>
-          <FeatureItem
-            emoji="🎭"
-            title="Share Your Art"
-            description="Upload and share illustrations, photography, prints, crafts, and more with a vibrant community"
-            isDark={isDark}
-          />
-          
-          <FeatureItem
-            emoji="💬"
-            title="Connect & Get Feedback"
-            description="Engage with fellow artists through comments and likes, exchange valuable feedback on each other's work"
-            isDark={isDark}
-          />
-          
-          <FeatureItem
-            emoji="🛒"
-            title="Direct Trade"
-            description="Buy and sell artworks directly with artists. Zero commission fees!"
-            isDark={isDark}
-          />
-          
-          <FeatureItem
-            emoji="🏆"
-            title="Weekly Challenges"
-            description="Join weekly themed challenges to push your creativity and improve your skills"
-            isDark={isDark}
-          />
-        </View>
-      </View>
-
-      {/* 시작 버튼 */}
-      <View style={styles.bottom}>
-        <Button
-          title="Get Started"
-          onPress={onGetStarted}
-          style={styles.startButton}
-        />
-        
-        <Text style={[
-          styles.footerText,
-          { color: isDark ? colors.darkTextMuted : colors.textMuted }
-        ]}>
-          Already have an account? Sign in with social login to get started quickly!
-        </Text>
-      </View>
+      </SafeAreaView>
     </Screen>
   );
 };
@@ -137,7 +144,16 @@ const FeatureItem: React.FC<FeatureItemProps> = ({ emoji, title, description, is
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xxl,
   },
   content: {
     flex: 1,
@@ -199,15 +215,22 @@ const styles = StyleSheet.create({
     fontSize: typography.body.fontSize,
     lineHeight: typography.body.lineHeight * 1.2,
   },
+  bottomContainer: {
+    // SafeAreaView 컨테이너
+  },
   bottom: {
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border + '20', // 20% opacity
   },
   startButton: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   footerText: {
     fontSize: typography.caption.fontSize,
     textAlign: 'center',
-    lineHeight: typography.caption.lineHeight * 1.2,
+    lineHeight: typography.caption.lineHeight * 1.3,
   },
 });

@@ -12,7 +12,9 @@ import {
   Image,
   ActivityIndicator,
   useColorScheme,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { getActiveChallenges, getChallenges } from '../services/challengeService';
 import { Challenge, getChallengeStatusLabel } from '../types/complete-system';
@@ -126,25 +128,33 @@ export const ChallengesScreen = () => {
   }
   
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
-      {/* Header */}
-      <View style={[
-        styles.headerContainer,
-        { 
-          backgroundColor: isDark ? colors.darkCard : colors.card,
-          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        }
-      ]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
-            ←
+    <SafeAreaView 
+      style={[styles.safeArea, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={isDark ? colors.darkBg : colors.bg}
+      />
+      <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+        {/* Header */}
+        <View style={[
+          styles.headerContainer,
+          { 
+            backgroundColor: isDark ? colors.darkCard : colors.card,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          }
+        ]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+              ←
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+            Challenges
           </Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          Challenges
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
+          <View style={styles.headerSpacer} />
+        </View>
 
       {/* 필터 */}
       <View style={[
@@ -198,11 +208,15 @@ export const ChallengesScreen = () => {
           </View>
         }
       />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     // backgroundColor는 동적으로 설정됨
@@ -218,7 +232,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     zIndex: 1000,
   },

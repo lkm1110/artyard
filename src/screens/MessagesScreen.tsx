@@ -2,7 +2,7 @@
  * 채팅 목록 화면 (Messages 탭) - 실시간 업데이트
  */
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  AppState,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -23,18 +24,49 @@ import { useChats, useRefreshChats } from '../hooks/useChats';
 import { Chat } from '../types';
 import { supabase } from '../services/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { scheduleLocalNotification } from '../services/pushNotificationService';
+import { Toast } from '../components/Toast';
 
 export const MessagesScreen: React.FC = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const appState = useRef(AppState.currentState);
+  const previousChatIds = useRef<Set<string>>(new Set());
+
+  // Toast 상태 (앱이 active일 때 새 메시지 알림)
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastData, setToastData] = useState<{
+    senderName: string;
+    message: string;
+    chatId: string;
+  } | null>(null);
 
   // 실제 채팅 데이터 조회
   const { data: chats = [], isLoading, isError } = useChats();
   const refreshChats = useRefreshChats();
 
-  // 🔥 실시간 채팅 목록 업데이트
+  // 초기 채팅 ID 목록 저장
+  useEffect(() => {
+    if (chats.length > 0 && previousChatIds.current.size === 0) {
+      previousChatIds.current = new Set(chats.map(c => c.id));
+    }
+  }, [chats]);
+
+  // AppState 감지 (포그라운드/백그라운드 전환)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      appState.current = nextAppState;
+      console.log('📱 App state changed to:', nextAppState);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // 🔥 실시간 채팅 목록 업데이트 + 신규 메시지 알림
   useEffect(() => {
     if (!user) return;
 
@@ -45,12 +77,102 @@ export const MessagesScreen: React.FC = () => {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'messages',
         },
-        (payload) => {
-          console.log('💬 Message updated in chat list:', payload);
+        async (payload) => {
+          console.log('💬 New message received:', payload);
+          
+          const newMessage = payload.new as any;
+          
+          // 자신이 보낸 메시지는 알림 안 띄움
+          if (newMessage.sender_id === user.id) {
+            console.log('⏭️ Skipping notification for own message');
+            queryClient.invalidateQueries({ queryKey: ['chats'] });
+            return;
+          }
+
+          // 발신자 정보 가져오기
+          const { data: sender } = await supabase
+            .from('profiles')
+            .select('handle')
+            .eq('id', newMessage.sender_id)
+            .single();
+
+          const senderName = sender?.handle || 'Someone';
+          const messagePreview = newMessage.content.length > 50 
+            ? newMessage.content.substring(0, 50) + '...'
+            : newMessage.content;
+
+          // 앱이 백그라운드일 때는 푸시 알림
+          if (appState.current !== 'active') {
+            console.log('🔔 Showing push notification for new message');
+            
+            await scheduleLocalNotification(
+              `New message from ${senderName}`,
+              messagePreview,
+              {
+                type: 'message',
+                chatId: newMessage.chat_id,
+                senderId: newMessage.sender_id,
+              }
+            );
+          } else {
+            // 앱이 active일 때는 Toast 표시
+            console.log('🍞 Showing toast for new message');
+            setToastData({
+              senderName,
+              message: messagePreview,
+              chatId: newMessage.chat_id,
+            });
+            setToastVisible(true);
+          }
+          
+          // 채팅 목록 새로고침
+          queryClient.invalidateQueries({ queryKey: ['chats'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chats',
+        },
+        async (payload) => {
+          console.log('🆕 New chat created:', payload);
+          
+          const newChat = payload.new as any;
+          
+          // 새 채팅방 알림 (자신이 만든 것이 아닐 경우에만)
+          const isNewChat = !previousChatIds.current.has(newChat.id);
+          const isNotMine = newChat.a !== user.id;
+          
+          if (isNewChat && isNotMine && appState.current !== 'active') {
+            console.log('🔔 Showing notification for new chat');
+            
+            // 상대방 정보 가져오기
+            const otherUserId = newChat.a === user.id ? newChat.b : newChat.a;
+            const { data: otherUser } = await supabase
+              .from('profiles')
+              .select('handle')
+              .eq('id', otherUserId)
+              .single();
+
+            const otherUserName = otherUser?.handle || 'Someone';
+
+            await scheduleLocalNotification(
+              'New Chat',
+              `${otherUserName} started a conversation with you`,
+              {
+                type: 'message',
+                chatId: newChat.id,
+                senderId: otherUserId,
+              }
+            );
+          }
+
           // 채팅 목록 새로고침
           queryClient.invalidateQueries({ queryKey: ['chats'] });
         }
@@ -239,6 +361,26 @@ export const MessagesScreen: React.FC = () => {
             tintColor={colors.primary}
           />
         }
+      />
+
+      {/* Toast for new messages when app is active */}
+      <Toast
+        visible={toastVisible}
+        message={toastData?.senderName || ''}
+        subtitle={toastData?.message || ''}
+        onPress={() => {
+          if (toastData?.chatId) {
+            // Find the chat to get the other_user info
+            const chat = chats.find(c => c.id === toastData.chatId);
+            if (chat) {
+              navigation.navigate('Chat' as any, {
+                chatId: toastData.chatId,
+                otherUser: chat.other_user,
+              });
+            }
+          }
+        }}
+        onHide={() => setToastVisible(false)}
       />
     </Screen>
   );

@@ -168,3 +168,4 @@ OAuth 콜백: https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback (현재)
 - artyard.app에 멋진 랜딩 페이지 생성 (브랜딩)
 - App Store 제출 시 artyard.app을 홈페이지로 등록
 
+

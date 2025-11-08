@@ -19,6 +19,45 @@ import {
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import type { Artwork } from '../types';
 
+// 한글 지명을 영문으로 번역
+const translateLocationToEnglish = (text: string | undefined): string | undefined => {
+  if (!text) return text;
+
+  const translations: Record<string, string> = {
+    '대한민국': 'South Korea', '한국': 'South Korea',
+    '서울특별시': 'Seoul', '서울': 'Seoul',
+    '부산광역시': 'Busan', '부산': 'Busan',
+    '대구광역시': 'Daegu', '대구': 'Daegu',
+    '인천광역시': 'Incheon', '인천': 'Incheon',
+    '광주광역시': 'Gwangju', '광주': 'Gwangju',
+    '대전광역시': 'Daejeon', '대전': 'Daejeon',
+    '울산광역시': 'Ulsan', '울산': 'Ulsan',
+    '세종특별자치시': 'Sejong', '세종': 'Sejong',
+    '경기도': 'Gyeonggi', '경기': 'Gyeonggi',
+    '강원도': 'Gangwon', '강원': 'Gangwon',
+    '충청북도': 'North Chungcheong', '충북': 'North Chungcheong',
+    '충청남도': 'South Chungcheong', '충남': 'South Chungcheong',
+    '전라북도': 'North Jeolla', '전북': 'North Jeolla',
+    '전라남도': 'South Jeolla', '전남': 'South Jeolla',
+    '경상북도': 'North Gyeongsang', '경북': 'North Gyeongsang',
+    '경상남도': 'South Gyeongsang', '경남': 'South Gyeongsang',
+    '제주특별자치도': 'Jeju', '제주': 'Jeju',
+    // 경기도 주요 도시
+    '수원시': 'Suwon', '수원': 'Suwon',
+    '성남시': 'Seongnam', '성남': 'Seongnam',
+    '고양시': 'Goyang', '고양': 'Goyang',
+    '용인시': 'Yongin', '용인': 'Yongin',
+    '부천시': 'Bucheon', '부천': 'Bucheon',
+    '안산시': 'Ansan', '안산': 'Ansan',
+    '남양주시': 'Namyangju', '남양주': 'Namyangju',
+    '화성시': 'Hwaseong', '화성': 'Hwaseong',
+    '평택시': 'Pyeongtaek', '평택': 'Pyeongtaek',
+    '의정부시': 'Uijeongbu', '의정부': 'Uijeongbu',
+  };
+
+  return translations[text] || text;
+};
+
 interface ArtworkCardProps {
   artwork: Artwork;
   onPress: () => void;
@@ -59,7 +98,7 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
   ];
 
   return (
-    <TouchableOpacity style={cardStyle} onPress={onPress} activeOpacity={0.9}>
+    <View style={cardStyle}>
       {/* 작품 이미지 슬라이더 */}
       <View style={styles.imageContainer}>
         {artwork.images && artwork.images.length > 0 ? (
@@ -72,14 +111,22 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               onScroll={handleScroll}
               scrollEventThrottle={16}
               style={styles.imageScrollView}
+              nestedScrollEnabled={true}
+              scrollEnabled={true}
+              directionalLockEnabled={true}
             >
               {artwork.images.map((imageUrl, index) => (
-                <Image 
+                <TouchableOpacity
                   key={index}
-                  source={{ uri: imageUrl }} 
-                  style={styles.image}
-                  resizeMode="cover"
-                />
+                  activeOpacity={1}
+                  onPress={onPress}
+                >
+                  <Image 
+                    source={{ uri: imageUrl }} 
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
               ))}
             </ScrollView>
             
@@ -122,8 +169,12 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
         )}
       </View>
 
-      {/* 작품 정보 */}
-      <View style={styles.content}>
+      {/* 작품 정보 - 클릭 가능 영역 */}
+      <TouchableOpacity 
+        style={styles.content}
+        onPress={onPress}
+        activeOpacity={0.9}
+      >
         {/* 제목과 가격 */}
         <View style={styles.titleRow}>
           <Text
@@ -162,7 +213,18 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             styles.location,
             { color: colors.accent }
           ]}>
-            📍 {artwork.location_city || ''}{artwork.location_city && artwork.location_state ? ', ' : ''}{artwork.location_state || ''}{(artwork.location_city || artwork.location_state) && artwork.location_country ? ', ' : ''}{artwork.location_country || artwork.location_full || ''}
+            📍 {(() => {
+              const city = translateLocationToEnglish(artwork.location_city);
+              const state = translateLocationToEnglish(artwork.location_state);
+              const country = translateLocationToEnglish(artwork.location_country);
+              
+              const parts = [];
+              if (city) parts.push(city);
+              if (state && state !== city) parts.push(state);
+              if (country && country !== city) parts.push(country);
+              
+              return parts.length > 0 ? parts.join(', ') : artwork.location_full || '';
+            })()}
           </Text>
         )}
 
@@ -172,7 +234,7 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             styles.details,
             { color: isDark ? colors.darkTextMuted : colors.textMuted }
           ]}>
-            {artwork.material} · {artwork.size} · {artwork.year}년
+            {artwork.material} · {artwork.size} · {artwork.year}
           </Text>
           
         </View>
@@ -258,8 +320,8 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 };
 
@@ -349,7 +411,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: typography.body.fontSize,
-    lineHeight: typography.body.lineHeight * 1.2,
+    lineHeight: typography.body.lineHeight * 0.95,
     marginBottom: spacing.sm,
   },
   detailsRow: {

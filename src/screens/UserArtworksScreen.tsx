@@ -319,7 +319,7 @@ export const UserArtworksScreen: React.FC = () => {
                 : `No ${SALE_STATUS_FILTERS.find(f => f.key === selectedFilter)?.label.toLowerCase()} artworks found.`
             }
             actionTitle="Explore Other Artists"
-            onAction={() => navigation.navigate('Home')}
+            onAction={() => navigation.navigate('MainApp')}
           />
         }
         ListFooterComponent={renderFooter}

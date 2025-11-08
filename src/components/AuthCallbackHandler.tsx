@@ -247,7 +247,10 @@ export const AuthCallbackHandler: React.FC = () => {
                   debugLog('🌐 토큰 유효성 서버 검증 중...', 'info');
                   
                   // Supabase API를 통한 실제 토큰 검증
-                  const tokenValidation = await fetch(`https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/user`, {
+                  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+                  if (!supabaseUrl) throw new Error('EXPO_PUBLIC_SUPABASE_URL not configured');
+                  
+                  const tokenValidation = await fetch(`${supabaseUrl}/auth/v1/user`, {
                     headers: {
                       'Authorization': `Bearer ${accessToken}`,
                       'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -272,7 +275,8 @@ export const AuthCallbackHandler: React.FC = () => {
                 }
                 
                 // Supabase가 사용하는 올바른 키로 저장
-                const supabaseStorageKey = 'sb-bkvycanciimgyftdtqpx-auth-token';
+                const projectRef = supabaseUrl?.split('//')[1]?.split('.')[0] || 'default';
+                const supabaseStorageKey = `sb-${projectRef}-auth-token`;
                 try {
                   const sessionData = {
                     access_token: accessToken,

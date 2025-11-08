@@ -1,373 +1,401 @@
 /**
- * 분석/대시보드 서비스
+ * Analytics Service
+ * Basic event tracking for business metrics
+ * 
+ * Future: Integrate with Firebase Analytics, Mixpanel, or Amplitude
  */
 
-import { supabase } from './supabase';
-import {
-  ArtistAnalytics,
-  DashboardSummary,
-  AnalyticsPeriod,
-  getDateRange,
-  calculatePercentageChange,
-} from '../types/complete-system';
+interface AnalyticsEvent {
+  name: string;
+  params?: Record<string, any>;
+  timestamp: number;
+}
 
-/**
- * 작품 조회 기록
- */
-export const recordArtworkView = async (
-  artworkId: string,
-  referrer?: string
-): Promise<void> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
+class AnalyticsService {
+  private events: AnalyticsEvent[] = [];
+  private sessionStart: number = Date.now();
+  private enabled: boolean = true;
+
+  /**
+   * Track a custom event
+   */
+  trackEvent(eventName: string, params?: Record<string, any>) {
+    if (!this.enabled) return;
+
+    const event: AnalyticsEvent = {
+      name: eventName,
+      params: {
+        ...params,
+        session_duration: Date.now() - this.sessionStart,
+      },
+      timestamp: Date.now(),
+    };
+
+    this.events.push(event);
     
-    await supabase.from('artwork_views').insert({
+    // Log to console in development
+    if (__DEV__) {
+      console.log('📊 Analytics Event:', event.name, event.params);
+    }
+
+    // TODO: Send to analytics service in production
+    // Example integrations:
+    // - Firebase: analytics().logEvent(eventName, params);
+    // - Mixpanel: mixpanel.track(eventName, params);
+    // - Amplitude: amplitude.getInstance().logEvent(eventName, params);
+  }
+
+  /**
+   * User Events
+   */
+  trackUserSignup(method: 'google' | 'naver' | 'kakao' | 'apple') {
+    this.trackEvent('user_signup', { method });
+  }
+
+  trackUserLogin(method: 'google' | 'naver' | 'kakao' | 'apple') {
+    this.trackEvent('user_login', { method });
+  }
+
+  trackProfileEdit(fields: string[]) {
+    this.trackEvent('profile_edit', { fields_changed: fields });
+  }
+
+  /**
+   * Artwork Events
+   */
+  trackArtworkView(artworkId: string, category?: string) {
+    this.trackEvent('artwork_view', { artwork_id: artworkId, category });
+  }
+
+  trackArtworkUpload(artworkId: string, material: string, priceRange: string) {
+    this.trackEvent('artwork_upload', {
       artwork_id: artworkId,
-      viewer_id: user?.id || null,
-      session_id: user?.id || `anon_${Date.now()}`,
-      referrer,
-      device_type: 'mobile', // 실제로는 디바이스 감지 로직 추가
-      viewed_at: new Date().toISOString(),
+      material,
+      price_range: priceRange,
+    });
+  }
+
+  trackArtworkLike(artworkId: string) {
+    this.trackEvent('artwork_like', { artwork_id: artworkId });
+  }
+
+  trackArtworkBookmark(artworkId: string) {
+    this.trackEvent('artwork_bookmark', { artwork_id: artworkId });
+  }
+
+  trackArtworkShare(artworkId: string, method: string) {
+    this.trackEvent('artwork_share', { artwork_id: artworkId, method });
+  }
+
+  /**
+   * Commerce Events
+   */
+  trackPurchaseInitiated(artworkId: string, price: number) {
+    this.trackEvent('purchase_initiated', {
+      artwork_id: artworkId,
+      value: price,
+      currency: 'KRW',
+    });
+  }
+
+  trackPurchaseCompleted(transactionId: string, artworkId: string, amount: number) {
+    this.trackEvent('purchase_completed', {
+      transaction_id: transactionId,
+      artwork_id: artworkId,
+      value: amount,
+      currency: 'KRW',
+    });
+  }
+
+  trackPaymentFailed(artworkId: string, reason: string) {
+    this.trackEvent('payment_failed', {
+      artwork_id: artworkId,
+      reason,
+    });
+  }
+
+  /**
+   * Engagement Events
+   */
+  trackSearch(query: string, resultsCount: number) {
+    this.trackEvent('search', {
+      search_term: query,
+      results_count: resultsCount,
+    });
+  }
+
+  trackFilterApplied(filters: Record<string, any>) {
+    this.trackEvent('filter_applied', filters);
+  }
+
+  trackChatInitiated(recipientId: string) {
+    this.trackEvent('chat_initiated', { recipient_id: recipientId });
+  }
+
+  trackChatMessageSent(chatId: string) {
+    this.trackEvent('chat_message_sent', { chat_id: chatId });
+  }
+
+  /**
+   * Screen Views
+   */
+  trackScreenView(screenName: string) {
+    this.trackEvent('screen_view', { screen_name: screenName });
+  }
+
+  /**
+   * Error Tracking
+   */
+  trackError(errorCode: string, errorMessage: string, context?: string) {
+    this.trackEvent('error', {
+      error_code: errorCode,
+      error_message: errorMessage,
+      context,
+    });
+  }
+
+  /**
+   * Get analytics summary (for debugging)
+   */
+  getSummary() {
+    const eventCounts: Record<string, number> = {};
+    this.events.forEach(event => {
+      eventCounts[event.name] = (eventCounts[event.name] || 0) + 1;
     });
     
-  } catch (error: any) {
-    console.error('조회 기록 오류:', error);
-    // 실패해도 사용자 경험에 영향 없음
+      return {
+      total_events: this.events.length,
+      session_duration: Date.now() - this.sessionStart,
+      event_counts: eventCounts,
+      recent_events: this.events.slice(-10),
+    };
   }
-};
+
+  /**
+   * Clear events (useful for testing)
+   */
+  clear() {
+    this.events = [];
+    this.sessionStart = Date.now();
+  }
+
+  /**
+   * Disable analytics (for privacy)
+   */
+  disable() {
+    this.enabled = false;
+  }
+
+  /**
+   * Enable analytics
+   */
+  enable() {
+    this.enabled = true;
+  }
+}
+
+// Singleton instance
+export const analytics = new AnalyticsService();
+
+// Convenience exports with proper 'this' binding
+export const trackEvent = (eventName: string, params?: Record<string, any>) => 
+  analytics.trackEvent(eventName, params);
+
+export const trackUserSignup = (method: 'google' | 'naver' | 'kakao' | 'apple') => 
+  analytics.trackUserSignup(method);
+
+export const trackUserLogin = (method: 'google' | 'naver' | 'kakao' | 'apple') => 
+  analytics.trackUserLogin(method);
+
+export const trackProfileEdit = (fields: string[]) => 
+  analytics.trackProfileEdit(fields);
+
+export const trackArtworkView = (artworkId: string, category?: string) => 
+  analytics.trackArtworkView(artworkId, category);
+
+export const trackArtworkUpload = (artworkId: string, material: string, priceRange: string) => 
+  analytics.trackArtworkUpload(artworkId, material, priceRange);
+
+export const trackArtworkLike = (artworkId: string) => 
+  analytics.trackArtworkLike(artworkId);
+
+export const trackArtworkBookmark = (artworkId: string) => 
+  analytics.trackArtworkBookmark(artworkId);
+
+export const trackArtworkShare = (artworkId: string, method: string) => 
+  analytics.trackArtworkShare(artworkId, method);
+
+export const trackPurchaseInitiated = (artworkId: string, price: number) => 
+  analytics.trackPurchaseInitiated(artworkId, price);
+
+export const trackPurchaseCompleted = (transactionId: string, artworkId: string, amount: number) => 
+  analytics.trackPurchaseCompleted(transactionId, artworkId, amount);
+
+export const trackPaymentFailed = (artworkId: string, reason: string) => 
+  analytics.trackPaymentFailed(artworkId, reason);
+
+export const trackSearch = (query: string, resultsCount: number) => 
+  analytics.trackSearch(query, resultsCount);
+
+export const trackFilterApplied = (filters: Record<string, any>) => 
+  analytics.trackFilterApplied(filters);
+
+export const trackChatInitiated = (recipientId: string) => 
+  analytics.trackChatInitiated(recipientId);
+
+export const trackChatMessageSent = (chatId: string) => 
+  analytics.trackChatMessageSent(chatId);
+
+export const trackScreenView = (screenName: string) => 
+  analytics.trackScreenView(screenName);
+
+export const trackError = (errorCode: string, errorMessage: string, context?: string) => 
+  analytics.trackError(errorCode, errorMessage, context);
 
 /**
- * 대시보드 요약 조회
+ * Get Dashboard Summary (for Artist Dashboard)
+ * TODO: Implement actual dashboard analytics
  */
-export const getDashboardSummary = async (
-  period: AnalyticsPeriod = 'weekly'
-): Promise<DashboardSummary> => {
+export const getDashboardSummary = async (period: 'daily' | 'weekly' | 'monthly' = 'weekly') => {
+  // Import supabase dynamically to avoid circular dependencies
+  const { supabase } = await import('./supabase');
+  const { useAuthStore } = await import('../store/authStore');
+  
+  console.log(`📊 Dashboard Summary requested for period: ${period}`);
+  
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('로그인이 필요합니다');
+    const user = useAuthStore.getState().user;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Calculate date range
+    const now = new Date();
+    let startDate: Date;
     
-    const { start, end } = getDateRange(period);
-    
-    // 1. 기본 프로필 통계
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-    
-    if (!profile) throw new Error('프로필을 찾을 수 없습니다');
-    
-    // 먼저 작가의 모든 작품 ID 조회
-    const { data: artworkIdData } = await supabase
+    switch (period) {
+      case 'daily':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 1);
+        break;
+      case 'weekly':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'monthly':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 30);
+        break;
+    }
+
+    // 1. Get user's artworks
+    const { data: artworks, error: artworksError } = await supabase
       .from('artworks')
-      .select('id')
+      .select('id, title, price, created_at, likes_count, comments_count')
       .eq('author_id', user.id);
     
-    const artworkIds = artworkIdData?.map(a => a.id) || [];
-    
-    // 작품이 없으면 빈 통계 반환
-    if (artworkIds.length === 0) {
-      return {
-        period,
-        total_sales: 0,
-        total_revenue: 0,
-        average_price: 0,
-        total_views: 0,
-        unique_visitors: 0,
-        engagement_rate: 0,
-        total_likes: 0,
-        total_comments: 0,
-        total_bookmarks: 0,
-        sales_growth: 0,
-        revenue_growth: 0,
-        views_growth: 0,
-        top_artworks: [],
-        revenue_by_date: [],
-      };
-    }
-    
-    // 2. 조회수 통계
-    const { data: views } = await supabase
-      .from('artwork_views')
-      .select('id, artwork_id, viewer_id, viewed_at')
-      .gte('viewed_at', start.toISOString())
-      .lte('viewed_at', end.toISOString())
-      .in('artwork_id', artworkIds);
-    
-    const totalViews = views?.length || 0;
-    const uniqueVisitors = new Set(views?.map(v => v.viewer_id).filter(Boolean)).size;
-    
-    // 3. 인게이지먼트 통계 (RLS 문제로 인해 비활성화)
-    // TODO: RLS 정책 수정 후 활성화 (database/FORCE-DISABLE-RLS.sql 실행 필요)
-    let totalLikes = 0;
-    let totalComments = 0;
-    let totalBookmarks = 0;
-    
-    // Comments만 조회 (comments 테이블은 RLS 문제 없음)
-    try {
-      const { data: allComments, error: commentsError } = await supabase
-        .from('comments')
-        .select('id, created_at, artwork_id')
-        .in('artwork_id', artworkIds);
-      
-      if (!commentsError && allComments) {
-        const filteredComments = allComments.filter(comment => {
-          const commentDate = new Date(comment.created_at);
-          return commentDate >= start && commentDate <= end;
-        });
-        totalComments = filteredComments.length;
-      }
-    } catch (error) {
-      totalComments = 0;
-    }
-    
-    // Likes와 Bookmarks는 RLS 문제로 비활성화
-    // Supabase에서 FORCE-DISABLE-RLS.sql 실행 후 활성화 가능
-    
-    const engagementRate = totalViews > 0 
-      ? Math.round(((totalLikes + totalComments + totalBookmarks) / totalViews) * 100)
-      : 0;
-    
-    // 4. 판매 통계
-    const { data: sales } = await supabase
+    if (artworksError) throw artworksError;
+
+    // 2. Get sales data (transactions)
+    const { data: transactions, error: transactionsError } = await supabase
       .from('transactions')
-      .select('id, amount, seller_amount, confirmed_at')
+      .select('artwork_id, amount, created_at, status')
       .eq('seller_id', user.id)
-      .eq('status', 'confirmed')
-      .gte('confirmed_at', start.toISOString())
-      .lte('confirmed_at', end.toISOString());
+      .gte('created_at', startDate.toISOString())
+      .in('status', ['completed', 'confirmed']);
     
-    const totalSales = sales?.length || 0;
-    const totalRevenue = sales?.reduce((sum, s) => sum + s.seller_amount, 0) || 0;
-    const averageSalePrice = totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0;
-    
-    const conversionRate = totalViews > 0
-      ? Math.round((totalSales / totalViews) * 100)
-      : 0;
-    
-    // 5. 팔로워 통계
-    const { data: follows } = await supabase
-      .from('follows')
-      .select('id, created_at')
-      .eq('following_id', user.id);
-    
-    const totalFollowers = follows?.length || 0;
-    
-    const newFollowers = follows?.filter(f => {
-      const followDate = new Date(f.created_at);
-      return followDate >= start && followDate <= end;
-    }).length || 0;
-    
-    // 6. 이전 기간 데이터 (변화율 계산용)
-    const previousStart = new Date(start);
-    const previousEnd = new Date(end);
-    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    previousStart.setDate(previousStart.getDate() - daysDiff);
-    previousEnd.setDate(previousEnd.getDate() - daysDiff);
-    
-    const { data: previousViews } = await supabase
-      .from('artwork_views')
-      .select('id')
-      .gte('viewed_at', previousStart.toISOString())
-      .lte('viewed_at', previousEnd.toISOString())
-      .in('artwork_id', artworkIds);
-    
-    const viewsChange = calculatePercentageChange(totalViews, previousViews?.length || 0);
-    
-    const { data: previousFollows } = await supabase
-      .from('follows')
-      .select('id')
-      .eq('following_id', user.id)
-      .gte('created_at', previousStart.toISOString())
-      .lte('created_at', previousEnd.toISOString());
-    
-    const followersChange = calculatePercentageChange(newFollowers, previousFollows?.length || 0);
-    
-    // 7. 인기 작품 (조회수, 좋아요, 매출 기준)
-    const { data: popularArtworks } = await supabase
-      .from('artworks')
-      .select(`
-        *,
-        views:artwork_views(count),
-        likes:likes(count)
-      `)
-      .eq('author_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    
-    const topArtworks = (popularArtworks || [])
-      .map(artwork => {
-        const viewsCount = Array.isArray(artwork.views) ? artwork.views.length : 0;
-        const likesCount = Array.isArray(artwork.likes) ? artwork.likes.length : 0;
-        
-        return {
-          artwork,
-          views: viewsCount,
-          likes: likesCount,
-          revenue: 0, // 나중에 거래 데이터에서 계산
-        };
+    if (transactionsError) throw transactionsError;
+
+    // 3. Calculate metrics
+    const totalLikes = artworks?.reduce((sum, art) => sum + (art.likes_count || 0), 0) || 0;
+    const totalComments = artworks?.reduce((sum, art) => sum + (art.comments_count || 0), 0) || 0;
+    const totalSales = transactions?.length || 0;
+    const totalRevenue = transactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+    const averageSalePrice = totalSales > 0 ? totalRevenue / totalSales : 0;
+    const conversionRate = artworks?.length > 0 ? ((totalSales / artworks.length) * 100).toFixed(2) : '0.00';
+
+    // 4. Get top artworks by engagement (likes + comments)
+    const topArtworks = (artworks || [])
+      .sort((a, b) => {
+        const scoreA = (a.likes_count || 0) * 2 + (a.comments_count || 0);
+        const scoreB = (b.likes_count || 0) * 2 + (b.comments_count || 0);
+        return scoreB - scoreA;
       })
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 5);
-    
-    // 8. 일별 트렌드
-    const dailyStats = await Promise.all(
-      Array.from({ length: period === 'daily' ? 7 : period === 'weekly' ? 30 : 180 }, (_, i) => {
-        const date = new Date(end);
-        date.setDate(date.getDate() - i);
-        return date;
-      }).reverse().map(async (date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        const nextDate = new Date(date);
-        nextDate.setDate(nextDate.getDate() + 1);
-        
-        const { data: dayViews } = await supabase
-          .from('artwork_views')
-          .select('id')
-          .gte('viewed_at', date.toISOString())
-          .lt('viewed_at', nextDate.toISOString())
-          .in('artwork_id', artworkIds);
-        
-        const { data: daySales } = await supabase
-          .from('transactions')
-          .select('id, seller_amount')
-          .eq('seller_id', user.id)
-          .eq('status', 'confirmed')
-          .gte('confirmed_at', date.toISOString())
-          .lt('confirmed_at', nextDate.toISOString());
-        
-        return {
-          date: dateStr,
-          views: dayViews?.length || 0,
-          sales: daySales?.length || 0,
-          revenue: daySales?.reduce((sum, s) => sum + s.seller_amount, 0) || 0,
-        };
-      })
-    );
-    
+      .slice(0, 5)
+      .map(artwork => ({
+        artwork: {
+          id: artwork.id,
+          title: artwork.title,
+        },
+        likes: artwork.likes_count || 0,
+        comments: artwork.comments_count || 0,
+      }));
+
+    // 5. Generate daily stats (last 7 days for display)
+    const dailyStats = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayTransactions = transactions?.filter(t => 
+        t.created_at.startsWith(dateStr)
+      ) || [];
+      
+      dailyStats.push({
+        date: dateStr,
+        sales: dayTransactions.length,
+        revenue: dayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0),
+        likes: Math.floor(totalLikes / 7), // Simplified: distribute likes evenly
+      });
+    }
+
+    // 6. Get followers count (if followers table exists, otherwise 0)
+    let totalFollowers = 0;
+    try {
+      const { count } = await supabase
+        .from('followers')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', user.id);
+      totalFollowers = count || 0;
+    } catch (error) {
+      console.warn('Followers table not available:', error);
+    }
+
     return {
       period,
-      start_date: start.toISOString(),
-      end_date: end.toISOString(),
-      
-      total_views: totalViews,
-      unique_visitors: uniqueVisitors,
-      views_change: viewsChange,
-      
+      // Core metrics
       total_likes: totalLikes,
       total_comments: totalComments,
-      total_bookmarks: totalBookmarks,
-      engagement_rate: engagementRate,
-      
       total_sales: totalSales,
-      total_revenue: totalRevenue,
       average_sale_price: averageSalePrice,
-      conversion_rate: conversionRate,
-      
+      total_revenue: totalRevenue,
+      conversion_rate: parseFloat(conversionRate),
       total_followers: totalFollowers,
-      new_followers: newFollowers,
-      followers_change: followersChange,
+      total_artworks: artworks?.length || 0,
       
+      // Top Artworks
       top_artworks: topArtworks,
+      
+      // Daily Stats (Trends: likes per day)
       daily_stats: dailyStats,
     };
+  } catch (error) {
+    console.error('❌ Failed to load dashboard summary:', error);
     
-  } catch (error: any) {
-    console.error('대시보드 요약 조회 오류:', error);
-    throw error;
-  }
-};
-
-/**
- * 간단한 통계 (프로필 화면용)
- */
-export const getSimpleStats = async (userId: string) => {
-  try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('total_sales, total_revenue, seller_rating, seller_reviews_count')
-      .eq('id', userId)
-      .single();
-    
-    const { data: artworks } = await supabase
-      .from('artworks')
-      .select('id')
-      .eq('author_id', userId);
-    
-    const { data: followers } = await supabase
-      .from('follows')
-      .select('id')
-      .eq('following_id', userId);
-    
+    // Return empty data on error
     return {
-      total_artworks: artworks?.length || 0,
-      total_sales: profile?.total_sales || 0,
-      total_revenue: profile?.total_revenue || 0,
-      total_followers: followers?.length || 0,
-      rating: profile?.seller_rating || 0,
-      reviews_count: profile?.seller_reviews_count || 0,
+      period,
+      total_likes: 0,
+      total_comments: 0,
+      total_sales: 0,
+      average_sale_price: 0,
+      total_revenue: 0,
+      conversion_rate: 0,
+      total_followers: 0,
+      total_artworks: 0,
+      top_artworks: [],
+      daily_stats: [],
     };
-    
-  } catch (error: any) {
-    console.error('간단한 통계 조회 오류:', error);
-    throw error;
   }
 };
-
-/**
- * 작품별 상세 통계
- */
-export const getArtworkAnalytics = async (artworkId: string) => {
-  try {
-    // 조회수
-    const { data: views } = await supabase
-      .from('artwork_views')
-      .select('id, viewed_at, viewer_id')
-      .eq('artwork_id', artworkId);
-    
-    // 좋아요
-    const { data: likes } = await supabase
-      .from('likes')
-      .select('id, created_at')
-      .eq('artwork_id', artworkId);
-    
-    // 댓글
-    const { data: comments } = await supabase
-      .from('comments')
-      .select('id, created_at')
-      .eq('artwork_id', artworkId);
-    
-    // 북마크
-    const { data: bookmarks } = await supabase
-      .from('bookmarks')
-      .select('id, created_at')
-      .eq('artwork_id', artworkId);
-    
-    // 거래
-    const { data: transaction } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('artwork_id', artworkId)
-      .eq('status', 'confirmed')
-      .single();
-    
-    const totalViews = views?.length || 0;
-    const uniqueVisitors = new Set(views?.map(v => v.viewer_id).filter(Boolean)).size;
-    
-    return {
-      total_views: totalViews,
-      unique_visitors: uniqueVisitors,
-      total_likes: likes?.length || 0,
-      total_comments: comments?.length || 0,
-      total_bookmarks: bookmarks?.length || 0,
-      sold: !!transaction,
-      sale_price: transaction?.amount || 0,
-      sold_at: transaction?.confirmed_at || null,
-    };
-    
-  } catch (error: any) {
-    console.error('작품 통계 조회 오류:', error);
-    throw error;
-  }
-};
-

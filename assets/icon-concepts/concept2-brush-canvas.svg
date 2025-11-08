@@ -1,0 +1,39 @@
+<!-- ArtYard Icon Concept 2: Brush & Canvas -->
+<!-- 컨셉: 예술 창작의 시작, 붓과 캔버스 -->
+<!-- 타겟: 작가 중심, 창의적이고 동적인 느낌 -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EC4899;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F472B6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EC5B9A;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg-gradient)" rx="228"/>
+  
+  <!-- Canvas (White Rectangle) -->
+  <rect x="180" y="250" width="664" height="524" fill="white" rx="30" opacity="0.95"/>
+  
+  <!-- Brush Stroke (Dynamic Pink) -->
+  <path d="M 300 400 Q 400 350, 500 420 T 720 500" 
+        stroke="#EC4899" 
+        stroke-width="80" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+        fill="none"
+        opacity="0.9"/>
+  
+  <!-- Paint Drip Effect -->
+  <circle cx="700" cy="520" r="20" fill="#EC4899" opacity="0.7"/>
+  <ellipse cx="700" cy="560" rx="12" ry="25" fill="#EC4899" opacity="0.7"/>
+  
+  <!-- Highlight Stroke (White accent) -->
+  <path d="M 320 420 Q 420 370, 500 435" 
+        stroke="white" 
+        stroke-width="25" 
+        stroke-linecap="round"
+        fill="none"
+        opacity="0.6"/>
+</svg>
+

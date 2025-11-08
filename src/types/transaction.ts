@@ -1,32 +1,29 @@
 /**
- * 거래/배송 시스템 타입 정의
+ * 거래 시스템 타입 정의
+ * Note: Shipping is arranged directly between buyer and seller
  */
 
 // ============================================
-// 배송 주소
+// Contact Info (for buyer-seller communication)
 // ============================================
-export interface ShippingAddress {
+export interface ContactInfo {
   id: string;
   user_id: string;
   
-  // 기본 정보
+  // Basic info
   recipient_name: string;
   phone: string;
   
-  // 주소
-  postal_code: string;
-  address: string;
+  // Address (optional, for reference only)
+  postal_code?: string;
+  address?: string;
   address_detail?: string;
+  country?: string;
   
-  // 국제 주소
-  country: string; // 'KR', 'US', etc.
-  state?: string;
-  city?: string;
-  
-  // 배송 메모
+  // Notes
   delivery_memo?: string;
   
-  // 설정
+  // Settings
   is_default: boolean;
   
   created_at: string;
@@ -34,67 +31,59 @@ export interface ShippingAddress {
 }
 
 // ============================================
-// 거래 상태
+// Transaction Status
 // ============================================
 export type TransactionStatus = 
-  | 'pending'      // 결제 대기
-  | 'paid'         // 결제 완료 (에스크로)
-  | 'preparing'    // 배송 준비 중
-  | 'shipped'      // 배송 중
-  | 'delivered'    // 배송 완료
-  | 'confirmed'    // 구매 확인 (정산 완료)
-  | 'refunded'     // 환불됨
-  | 'disputed'     // 분쟁 중
-  | 'cancelled';   // 취소됨
+  | 'pending'      // Payment pending
+  | 'paid'         // Payment complete (in escrow)
+  | 'confirmed'    // Delivery confirmed (settled to seller)
+  | 'refunded'     // Refunded
+  | 'disputed'     // In dispute
+  | 'cancelled';   // Cancelled
+  
+// Note: No shipping/delivery status - handled by buyer and seller directly
 
 // ============================================
-// 거래
+// Transaction
 // ============================================
 export interface Transaction {
   id: string;
   
-  // 관련 정보
+  // Related info
   artwork_id: string;
   buyer_id: string;
   seller_id: string;
   
-  // 금액
-  amount: number;              // 작품 가격
-  platform_fee: number;        // 플랫폼 수수료
-  seller_amount: number;       // 판매자 수령액
-  payment_method: string;      // 'stripe_card', 'toss_transfer'
+  // Amount (includes 10% platform fee)
+  amount: number;              // Full sale price (buyer pays this)
+  platform_fee: number;        // Platform fee (10% of amount)
+  seller_amount: number;       // Seller receives (amount - platform_fee - payment_fee)
+  payment_method: string;      // '2checkout', etc.
+  payment_fee: number;         // Payment gateway fee (e.g., 2Checkout 3.5%)
   
-  // Stripe
-  stripe_payment_intent_id?: string;
-  stripe_charge_id?: string;
-  stripe_transfer_id?: string;
+  // Payment gateway IDs
+  payment_intent_id?: string;  // 2Checkout order reference
+  charge_id?: string;
+  transfer_id?: string;
   
-  // 상태
+  // Status
   status: TransactionStatus;
   
-  // 배송 주소 (스냅샷)
-  shipping_recipient: string;
-  shipping_phone: string;
-  shipping_postal_code: string;
-  shipping_address: string;
-  shipping_address_detail?: string;
-  shipping_memo?: string;
+  // Contact info (optional, for reference only)
+  buyer_name?: string;
+  buyer_phone?: string;
+  buyer_address?: string;
+  delivery_notes?: string;     // Buyer's notes for seller
   
-  // 배송 정보
-  tracking_number?: string;
-  carrier?: string; // '우체국택배', 'CJ대한통운'
-  
-  // 타임스탬프
+  // Timestamps
   paid_at?: string;
-  shipped_at?: string;
-  delivered_at?: string;
   confirmed_at?: string;
-  auto_confirm_at?: string;
+  auto_confirm_at?: string;    // Auto-confirm after 7 days
   
   created_at: string;
   updated_at: string;
   
-  // 조인 데이터
+  // Joined data
   artwork?: any;
   buyer?: any;
   seller?: any;
@@ -161,63 +150,91 @@ export interface TransactionReview {
 }
 
 // ============================================
-// 결제 요청 데이터
+// Payment Request Data
 // ============================================
 export interface CreatePaymentRequest {
   artwork_id: string;
-  shipping_address_id: string; // 기존 주소 사용
-  // OR
-  shipping_address?: Omit<ShippingAddress, 'id' | 'user_id' | 'created_at' | 'updated_at'>; // 새 주소
+  // Optional contact info for seller reference
+  contact_name?: string;
+  contact_phone?: string;
+  contact_address?: string;
+  delivery_notes?: string;
 }
 
 // ============================================
-// 플랫폼 수수료 계산
+// Fee Calculation
+// Note: Platform fee is INCLUDED in the sale price
+// Payment gateway fees are covered by the platform
 // ============================================
 export interface FeeCalculation {
-  artwork_price: number;      // 작품 가격
-  platform_fee_rate: number;  // 수수료율 (0.1 = 10%)
-  platform_fee: number;       // 플랫폼 수수료
-  seller_amount: number;      // 판매자 수령액
-  stripe_fee: number;         // Stripe 수수료 (2.9% + 30¢)
-  final_seller_amount: number; // 최종 판매자 수령액
+  sale_price: number;          // Total sale price (buyer pays)
+  platform_fee_rate: number;   // Fee rate (0.10 = 10%)
+  platform_fee: number;        // Platform fee (10% of sale price)
+  payment_fee_rate: number;    // 2Checkout fee rate (0.035 = 3.5%)
+  payment_fee: number;         // Payment gateway fee (platform covers this)
+  seller_amount: number;       // Amount seller receives (90% of sale price)
+  platform_net: number;        // Platform's net earnings (after payment fees)
 }
 
-export function calculateFees(artworkPrice: number, platformFeeRate: number = 0.10): FeeCalculation {
-  const platform_fee = Math.round(artworkPrice * platformFeeRate);
-  const seller_amount = artworkPrice - platform_fee;
-  
-  // Stripe 수수료: 2.9% + 300원
-  const stripe_fee = Math.round(artworkPrice * 0.029) + 300;
-  const final_seller_amount = seller_amount - stripe_fee;
+/**
+ * Calculate fees for a transaction
+ * Platform covers payment gateway fees, seller receives exactly 90%
+ * @param salePrice - Total sale price (includes platform fee)
+ * @param platformFeeRate - Platform fee rate (default 0.10 = 10%)
+ * @param paymentFeeRate - Payment gateway fee rate (default 0.035 = 3.5% for 2Checkout)
+ */
+export function calculateFees(
+  salePrice: number, 
+  platformFeeRate: number = 0.10,
+  paymentFeeRate: number = 0.035
+): FeeCalculation {
+  const platform_fee = Math.round(salePrice * platformFeeRate);
+  const seller_amount = salePrice - platform_fee;  // Seller gets exactly 90%
+  const payment_fee = Math.round(salePrice * paymentFeeRate);  // Platform pays this
+  const platform_net = platform_fee - payment_fee;  // Platform's actual earnings
   
   return {
-    artwork_price: artworkPrice,
+    sale_price: salePrice,
     platform_fee_rate: platformFeeRate,
     platform_fee,
+    payment_fee_rate: paymentFeeRate,
+    payment_fee,
     seller_amount,
-    stripe_fee,
-    final_seller_amount
+    platform_net,
   };
 }
 
 // ============================================
-// 사용 예시
+// Usage Example
 // ============================================
 /*
-const fees = calculateFees(50000, 0.05);
+const fees = calculateFees(50000); // Sale price: ₩50,000
+
 console.log(`
-작품 가격: ${fees.artwork_price}원
-플랫폼 수수료 (5%): ${fees.platform_fee}원
-Stripe 수수료: ${fees.stripe_fee}원
+Sale Price: ₩${fees.sale_price.toLocaleString()}
+Platform Fee (10%): -₩${fees.platform_fee.toLocaleString()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
-판매자 수령액: ${fees.final_seller_amount}원
+Seller Receives: ₩${fees.seller_amount.toLocaleString()} (90%)
+
+Platform Breakdown:
+  Collected: ₩${fees.platform_fee.toLocaleString()}
+  Payment Fee: -₩${fees.payment_fee.toLocaleString()}
+  Net Earnings: ₩${fees.platform_net.toLocaleString()} (6.5%)
 `);
 
-// 출력:
-// 작품 가격: 50,000원
-// 플랫폼 수수료 (10%): 5,000원
-// Stripe 수수료: 1,750원
+// Output:
+// Sale Price: ₩50,000
+// Platform Fee (10%): -₩5,000
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 판매자 수령액: 43,250원
+// Seller Receives: ₩45,000 (90%) ✅
+//
+// Platform Breakdown:
+//   Collected: ₩5,000
+//   Payment Fee: -₩1,750
+//   Net Earnings: ₩3,250 (6.5%)
+
+// Note: Buyer pays ₩50,000 (no additional fees)
+// Seller gets exactly 90%
+// Platform covers payment gateway fees
 */
 

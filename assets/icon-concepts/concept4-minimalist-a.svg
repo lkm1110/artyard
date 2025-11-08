@@ -1,0 +1,43 @@
+<!-- ArtYard Icon Concept 4: Minimalist "A" -->
+<!-- 컨셉: 심플하고 기억하기 쉬운 로고타입 -->
+<!-- 타겟: 전 연령층, 클린하고 전문적인 느낌 -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Gradient -->
+  <defs>
+    <linearGradient id="minimalist-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EC4899;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EF7BAA;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="a-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0.95" />
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#minimalist-bg)" rx="228"/>
+  
+  <!-- Stylized "A" Letter -->
+  <!-- Left leg -->
+  <path d="M 350 750 L 480 250" 
+        stroke="url(#a-gradient)" 
+        stroke-width="110" 
+        stroke-linecap="round"
+        fill="none"/>
+  
+  <!-- Right leg -->
+  <path d="M 544 250 L 674 750" 
+        stroke="url(#a-gradient)" 
+        stroke-width="110" 
+        stroke-linecap="round"
+        fill="none"/>
+  
+  <!-- Crossbar (artistic angle) -->
+  <path d="M 420 520 L 604 520" 
+        stroke="url(#a-gradient)" 
+        stroke-width="90" 
+        stroke-linecap="round"
+        fill="none"/>
+  
+  <!-- Accent Dot (art touch) -->
+  <circle cx="512" cy="180" r="45" fill="white" opacity="0.9"/>
+</svg>
+

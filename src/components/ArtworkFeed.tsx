@@ -10,7 +10,7 @@ import { ArtworkCard } from './ArtworkCard';
 import { EmptyState } from './EmptyState';
 import { LoadingSpinner } from './LoadingSpinner';
 import { Button } from './Button';
-import { useArtworks, useToggleArtworkLike, useToggleArtworkBookmark } from '../hooks/useArtworks';
+import { useInfiniteArtworks, useToggleArtworkLike, useToggleArtworkBookmark } from '../hooks/useArtworks';
 import { useAuthStore } from '../store/authStore';
 import type { Artwork } from '../types';
 
@@ -37,13 +37,22 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
   
-  // 실제 데이터만 조회
-  const { data: artworksData, isLoading, error, refetch } = useArtworks(1, 10, filter);
+  // 무한 스크롤로 데이터 조회
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteArtworks(20, filter);
+  
   const toggleLikeMutation = useToggleArtworkLike();
   const toggleBookmarkMutation = useToggleArtworkBookmark();
 
-  // 실제 데이터만 사용
-  const artworks = artworksData?.data || [];
+  // 모든 페이지의 데이터를 하나의 배열로 합치기
+  const artworks = data?.pages.flatMap(page => page.data) || [];
 
   const handleLike = async (artworkId: string) => {
     console.log('🩷 Like button clicked for artwork:', artworkId);
@@ -95,12 +104,17 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
     try {
       console.log('📤 공유 시작:', artwork.title);
       
+      // 작품 상세 링크 생성 (앱 스킴 사용)
+      const artworkUrl = `artyard://artwork/${artwork.id}`;
+      const webUrl = `https://artyard.app/artwork/${artwork.id}`; // 웹 백업
+      
       // 공유할 메시지 구성
-      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Join the art community: https://artyard.app`;
+      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Open in app: ${artworkUrl}\n\n🎨 Download ArtYard: ${webUrl}`;
       
       const shareOptions = {
         message: shareMessage,
         title: `${artwork.title} - ArtYard`,
+        url: Platform.OS === 'web' ? webUrl : artworkUrl,
       };
 
       // 웹에서는 Web Share API 사용 (지원되는 경우)
@@ -155,12 +169,12 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
     <EmptyState
       title="No artworks yet"
       description="Be the first to share your artwork with the ArtYard community!"
-      action={
+      action={onUploadPress ? (
         <Button
           title="Upload Artwork"
           onPress={onUploadPress}
         />
-      }
+      ) : undefined}
     />
   );
 
@@ -203,13 +217,29 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={artworks.length === 0 ? styles.emptyList : styles.list}
+        nestedScrollEnabled={true}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
+            refreshing={isLoading && artworks.length === 0}
             onRefresh={refetch}
             colors={[colors.primary]}
             tintColor={colors.primary}
           />
+        }
+        // 무한 스크롤 설정
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            console.log('📜 Loading next page...');
+            fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5} // 50% 남았을 때 로드
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View style={styles.footer}>
+              <LoadingSpinner message="Loading more..." />
+            </View>
+          ) : null
         }
       />
     </View>
@@ -220,8 +250,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  footer: {
+    paddingVertical: 20,
+  },
   list: {
-    paddingVertical: 0, // 화면 꽉 채우기 위해 padding 제거
+    paddingVertical: 0,
   },
   emptyList: {
     flex: 1,

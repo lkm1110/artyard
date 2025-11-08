@@ -9,7 +9,12 @@
     "ios": "expo start --ios --port 8085",
     "web": "expo start --web --port 8085",
     "web:dev": "expo start --web --port 8085 --clear",
-    "web:https": "expo start --web --port 8085 --https"
+    "web:https": "expo start --web --port 8085 --https",
+    "build:android": "eas build --platform android --profile production",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:ios": "eas build --platform ios --profile production",
+    "build:list": "eas build:list --platform android --limit 5",
+    "build:download": "eas build:download"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

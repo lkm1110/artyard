@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtYard Icon Concepts Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 50px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .concept-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .concept-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .icon-preview {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .concept-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #EC4899;
+            margin-bottom: 10px;
+        }
+        
+        .concept-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        
+        .concept-description {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .tag {
+            background: #FDF2F8;
+            color: #EC4899;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .score {
+            background: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        .recommended {
+            border: 3px solid #FBBF24;
+            position: relative;
+        }
+        
+        .recommended::before {
+            content: "⭐ BEST";
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: #FBBF24;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 5px 15px rgba(251, 191, 36, 0.4);
+        }
+        
+        .download-btn {
+            display: block;
+            width: 100%;
+            background: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-align: center;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: transform 0.2s ease;
+        }
+        
+        .download-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+        
+        .footer h2 {
+            margin-bottom: 15px;
+            font-size: 28px;
+        }
+        
+        .footer p {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 ArtYard App Icon Concepts</h1>
+        <p class="subtitle">베테랑 마케팅 디자이너가 제안하는 5가지 컨셉</p>
+        
+        <div class="grid">
+            <!-- Concept 1 -->
+            <div class="concept-card">
+                <img src="concept1-gallery-frame.svg" alt="Gallery Frame" class="icon-preview">
+                <h3 class="concept-title">1. Gallery Frame</h3>
+                <p class="concept-subtitle">"미술관의 품격을 손안에"</p>
+                <p class="concept-description">
+                    세련된 갤러리 액자를 모티브로 한 디자인. 프리미엄 감성과 신뢰감을 동시에 전달합니다.
+                </p>
+                <div class="tags">
+                    <span class="tag">프리미엄</span>
+                    <span class="tag">신뢰감</span>
+                    <span class="tag">고급스러움</span>
+                </div>
+                <div class="score">추천 점수: 85/100</div>
+                <a href="concept1-gallery-frame.svg" download class="download-btn">⬇️ SVG 다운로드</a>
+            </div>
+            
+            <!-- Concept 2 -->
+            <div class="concept-card">
+                <img src="concept2-brush-canvas.svg" alt="Brush & Canvas" class="icon-preview">
+                <h3 class="concept-title">2. Brush & Canvas</h3>
+                <p class="concept-subtitle">"창작의 순간을 담다"</p>
+                <p class="concept-description">
+                    붓과 캔버스로 표현한 동적인 디자인. 작가 커뮤니티와 창의성을 강조합니다.
+                </p>
+                <div class="tags">
+                    <span class="tag">창의적</span>
+                    <span class="tag">동적</span>
+                    <span class="tag">작가 중심</span>
+                </div>
+                <div class="score">추천 점수: 90/100</div>
+                <a href="concept2-brush-canvas.svg" download class="download-btn">⬇️ SVG 다운로드</a>
+            </div>
+            
+            <!-- Concept 3 -->
+            <div class="concept-card">
+                <img src="concept3-abstract-art.svg" alt="Abstract Art" class="icon-preview">
+                <h3 class="concept-title">3. Abstract Art</h3>
+                <p class="concept-subtitle">"현대 미술의 새로운 기준"</p>
+                <p class="concept-description">
+                    추상적이고 모던한 디자인. Z세대를 타겟으로 한 트렌디한 비주얼입니다.
+                </p>
+                <div class="tags">
+                    <span class="tag">모던</span>
+                    <span class="tag">트렌디</span>
+                    <span class="tag">독특함</span>
+                </div>
+                <div class="score">추천 점수: 80/100</div>
+                <a href="concept3-abstract-art.svg" download class="download-btn">⬇️ SVG 다운로드</a>
+            </div>
+            
+            <!-- Concept 4 - RECOMMENDED -->
+            <div class="concept-card recommended">
+                <img src="concept4-minimalist-a.svg" alt="Minimalist A" class="icon-preview">
+                <h3 class="concept-title">4. Minimalist "A"</h3>
+                <p class="concept-subtitle">"심플함 속의 강력함"</p>
+                <p class="concept-description">
+                    가장 기억하기 쉽고 확장성 높은 디자인. 앱 아이콘부터 브랜드 로고까지 모든 곳에 활용 가능합니다.
+                </p>
+                <div class="tags">
+                    <span class="tag">심플</span>
+                    <span class="tag">확장성</span>
+                    <span class="tag">브랜딩</span>
+                    <span class="tag">범용적</span>
+                </div>
+                <div class="score">추천 점수: 95/100 ⭐</div>
+                <a href="concept4-minimalist-a.svg" download class="download-btn">⬇️ SVG 다운로드</a>
+            </div>
+            
+            <!-- Concept 5 -->
+            <div class="concept-card">
+                <img src="concept5-palette.svg" alt="Artist Palette" class="icon-preview">
+                <h3 class="concept-title">5. Artist Palette</h3>
+                <p class="concept-subtitle">"모든 색깔을 담는 플랫폼"</p>
+                <p class="concept-description">
+                    팔레트 모티브의 친근한 디자인. 직관적이고 다양성을 표현합니다.
+                </p>
+                <div class="tags">
+                    <span class="tag">친근함</span>
+                    <span class="tag">직관적</span>
+                    <span class="tag">다양성</span>
+                </div>
+                <div class="score">추천 점수: 75/100</div>
+                <a href="concept5-palette.svg" download class="download-btn">⬇️ SVG 다운로드</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <h2>🏆 최종 추천</h2>
+            <p>
+                <strong>장기적 브랜드 구축:</strong> Concept 4 (Minimalist "A")<br>
+                확장성과 일관성이 뛰어나며, 모든 플랫폼에서 완벽하게 작동합니다.<br><br>
+                
+                <strong>단기 MVP/테스트:</strong> Concept 2 (Brush & Canvas)<br>
+                눈에 띄고 기억에 남아 초기 사용자 유입에 유리합니다.<br><br>
+                
+                자세한 설명은 <strong>DESIGN_CONCEPTS.md</strong> 파일을 참고하세요!
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

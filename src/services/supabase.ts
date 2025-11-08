@@ -9,8 +9,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 // app.json의 extra에서 설정값 가져오기
-const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://bkvycanciimgyftdtqpx.supabase.co';
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY';
+const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+// 환경변수 검증
+if (!supabaseUrl || !supabaseAnonKey) {
+  const missingVars = [];
+  if (!supabaseUrl) missingVars.push('EXPO_PUBLIC_SUPABASE_URL');
+  if (!supabaseAnonKey) missingVars.push('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  
+  throw new Error(
+    `Missing required environment variables: ${missingVars.join(', ')}\n` +
+    'Please check your .env file. See .env.example for reference.'
+  );
+}
 
 console.log('🔍 [Supabase] URL:', supabaseUrl);
 console.log('🔍 [Supabase] Anon Key:', supabaseAnonKey.substring(0, 20) + '...');
@@ -96,7 +108,7 @@ export const getRedirectUri = (provider?: string) => {
   
   // ⭐ OAuth는 개발/프로덕션 관계없이 항상 Supabase 콜백 URL 사용
   // 이유: 네이티브 앱은 localhost로 돌아올 수 없고, 웹에서도 통일성을 위해 Supabase 사용
-  const supabaseRedirectUri = 'https://bkvycanciimgyftdtqpx.supabase.co/auth/v1/callback';
+  const supabaseRedirectUri = `${supabaseUrl}/auth/v1/callback`;
   
   console.log(`🔄 OAuth 리다이렉트 URI (${Platform.OS}):`, supabaseRedirectUri);
   console.log(`📍 이유: OAuth는 항상 Supabase 콜백 사용 (localhost 사용 안함)`);

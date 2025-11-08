@@ -60,3 +60,4 @@ BEGIN
   RAISE NOTICE '✅ Comments trigger fixed: user_id → author_id';
 END $$;
 
+

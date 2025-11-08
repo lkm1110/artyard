@@ -14,7 +14,10 @@ import {
   ActivityIndicator,
   useColorScheme,
   Alert,
+  RefreshControl,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/authStore';
@@ -37,6 +40,7 @@ export const AdminDashboardScreen = () => {
   const { user } = useAuthStore();
   
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalArtworks: 0,
@@ -76,9 +80,13 @@ export const AdminDashboardScreen = () => {
     }
   };
 
-  const loadStats = async () => {
+  const loadStats = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       // 1. 총 사용자 수
       let totalUsers = 0;
@@ -152,13 +160,24 @@ export const AdminDashboardScreen = () => {
       // 4. 대기 중인 신고
       let pendingReports = 0;
       try {
-        const { count } = await supabase
+        console.log('🔍 [Admin] Fetching pending reports...');
+        const { data, count, error: reportsError } = await supabase
           .from('reports')
-          .select('*', { count: 'exact', head: true })
+          .select('*, reporter:profiles!reports_reporter_id_fkey(handle), reported:profiles!reports_reported_id_fkey(handle)', { count: 'exact' })
           .eq('status', 'pending');
+        
+        if (reportsError) {
+          console.error('❌ [Admin] Failed to load reports:', reportsError);
+          throw reportsError;
+        }
+        
         pendingReports = count || 0;
+        console.log(`✅ [Admin] Found ${pendingReports} pending reports`);
+        if (data && data.length > 0) {
+          console.log('📋 [Admin] Sample report:', data[0]);
+        }
       } catch (error) {
-        console.warn('Failed to load pending reports:', error);
+        console.warn('⚠️ [Admin] Failed to load pending reports:', error);
       }
 
       // 5. 활성 사용자 (지난 7일)
@@ -204,6 +223,7 @@ export const AdminDashboardScreen = () => {
       Alert.alert('Error', 'Failed to load statistics');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -297,32 +317,48 @@ export const AdminDashboardScreen = () => {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* 헤더 */}
-      <View style={[
-        styles.header,
-        { 
-          backgroundColor: isDark ? colors.darkCard : colors.card,
-          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        }
-      ]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
-            ←
+    <SafeAreaView 
+      style={[styles.safeArea, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={isDark ? colors.darkBackground : colors.background}
+      />
+      <View style={{ flex: 1 }}>
+        {/* 헤더 */}
+        <View style={[
+          styles.header,
+          { 
+            backgroundColor: isDark ? colors.darkCard : colors.card,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          }
+        ]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+              ←
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+            Admin Dashboard
           </Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          Admin Dashboard
-        </Text>
-        <View style={styles.headerSpacer} />
-      </View>
+          <View style={styles.headerSpacer} />
+        </View>
       
       <ScrollView
         style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadStats(true)}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
 
       {/* 통계 카드 */}
@@ -502,21 +538,17 @@ export const AdminDashboardScreen = () => {
         />
       </View>
 
-      {/* 새로고침 버튼 */}
-      <TouchableOpacity
-        style={[styles.refreshButton, { backgroundColor: colors.primary }]}
-        onPress={loadStats}
-      >
-        <Text style={styles.refreshButtonText}>🔄 Refresh Statistics</Text>
-      </TouchableOpacity>
-
       <View style={styles.bottomSpacer} />
-    </ScrollView>
-    </View>
+      </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -535,7 +567,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     zIndex: 1000,
   },
@@ -672,18 +704,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  refreshButton: {
-    marginHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  refreshButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
   },
   bottomSpacer: {
     height: spacing.xl,

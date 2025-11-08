@@ -25,6 +25,7 @@ export type SaleStatus = 'available' | 'sold' | 'reserved' | 'not_for_sale';
 export interface Artwork {
   id: string;
   author_id: string;
+  artist_name?: string; // Original artist name (can differ from seller for resale)
   title: string;
   description: string;
   material: string;

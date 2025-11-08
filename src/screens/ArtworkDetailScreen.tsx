@@ -2,7 +2,7 @@
  * Artwork Detail Screen - Uses actual data only
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import {
 import AIOrchestrationService from '../services/ai/aiOrchestrationService';
 import { useColorScheme } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import { Screen } from '../components/Screen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -34,6 +35,46 @@ import { Comment } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { FollowButton } from '../components/FollowButton';
 import { getAddressFromCoordinates } from '../services/locationService';
+import { CustomAlert } from '../components/CustomAlert';
+
+// 한글 지명을 영문으로 번역
+const translateLocationToEnglish = (text: string | undefined): string | undefined => {
+  if (!text) return text;
+
+  const translations: Record<string, string> = {
+    '대한민국': 'South Korea', '한국': 'South Korea',
+    '서울특별시': 'Seoul', '서울': 'Seoul',
+    '부산광역시': 'Busan', '부산': 'Busan',
+    '대구광역시': 'Daegu', '대구': 'Daegu',
+    '인천광역시': 'Incheon', '인천': 'Incheon',
+    '광주광역시': 'Gwangju', '광주': 'Gwangju',
+    '대전광역시': 'Daejeon', '대전': 'Daejeon',
+    '울산광역시': 'Ulsan', '울산': 'Ulsan',
+    '세종특별자치시': 'Sejong', '세종': 'Sejong',
+    '경기도': 'Gyeonggi', '경기': 'Gyeonggi',
+    '강원도': 'Gangwon', '강원': 'Gangwon',
+    '충청북도': 'North Chungcheong', '충북': 'North Chungcheong',
+    '충청남도': 'South Chungcheong', '충남': 'South Chungcheong',
+    '전라북도': 'North Jeolla', '전북': 'North Jeolla',
+    '전라남도': 'South Jeolla', '전남': 'South Jeolla',
+    '경상북도': 'North Gyeongsang', '경북': 'North Gyeongsang',
+    '경상남도': 'South Gyeongsang', '경남': 'South Gyeongsang',
+    '제주특별자치도': 'Jeju', '제주': 'Jeju',
+    // 경기도 주요 도시
+    '수원시': 'Suwon', '수원': 'Suwon',
+    '성남시': 'Seongnam', '성남': 'Seongnam',
+    '고양시': 'Goyang', '고양': 'Goyang',
+    '용인시': 'Yongin', '용인': 'Yongin',
+    '부천시': 'Bucheon', '부천': 'Bucheon',
+    '안산시': 'Ansan', '안산': 'Ansan',
+    '남양주시': 'Namyangju', '남양주': 'Namyangju',
+    '화성시': 'Hwaseong', '화성': 'Hwaseong',
+    '평택시': 'Pyeongtaek', '평택': 'Pyeongtaek',
+    '의정부시': 'Uijeongbu', '의정부': 'Uijeongbu',
+  };
+
+  return translations[text] || text;
+};
 import { supabase } from '../services/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -45,6 +86,7 @@ export const ArtworkDetailScreen: React.FC = () => {
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
   const { artworkId } = route.params;
+  const queryClient = useQueryClient();
 
   // 실제 API 훅들만 사용
   const { data: artwork, isLoading: artworkLoading, isError: artworkError } = useArtworkDetail(artworkId, user?.id);
@@ -57,6 +99,8 @@ export const ArtworkDetailScreen: React.FC = () => {
   const deleteCommentMutation = useDeleteComment();
   const updateCommentMutation = useUpdateComment();
 
+  const scrollViewRef = useRef<ScrollView>(null);
+  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [newComment, setNewComment] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -67,6 +111,12 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
+  
+  // CustomAlert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertButtons, setAlertButtons] = useState<any[]>([]);
 
   // Load reviews for this artwork
   const loadReviews = useCallback(async () => {
@@ -156,11 +206,13 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('⏳ Detail screen: Calling toggleLike API...');
       await toggleLike.mutateAsync(artwork.id);
       console.log('✅ Detail screen: Like toggle successful');
+      // ✅ 즉시 UI 갱신
+      queryClient.invalidateQueries({ queryKey: ['artworkDetail', artworkId] });
     } catch (error) {
       console.error('💥 Detail screen: Like API failed:', error);
       Alert.alert('Error', 'Failed to update like. Please try again.');
     }
-  }, [artwork, user, toggleLike]);
+  }, [artwork, user, toggleLike, queryClient, artworkId]);
 
   // 북마크 핸들러
   const handleBookmark = useCallback(async () => {
@@ -177,11 +229,13 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('⏳ Detail screen: Calling toggleBookmark API...');
       await toggleBookmark.mutateAsync(artwork.id);
       console.log('✅ Detail screen: Bookmark toggle successful');
+      // ✅ 즉시 UI 갱신
+      queryClient.invalidateQueries({ queryKey: ['artworkDetail', artworkId] });
     } catch (error) {
       console.error('💥 Detail screen: Bookmark API failed:', error);
       Alert.alert('Error', 'Failed to update bookmark. Please try again.');
     }
-  }, [artwork, user, toggleBookmark]);
+  }, [artwork, user, toggleBookmark, queryClient, artworkId]);
 
   // 댓글 작성 핸들러
   const handleSubmitComment = useCallback(async () => {
@@ -206,6 +260,11 @@ export const ArtworkDetailScreen: React.FC = () => {
     console.log('✏️ 댓글 인라인 수정 시작:', comment.id);
     setEditingCommentId(comment.id);
     setEditCommentText(comment.content);
+    
+    // 키보드가 나타날 때 스크롤
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 300);
   }, []);
 
   // 댓글 수정 저장 핸들러
@@ -379,28 +438,27 @@ export const ArtworkDetailScreen: React.FC = () => {
     const confirmDelete = Platform.OS === 'web' 
       ? window.confirm(`Are you sure you want to delete "${artwork.title}"? This action cannot be undone.`)
       : await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            'Delete Artwork',
-            `Are you sure you want to delete "${artwork.title}"?\n\n⚠️ Deleted artworks cannot be recovered.`,
-            [
-              { 
-                text: 'Cancel', 
-                style: 'cancel',
-                onPress: () => {
-                  console.log('❌ User canceled deletion');
-                  resolve(false);
-                }
+          setAlertTitle('Delete Artwork');
+          setAlertMessage(`Are you sure you want to delete "${artwork.title}"?\n\nDeleted artworks cannot be recovered.`);
+          setAlertButtons([
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => {
+                console.log('❌ User canceled deletion');
+                resolve(false);
+              }
+            },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: () => {
+                console.log('🔥 User confirmed deletion');
+                resolve(true);
               },
-              {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: () => {
-                  console.log('🔥 User confirmed deletion');
-                  resolve(true);
-                },
-              },
-            ]
-          );
+            },
+          ]);
+          setAlertVisible(true);
         });
 
     if (!confirmDelete) {
@@ -414,26 +472,22 @@ export const ArtworkDetailScreen: React.FC = () => {
       await deleteArtworkMutation.mutateAsync(artwork.id);
       console.log('✅ 작품 삭제 API 성공');
       
-      const showSuccess = Platform.OS === 'web'
-        ? () => {
-            window.alert('Your artwork has been deleted successfully.');
+      if (Platform.OS === 'web') {
+        window.alert('Your artwork has been deleted successfully.');
+        navigation.goBack();
+      } else {
+        setAlertTitle('Deleted');
+        setAlertMessage('Your artwork has been deleted successfully.');
+        setAlertButtons([{ 
+          text: 'OK', 
+          style: 'default',
+          onPress: () => {
+            console.log('📱 이전 화면으로 이동');
             navigation.goBack();
           }
-        : () => {
-            Alert.alert(
-              'Deleted',
-              'Your artwork has been deleted successfully.',
-              [{ 
-                text: 'OK', 
-                onPress: () => {
-                  console.log('📱 이전 화면으로 이동');
-                  navigation.goBack();
-                }
-              }]
-            );
-          };
-      
-      showSuccess();
+        }]);
+        setAlertVisible(true);
+      }
     } catch (error) {
       console.error('💥 작품 삭제 API 실패:', error);
       console.error('💥 오류 상세:', {
@@ -616,33 +670,32 @@ export const ArtworkDetailScreen: React.FC = () => {
                     const confirmDelete = Platform.OS === 'web'
                       ? window.confirm('Are you sure you want to delete this comment?')
                       : (() => {
-                          Alert.alert(
-                            'Delete Comment',
-                            'Are you sure you want to delete this comment?\n\nDeleted comments cannot be recovered.',
-                            [
-                              { 
-                                text: 'Cancel', 
-                                style: 'cancel',
-                                onPress: () => console.log('❌ Comment deletion canceled')
+                          setAlertTitle('Delete Comment');
+                          setAlertMessage('Are you sure you want to delete this comment?\n\nDeleted comments cannot be recovered.');
+                          setAlertButtons([
+                            { 
+                              text: 'Cancel', 
+                              style: 'cancel',
+                              onPress: () => console.log('❌ Comment deletion canceled')
+                            },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => {
+                                console.log('🔥 Comment deletion confirmed - Starting API call');
+                                try {
+                                  deleteCommentMutation.mutate({
+                                    commentId: item.id,
+                                    artworkId: artwork.id,
+                                  });
+                                  console.log('✅ Comment deletion mutation called');
+                                } catch (error) {
+                                  console.error('💥 Comment deletion mutation failed:', error);
+                                }
                               },
-                              {
-                                text: 'Delete',
-                                style: 'destructive',
-                                onPress: () => {
-                                  console.log('🔥 Comment deletion confirmed - Starting API call');
-                                  try {
-                                    deleteCommentMutation.mutate({
-                                      commentId: item.id,
-                                      artworkId: artwork.id,
-                                    });
-                                    console.log('✅ Comment deletion mutation called');
-                                  } catch (error) {
-                                    console.error('💥 Comment deletion mutation failed:', error);
-                                  }
-                                },
-                              },
-                            ]
-                          );
+                            },
+                          ]);
+                          setAlertVisible(true);
                           return false; // Alert는 비동기이므로 여기서는 false 반환
                         })();
 
@@ -764,7 +817,10 @@ export const ArtworkDetailScreen: React.FC = () => {
         )}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 이미지 갤러리 */}
         <View style={styles.imageSection}>
           <FlatList
@@ -811,15 +867,13 @@ export const ArtworkDetailScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* Purchase 버튼 (본인 작품이 아닐 때만) */}
-          {artwork.author.id !== user?.id && (
-            <TouchableOpacity
-              style={[styles.purchaseButton, { backgroundColor: colors.primary }]}
-              onPress={() => navigation.navigate('Checkout' as never, { artworkId: artwork.id } as never)}
-            >
-              <Text style={styles.purchaseButtonText}>💳 Purchase Artwork</Text>
-            </TouchableOpacity>
-          )}
+          {/* Purchase 버튼 (모든 작품에 표시) */}
+          <TouchableOpacity
+            style={[styles.purchaseButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('Checkout' as never, { artworkId: artwork.id } as never)}
+          >
+            <Text style={styles.purchaseButtonText}>💳 Purchase Artwork</Text>
+          </TouchableOpacity>
 
           <Text style={[styles.description, { color: isDark ? colors.darkTextSecondary : colors.textSecondary }]}>
             {artwork.description}
@@ -838,8 +892,8 @@ export const ArtworkDetailScreen: React.FC = () => {
               <Text style={[styles.locationText, { color: isDark ? colors.darkText : colors.text }]}>
                 {(() => {
                   // 보완된 위치 정보 우선 사용
-                  const displayCountry = enhancedLocation?.country || artwork.location_country;
-                  const displayCity = enhancedLocation?.city || artwork.location_city;
+                  const displayCountry = translateLocationToEnglish(enhancedLocation?.country || artwork.location_country);
+                  const displayCity = translateLocationToEnglish(enhancedLocation?.city || artwork.location_city);
                   
                   if (displayCity && displayCountry) {
                     return `${displayCity}, ${displayCountry}`;
@@ -850,7 +904,7 @@ export const ArtworkDetailScreen: React.FC = () => {
                   } else if (artwork.location_full) {
                     return artwork.location_full;
                   } else if (artwork.location_latitude && artwork.location_longitude) {
-                    return `${artwork.location_latitude.toFixed(4)}, ${artwork.location_longitude.toFixed(4)} ${enhancedLocation ? '(주소 조회 중...)' : ''}`;
+                    return `${artwork.location_latitude.toFixed(4)}, ${artwork.location_longitude.toFixed(4)}`;
                   } else {
                     return 'Location added';
                   }
@@ -1112,7 +1166,7 @@ export const ArtworkDetailScreen: React.FC = () => {
       {user && (
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
         >
           <View style={[styles.commentInput, {
             backgroundColor: isDark ? colors.darkCard : colors.card,
@@ -1131,6 +1185,11 @@ export const ArtworkDetailScreen: React.FC = () => {
               placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
               value={newComment}
               onChangeText={setNewComment}
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+              }}
               multiline
               maxLength={500}
             />
@@ -1217,6 +1276,14 @@ export const ArtworkDetailScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+      
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        buttons={alertButtons}
+        onClose={() => setAlertVisible(false)}
+      />
     </Screen>
   );
 };
@@ -1311,6 +1378,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
     marginVertical: spacing.md,
     ...shadows.md,
   },
@@ -1318,6 +1386,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
   },
   description: {
     ...typography.body,

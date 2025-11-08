@@ -12,6 +12,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import AIOrchestrationService from './src/services/ai/aiOrchestrationService';
 import { PermissionsHandler } from './src/components/PermissionsHandler';
 import { PushNotificationConsent } from './src/components/PushNotificationConsent';
+import { NetworkStatus } from './src/components/NetworkStatus';
 
 // Expo Go 환경 체크
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -57,6 +58,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="auto" />
+      <NetworkStatus />
       <PermissionsHandler />
       {/* Expo Go에서는 푸시 알림 미지원 (SDK 53+) */}
       {!isExpoGo && <PushNotificationConsent />}

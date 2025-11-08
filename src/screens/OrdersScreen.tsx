@@ -1,5 +1,5 @@
 /**
- * My Orders Screen (Buyer)
+ * My Orders Screen (Buyer) - Simplified
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,387 +11,183 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useColorScheme,
-  Alert,
   Image,
+  RefreshControl,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../services/supabase';
-import { useAuthStore } from '../store/authStore';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { getMyOrders } from '../services/transactionService';
+import { formatCurrency } from '../services/paymentService';
+import { getTransactionStatusLabel, getTransactionStatusColor } from '../types/complete-system';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
-import { formatPrice } from '../types/complete-system';
-
-interface Order {
-  id: string;
-  amount: number;
-  status: string;
-  created_at: string;
-  shipping_address: any;
-  artwork: {
-    id: string;
-    title: string;
-    images: string[];
-    author: {
-      handle: string;
-    };
-  };
-}
+import { Transaction } from '../types/transaction';
 
 export const OrdersScreen = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
-  const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const [orders, setOrders] = useState<Transaction[]>([]);
 
-  useEffect(() => {
-    loadOrders();
-  }, [filter]);
+  useFocusEffect(
+    React.useCallback(() => {
+      loadOrders();
+    }, [])
+  );
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-
-      // Step 1: 기본 거래 정보만 가져오기
-      let query = supabase
-        .from('transactions')
-        .select('*')
-        .eq('buyer_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
-      }
-
-      const { data: transactions, error: transactionsError } = await query;
-
-      if (transactionsError) {
-        console.error('Transactions query error:', transactionsError);
-        throw transactionsError;
-      }
-
-      if (!transactions || transactions.length === 0) {
-        setOrders([]);
-        return;
-      }
-
-      // Step 2: 관련 데이터 병렬로 가져오기
-      const ordersWithDetails = await Promise.all(
-        transactions.map(async (transaction) => {
-          try {
-            // Artwork 정보
-            let artwork = null;
-            if (transaction.artwork_id) {
-              const { data: artworkData } = await supabase
-                .from('artworks')
-                .select('id, title, images, author_id')
-                .eq('id', transaction.artwork_id)
-                .maybeSingle();
-              
-              if (artworkData) {
-                // Author 정보
-                const { data: authorData } = await supabase
-                  .from('profiles')
-                  .select('handle')
-                  .eq('id', artworkData.author_id)
-                  .maybeSingle();
-                
-                artwork = {
-                  ...artworkData,
-                  author: authorData || { handle: 'Unknown' },
-                };
-              }
-            }
-
-            // Shipping address 정보
-            let shipping_address = null;
-            if (transaction.shipping_address_id) {
-              const { data: addressData } = await supabase
-                .from('shipping_addresses')
-                .select('*')
-                .eq('id', transaction.shipping_address_id)
-                .maybeSingle();
-              
-              shipping_address = addressData;
-            }
-
-            return {
-              ...transaction,
-              artwork,
-              shipping_address,
-            };
-          } catch (detailError) {
-            console.warn('Failed to load detail for transaction:', transaction.id, detailError);
-            return {
-              ...transaction,
-              artwork: null,
-              shipping_address: null,
-            };
-          }
-        })
-      );
-
-      setOrders(ordersWithDetails);
-    } catch (error: any) {
-      console.error('Failed to load orders:', error);
-      // 에러가 발생해도 빈 배열로 설정하여 UI가 계속 작동하도록
-      setOrders([]);
-      Alert.alert('Error', 'Failed to load orders. Please try again.');
+      const data = await getMyOrders();
+      setOrders(data);
+    } catch (error) {
+      console.error('Error loading orders:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '#F59E0B';
-      case 'completed':
-        return '#10B981';
-      case 'cancelled':
-        return '#EF4444';
-      case 'refunded':
-        return '#6B7280';
-      default:
-        return colors.textMuted;
-    }
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadOrders();
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'processing':
-        return 'Processing';
-      case 'shipped':
-        return 'Shipped';
-      case 'delivered':
-        return 'Delivered';
-      case 'completed':
-        return 'Completed';
-      case 'cancelled':
-        return 'Cancelled';
-      case 'refunded':
-        return 'Refunded';
-      default:
-        return status;
-    }
+  const handleOrderPress = (orderId: string) => {
+    navigation.navigate('OrderDetail' as never, { transactionId: orderId } as never);
   };
 
-  const renderOrder = ({ item }: { item: Order }) => {
-    const artwork = item.artwork;
+  const handleChatWithSeller = (sellerId: string) => {
+    navigation.navigate('Chat' as never, { userId: sellerId } as never);
+  };
+
+  const theme = {
+    bg: isDark ? colors.darkBackground : colors.white,
+    text: isDark ? colors.darkText : colors.text,
+    textSecondary: isDark ? colors.darkTextMuted : colors.textMuted,
+    card: isDark ? colors.darkCard : colors.white,
+    border: isDark ? colors.darkBorder : colors.border,
+  };
+
+  const renderOrder = ({ item }: { item: Transaction }) => {
+    const statusColor = getTransactionStatusColor(item.status);
+    const statusLabel = getTransactionStatusLabel(item.status);
 
     return (
       <TouchableOpacity
-        style={[
-          styles.orderCard,
-          { backgroundColor: isDark ? colors.darkCard : colors.card },
-        ]}
-        onPress={() => {
-          // Navigate to order detail (to be implemented)
-          Alert.alert('Order Detail', `Order ID: ${item.id}`);
-        }}
+        style={[styles.orderCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+        onPress={() => handleOrderPress(item.id)}
       >
-        {/* Order Header */}
-        <View style={styles.orderHeader}>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-              {getStatusLabel(item.status)}
-            </Text>
-          </View>
-          <Text style={[styles.orderDate, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-            {new Date(item.created_at).toLocaleDateString()}
+        {/* Artwork Image */}
+        {item.artwork?.image_url && (
+          <Image
+            source={{ uri: item.artwork.image_url }}
+            style={styles.artworkImage}
+          />
+        )}
+
+        <View style={styles.orderInfo}>
+          {/* Artwork Title */}
+          <Text style={[styles.artworkTitle, { color: theme.text }]} numberOfLines={1}>
+            {item.artwork?.title || 'Artwork'}
           </Text>
-        </View>
 
-        {/* 작품 정보 */}
-        <View style={styles.orderContent}>
-          {artwork && artwork.images?.[0] && (
-            <Image
-              source={{ uri: artwork.images[0] }}
-              style={styles.artworkImage}
-            />
-          )}
+          {/* Artist */}
+          <Text style={[styles.artistName, { color: theme.textSecondary }]} numberOfLines={1}>
+            by {item.seller?.full_name || item.seller?.handle || 'Artist'}
+          </Text>
 
-          <View style={styles.orderInfo}>
-            <Text
-              style={[styles.artworkTitle, { color: isDark ? colors.darkText : colors.text }]}
-              numberOfLines={1}
-            >
-              {artwork?.title || 'Unknown Artwork'}
+          {/* Status Badge */}
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusText, { color: statusColor }]}>
+              {statusLabel}
             </Text>
-            <Text style={[styles.artistName, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-              by {artwork?.author?.handle || 'Unknown'}
-            </Text>
+          </View>
 
+          {/* Price */}
+          <Text style={[styles.price, { color: theme.text }]}>
+            {formatCurrency(item.amount, 'KRW')}
+          </Text>
 
-            <Text style={[styles.totalAmount, { color: colors.primary }]}>
-              {formatPrice(item.amount, 'USD')}
-            </Text>
+          {/* Action Buttons */}
+          <View style={styles.actions}>
+            {item.status === 'paid' && (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.primaryLight }]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleChatWithSeller(item.seller_id);
+                  }}
+                >
+                  <Ionicons name="chatbubble" size={16} color={colors.primary} />
+                  <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+                    Chat with Artist
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
 
-        {/* Order Actions */}
-        <View style={styles.orderActions}>
-          {item.status === 'completed' && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                navigation.navigate('Review' as never, { 
-                  orderId: item.id,
-                  artworkId: artwork?.id,
-                } as never);
-              }}
-            >
-              <Text style={styles.actionButtonText}>Write Review</Text>
-            </TouchableOpacity>
-          )}
-
-          {item.status === 'pending' && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#EF4444' }]}
-              onPress={() => {
-                Alert.alert(
-                  'Cancel Order',
-                  'Are you sure you want to cancel this order?',
-                  [
-                    { text: 'No', style: 'cancel' },
-                    {
-                      text: 'Yes',
-                      onPress: async () => {
-                        try {
-                          await supabase
-                            .from('transactions')
-                            .update({ status: 'cancelled' })
-                            .eq('id', item.id);
-                          
-                          Alert.alert('Success', 'Order cancelled');
-                          loadOrders();
-                        } catch (error: any) {
-                          Alert.alert('Error', error.message);
-                        }
-                      },
-                    },
-                  ]
-                );
-              }}
-            >
-              <Text style={styles.actionButtonText}>Cancel Order</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
       </TouchableOpacity>
     );
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-      {/* 헤더 */}
-      <View style={[
-        styles.header,
-        { 
-          backgroundColor: isDark ? colors.darkCard : colors.card,
-          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        }
-      ]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
-            ←
-          </Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          My Orders
+  if (loading && !refreshing) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.bg }, styles.centerContent]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.bg }, styles.centerContent]}>
+        <Ionicons name="cart-outline" size={80} color={colors.primary} />
+        <Text style={[styles.emptyTitle, { color: theme.text }]}>
+          No Orders Yet
         </Text>
-        <View style={styles.headerSpacer}>
-          {orders.length > 0 && (
-            <Text style={[styles.orderCount, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-              {orders.length}
-            </Text>
-          )}
-        </View>
-      </View>
-
-      {/* 필터 */}
-      <View style={styles.filterContainer}>
+        <Text style={[styles.emptyMessage, { color: theme.textSecondary }]}>
+          Your purchase history will appear here
+        </Text>
         <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'all' && styles.filterButtonActive,
-            { backgroundColor: filter === 'all' ? colors.primary : (isDark ? colors.darkCard : colors.card) },
-          ]}
-          onPress={() => setFilter('all')}
+          style={styles.browseButton}
+          onPress={() => navigation.navigate('MainApp' as never)}
         >
-          <Text
-            style={[
-              styles.filterButtonText,
-              { color: filter === 'all' ? colors.white : (isDark ? colors.darkText : colors.text) },
-            ]}
-          >
-            All
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'pending' && styles.filterButtonActive,
-            { backgroundColor: filter === 'pending' ? colors.primary : (isDark ? colors.darkCard : colors.card) },
-          ]}
-          onPress={() => setFilter('pending')}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              { color: filter === 'pending' ? colors.white : (isDark ? colors.darkText : colors.text) },
-            ]}
-          >
-            Pending
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'completed' && styles.filterButtonActive,
-            { backgroundColor: filter === 'completed' ? colors.primary : (isDark ? colors.darkCard : colors.card) },
-          ]}
-          onPress={() => setFilter('completed')}
-        >
-          <Text
-            style={[
-              styles.filterButtonText,
-              { color: filter === 'completed' ? colors.white : (isDark ? colors.darkText : colors.text) },
-            ]}
-          >
-            Completed
-          </Text>
+          <Text style={styles.browseButtonText}>Browse Artworks</Text>
         </TouchableOpacity>
       </View>
+    );
+  }
 
-      {/* Order List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : orders.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-            No orders yet
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={orders}
-          renderItem={renderOrder}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-        />
-      )}
+  return (
+    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+      {/* Info Banner */}
+      <View style={[styles.infoBanner, { backgroundColor: colors.infoLight }]}>
+        <Ionicons name="information-circle" size={20} color={colors.info} />
+        <Text style={[styles.infoBannerText, { color: theme.text }]}>
+          Chat with artists to arrange shipping and delivery
+        </Text>
+      </View>
+
+      <FlatList
+        data={orders}
+        renderItem={renderOrder}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      />
     </View>
   );
 };
@@ -400,137 +196,112 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  centerContent: {
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    zIndex: 1000,
+    paddingHorizontal: spacing.xl,
   },
-  backButton: {
-    padding: spacing.sm,
-    marginLeft: -spacing.sm,
-  },
-  backIcon: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    ...typography.h3,
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  orderCount: {
-    ...typography.caption,
-    fontWeight: '500',
-  },
-  filterContainer: {
+  infoBanner: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    padding: spacing.md,
     gap: spacing.sm,
-    marginBottom: spacing.md,
   },
-  filterButton: {
+  infoBannerText: {
+    ...typography.body,
     flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
   },
-  filterButtonActive: {},
-  filterButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-  },
-  list: {
-    padding: spacing.lg,
+  listContent: {
+    padding: spacing.md,
   },
   orderCard: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-  },
-  orderHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
     alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  orderDate: {
-    fontSize: 12,
-  },
-  orderContent: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   artworkImage: {
     width: 80,
     height: 80,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     marginRight: spacing.md,
   },
   orderInfo: {
     flex: 1,
-    justifyContent: 'center',
   },
   artworkTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.h4,
     marginBottom: spacing.xs,
   },
   artistName: {
-    fontSize: 12,
-    marginBottom: spacing.xs,
+    ...typography.caption,
+    marginBottom: spacing.sm,
   },
-  itemCount: {
-    fontSize: 12,
-    marginBottom: spacing.xs,
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
   },
-  totalAmount: {
-    fontSize: 18,
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: spacing.xs,
+  },
+  statusText: {
+    ...typography.caption,
     fontWeight: 'bold',
   },
-  orderActions: {
+  price: {
+    ...typography.h4,
+    fontWeight: 'bold',
+    marginBottom: spacing.sm,
+  },
+  actions: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
   actionButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    gap: spacing.xs,
   },
   actionButtonText: {
+    ...typography.caption,
+    fontWeight: 'bold',
+  },
+  emptyTitle: {
+    ...typography.h2,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  emptyMessage: {
+    ...typography.body,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  browseButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  browseButtonText: {
+    ...typography.button,
     color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
   },
 });
-

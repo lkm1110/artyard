@@ -27,6 +27,7 @@ import { useAuthStore } from '../store/authStore';
 import { updateProfile, checkHandleAvailability } from '../services/profileService';
 import { validateNickname, suggestNickname } from '../services/nicknameValidationService';
 import { Profile } from '../types';
+import { CustomAlert } from '../components/CustomAlert';
 
 interface FormData {
   handle: string;
@@ -44,6 +45,12 @@ export const ProfileEditScreen: React.FC = () => {
   const isDark = useColorScheme() === 'dark';
   const { user, setUser } = useAuthStore();
   const queryClient = useQueryClient();
+
+  // CustomAlert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertButtons, setAlertButtons] = useState<any[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     handle: user?.handle || '',
@@ -158,42 +165,43 @@ export const ProfileEditScreen: React.FC = () => {
       setUser(updatedProfile);
       setOriginalData({ ...formData });
 
-      // React Query 캐시 무효화 - 닉네임 변경 시 모든 관련 데이터 새로고침
-      if (nicknameChanged) {
-        console.log('🔄 닉네임 변경으로 인한 캐시 무효화 시작...');
-        
-        // 채팅 관련 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: ['chats'] });
-        queryClient.invalidateQueries({ queryKey: ['chatMessages'] });
-        
-        // 작품 관련 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: ['artworks'] });
-        queryClient.invalidateQueries({ queryKey: ['userArtworks'] });
-        queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
-        
-        // 댓글 관련 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: ['comments'] });
-        
-        console.log('✅ 모든 캐시 무효화 완료');
-      }
+      // React Query 캐시 무효화 - 항상 실행 (프로필 정보가 여러 곳에서 사용되므로)
+      console.log('🔄 프로필 변경으로 인한 캐시 무효화 시작...');
+      
+      // 채팅 관련 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['chats'] });
+      queryClient.invalidateQueries({ queryKey: ['chatMessages'] });
+      
+      // 작품 관련 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['artworks'] });
+      queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
+      queryClient.invalidateQueries({ queryKey: ['userArtworks'] });
+      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+      
+      // 댓글 관련 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['comments'] });
+      
+      console.log('✅ 모든 캐시 무효화 완료');
 
       // 닉네임 변경 시 특별 메시지
-      Alert.alert(
-        '✅ Success!',
+      setAlertTitle('Success!');
+      setAlertMessage(
         nicknameChanged 
-          ? `🎉 Profile updated successfully!\n\n🎭 Your nickname has been changed to "@${formData.handle}"\n\n📚 All your existing artworks and chats will now show the new nickname automatically.\n\n🔄 The app will refresh to show your changes.`
-          : `🎉 Your profile has been updated successfully!\n\n✨ Changes saved:\n${Object.entries(formData)
+          ? `Profile updated successfully!\n\nYour nickname has been changed to "@${formData.handle}"\n\nAll your existing artworks and chats will now show the new nickname automatically.\n\nThe app will refresh to show your changes.`
+          : `Your profile has been updated successfully!\n\nChanges saved:\n${Object.entries(formData)
               .filter(([key, value]) => value !== originalData?.[key] && value?.trim())
               .map(([key, value]) => `• ${key.charAt(0).toUpperCase() + key.slice(1)}: ${key === 'bio' ? (value as string).substring(0, 30) + '...' : value}`)
-              .join('\n') || '• Profile information updated'}`,
-        [{ 
-          text: 'OK', 
-          onPress: () => {
-            console.log('✅ 사용자가 성공 메시지를 확인했습니다.');
-            navigation.goBack();
-          }
-        }]
+              .join('\n') || '• Profile information updated'}`
       );
+      setAlertButtons([{ 
+        text: 'OK', 
+        style: 'default',
+        onPress: () => {
+          console.log('✅ 사용자가 성공 메시지를 확인했습니다.');
+          navigation.goBack();
+        }
+      }]);
+      setAlertVisible(true);
     } catch (error) {
       console.error('💥 프로필 업데이트 실패:', error);
       
@@ -232,26 +240,26 @@ export const ProfileEditScreen: React.FC = () => {
         }
       }
       
-      Alert.alert(
-        errorTitle,
-        errorMessage,
-        [
-          { 
-            text: 'Try Again', 
-            onPress: () => {
-              // 재시도 로직 - 폼 상태 유지
-              console.log('사용자가 재시도를 선택했습니다.');
-            }
-          },
-          { 
-            text: 'Cancel', 
-            style: 'cancel',
-            onPress: () => {
-              console.log('사용자가 취소를 선택했습니다.');
-            }
+      setAlertTitle(errorTitle);
+      setAlertMessage(errorMessage);
+      setAlertButtons([
+        { 
+          text: 'Try Again', 
+          style: 'default',
+          onPress: () => {
+            // 재시도 로직 - 폼 상태 유지
+            console.log('사용자가 재시도를 선택했습니다.');
           }
-        ]
-      );
+        },
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => {
+            console.log('사용자가 취소를 선택했습니다.');
+          }
+        }
+      ]);
+      setAlertVisible(true);
     } finally {
       setIsSaving(false);
     }
@@ -259,18 +267,17 @@ export const ProfileEditScreen: React.FC = () => {
 
   const handleCancel = useCallback(() => {
     if (hasChanges()) {
-      Alert.alert(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to go back?',
-        [
-          { text: 'Stay', style: 'cancel' },
-          { 
-            text: 'Discard', 
-            style: 'destructive', 
-            onPress: () => navigation.goBack() 
-          },
-        ]
-      );
+      setAlertTitle('Discard Changes?');
+      setAlertMessage('You have unsaved changes. Are you sure you want to go back?');
+      setAlertButtons([
+        { text: 'Stay', style: 'cancel' },
+        { 
+          text: 'Discard', 
+          style: 'destructive', 
+          onPress: () => navigation.goBack() 
+        },
+      ]);
+      setAlertVisible(true);
     } else {
       navigation.goBack();
     }
@@ -360,7 +367,10 @@ export const ProfileEditScreen: React.FC = () => {
                 style={[styles.changePhotoButton, { backgroundColor: colors.primary }]}
                 onPress={() => {
                   // TODO: 이미지 선택 기능
-                  Alert.alert('Coming Soon', 'Profile picture editing will be available soon!');
+                  setAlertTitle('Coming Soon');
+                  setAlertMessage('Profile picture editing will be available soon!');
+                  setAlertButtons([{ text: 'OK', style: 'default' }]);
+                  setAlertVisible(true);
                 }}
                 activeOpacity={0.8}
               >
@@ -534,6 +544,14 @@ export const ProfileEditScreen: React.FC = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        buttons={alertButtons}
+        onClose={() => setAlertVisible(false)}
+      />
     </Screen>
   );
 };

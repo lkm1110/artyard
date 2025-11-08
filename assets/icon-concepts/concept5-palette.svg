@@ -1,0 +1,39 @@
+<!-- ArtYard Icon Concept 5: Artist Palette -->
+<!-- 컨셉: 예술가의 팔레트, 친근하고 직관적 -->
+<!-- 타겟: 모든 사용자, 쉽게 인식 가능한 아이콘 -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#FFFFFF" rx="228"/>
+  
+  <!-- Palette Shape (Custom Path) -->
+  <path d="M 512 180 
+           C 300 180, 180 300, 180 512 
+           C 180 724, 300 844, 512 844
+           C 600 844, 680 820, 740 780
+           C 780 750, 800 710, 800 660
+           C 800 590, 750 540, 680 540
+           C 640 540, 600 560, 580 600
+           C 560 640, 540 660, 512 660
+           C 480 660, 460 640, 460 608
+           C 460 500, 520 420, 620 380
+           C 720 340, 844 380, 844 512
+           C 844 724, 724 844, 512 844
+           Z" 
+        fill="#EC4899"/>
+  
+  <!-- Paint Dabs (Different Colors) -->
+  <circle cx="380" cy="380" r="50" fill="#F472B6"/>
+  <circle cx="520" cy="340" r="50" fill="#FBBF24"/>
+  <circle cx="640" cy="400" r="50" fill="#60A5FA"/>
+  <circle cx="420" cy="520" r="50" fill="#A78BFA"/>
+  <circle cx="580" cy="540" r="50" fill="#34D399"/>
+  
+  <!-- Thumb Hole (White) -->
+  <ellipse cx="700" cy="620" rx="80" ry="100" fill="white"/>
+  
+  <!-- Highlights on paint dabs -->
+  <circle cx="390" cy="370" r="15" fill="white" opacity="0.6"/>
+  <circle cx="530" cy="330" r="15" fill="white" opacity="0.6"/>
+  <circle cx="650" cy="390" r="15" fill="white" opacity="0.6"/>
+</svg>
+

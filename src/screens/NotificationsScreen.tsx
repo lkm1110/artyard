@@ -246,26 +246,32 @@ export const NotificationsScreen: React.FC = () => {
 
   return (
     <Screen>
-      {/* 헤더 (뒤로가기 버튼 포함) */}
+      {/* 헤더 (통일된 스타일) */}
       <View style={[
         styles.screenHeader,
         { 
           backgroundColor: isDark ? colors.darkCard : colors.card,
-          borderBottomColor: isDark ? colors.darkBorder : colors.border,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
         }
       ]}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()} 
           style={styles.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={[styles.backButtonText, { color: colors.primary }]}>
-            ← Back
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
           </Text>
         </TouchableOpacity>
         <Text style={[styles.screenTitle, { color: isDark ? colors.darkText : colors.text }]}>
           Notifications
         </Text>
+        <View style={styles.headerSpacer}>
+          {notifications.filter(n => !n.is_read).length > 0 && (
+            <Text style={[styles.notificationCount, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+              {notifications.filter(n => !n.is_read).length}
+            </Text>
+          )}
+        </View>
       </View>
       
       <FlatList
@@ -278,7 +284,7 @@ export const NotificationsScreen: React.FC = () => {
             title="No notifications"
             message="You'll see notifications about new artworks, followers, and interactions here."
             actionTitle="Explore Artworks"
-            onAction={() => navigation.navigate('Home')}
+            onAction={() => navigation.navigate('MainApp')}
           />
         }
         refreshControl={
@@ -301,23 +307,31 @@ const styles = StyleSheet.create({
   screenHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    gap: spacing.md,
   },
   backButton: {
     paddingVertical: spacing.xs,
   },
-  backButtonText: {
-    fontSize: 16,
+  backIcon: {
+    fontSize: 24,
     fontWeight: '600',
   },
   screenTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
     flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
+    alignItems: 'flex-end',
+  },
+  notificationCount: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,

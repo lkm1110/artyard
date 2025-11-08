@@ -2,7 +2,7 @@
  * 홈 스크린 (작품 피드)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { SearchModal } from '../components/SearchModal';
 import { SimpleFilterModal } from '../components/SimpleFilterModal';
 import { useAuthStore } from '../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
+import { trackScreenView, trackSearch, trackFilterApplied } from '../services/analyticsService';
 import type { Artwork } from '../types';
 // Simple filter interface
 interface SimpleFilter {
@@ -47,6 +48,11 @@ export const HomeScreen: React.FC = () => {
   const [searchModalVisible, setSearchModalVisible] = useState<boolean>(false);
   const [filterModalVisible, setFilterModalVisible] = useState<boolean>(false);
   const [simpleFilter, setSimpleFilter] = useState<SimpleFilter>({});
+
+  // Track screen view on mount
+  useEffect(() => {
+    trackScreenView('Home');
+  }, []);
 
   const handleUploadPress = () => {
     if (!isAuthenticated) {
@@ -93,6 +99,9 @@ export const HomeScreen: React.FC = () => {
     setSimpleFilter(filter);
     setFilterModalVisible(false);
     console.log('필터 적용:', filter);
+    
+    // Track filter usage
+    trackFilterApplied(filter);
   };
 
   const handleSearchArtworkPress = (artworkId: string) => {

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG to JPG Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #EC4899;
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 30px;
+        }
+        
+        .preview-area {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .preview-box {
+            flex: 1;
+            min-width: 300px;
+            border: 2px dashed #E5E7EB;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .preview-box h3 {
+            color: #6B7280;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        #svgPreview, #jpgPreview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        label {
+            color: #374151;
+            font-weight: 600;
+            min-width: 120px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 5px;
+            background: #E5E7EB;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #EC4899;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #EC4899;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .value-display {
+            min-width: 80px;
+            text-align: right;
+            color: #EC4899;
+            font-weight: 700;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #EC4899 0%, #F472B6 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(236, 72, 153, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(236, 72, 153, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #F3F4F6;
+            color: #374151;
+        }
+        
+        .btn-secondary:hover {
+            background: #E5E7EB;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .info {
+            background: #FDF2F8;
+            border: 2px solid #FBBF24;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            color: #92400E;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .info strong {
+            color: #EC4899;
+        }
+        
+        #status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        
+        .success {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+        
+        .error {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 SVG → JPG 변환기</h1>
+        
+        <div class="preview-area">
+            <div class="preview-box">
+                <h3>원본 SVG</h3>
+                <img id="svgPreview" src="concept3-abstract-art.svg" alt="SVG Preview">
+            </div>
+            <div class="preview-box">
+                <h3>변환된 JPG</h3>
+                <canvas id="jpgPreview"></canvas>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="sizeSlider">해상도:</label>
+                <input type="range" id="sizeSlider" min="512" max="4096" value="1024" step="512">
+                <span class="value-display" id="sizeValue">1024px</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="qualitySlider">품질:</label>
+                <input type="range" id="qualitySlider" min="1" max="100" value="95" step="1">
+                <span class="value-display" id="qualityValue">95%</span>
+            </div>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="convertAndPreview()">🔄 변환하기</button>
+            <button class="btn btn-secondary" onclick="downloadJPG()">⬇️ JPG 다운로드</button>
+        </div>
+        
+        <div id="status"></div>
+        
+        <div class="info">
+            <strong>💡 사용 방법:</strong><br>
+            1. 해상도와 품질을 조정하세요 (기본값: 1024px, 95%)<br>
+            2. "변환하기" 버튼을 클릭하세요<br>
+            3. 오른쪽에 미리보기가 나타나면 "JPG 다운로드" 클릭!<br><br>
+            <strong>추천 설정:</strong> 앱 아이콘은 1024px 이상, 품질 90% 이상
+        </div>
+    </div>
+
+    <script>
+        let convertedDataUrl = null;
+        
+        // Update value displays
+        document.getElementById('sizeSlider').addEventListener('input', function(e) {
+            document.getElementById('sizeValue').textContent = e.target.value + 'px';
+        });
+        
+        document.getElementById('qualitySlider').addEventListener('input', function(e) {
+            document.getElementById('qualityValue').textContent = e.target.value + '%';
+        });
+        
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = isError ? 'error' : 'success';
+            status.style.display = 'block';
+        }
+        
+        function convertAndPreview() {
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            const quality = parseInt(document.getElementById('qualitySlider').value) / 100;
+            
+            showStatus('🔄 변환 중...');
+            
+            // Load SVG
+            const svgImage = new Image();
+            svgImage.onload = function() {
+                // Create canvas
+                const canvas = document.getElementById('jpgPreview');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // Fill white background (JPG doesn't support transparency)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, size, size);
+                
+                // Draw SVG on canvas
+                ctx.drawImage(svgImage, 0, 0, size, size);
+                
+                // Convert to JPG
+                convertedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                showStatus('✅ 변환 완료! 이제 다운로드할 수 있습니다.');
+            };
+            
+            svgImage.onerror = function() {
+                showStatus('❌ SVG 로딩 실패. 파일 경로를 확인하세요.', true);
+            };
+            
+            svgImage.src = 'concept3-abstract-art.svg';
+        }
+        
+        function downloadJPG() {
+            if (!convertedDataUrl) {
+                showStatus('⚠️ 먼저 "변환하기" 버튼을 클릭하세요!', true);
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = 'concept3-abstract-art.jpg';
+            link.href = convertedDataUrl;
+            link.click();
+            
+            showStatus('✅ 다운로드 완료!');
+        }
+        
+        // Auto-convert on page load
+        window.addEventListener('load', function() {
+            setTimeout(convertAndPreview, 500);
+        });
+    </script>
+</body>
+</html>
+

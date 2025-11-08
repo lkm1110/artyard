@@ -13,8 +13,14 @@ export const colors = {
   
   // 시스템 컬러
   success: '#10B981',
+  successLight: '#D1FAE5',
   warning: '#F59E0B',
+  warningLight: '#FEF3C7',
   danger: '#EF4444',
+  error: '#EF4444',
+  info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  primaryLight: '#FCE7F3',
   
   // 라이트 모드
   text: '#111827',

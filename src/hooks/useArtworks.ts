@@ -2,7 +2,7 @@
  * 작품 관련 React Query 훅
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getArtworks,
   getArtworkDetail,
@@ -15,7 +15,7 @@ import {
 import type { Artwork } from '../types';
 
 /**
- * 작품 목록 조회 훅
+ * 작품 목록 조회 훅 (기존 - 페이지네이션)
  */
 export const useArtworks = (
   page: number = 1,
@@ -32,6 +32,36 @@ export const useArtworks = (
   return useQuery({
     queryKey: ['artworks', page, limit, filter],
     queryFn: () => getArtworks(page, limit, filter),
+    staleTime: 1000 * 60 * 5, // 5분
+  });
+};
+
+/**
+ * 작품 목록 무한 스크롤 훅
+ */
+export const useInfiniteArtworks = (
+  limit: number = 20,
+  filter?: {
+    material?: string;
+    price?: string;
+    search?: string;
+    priceRange?: { min: number; max: number };
+    sizeRange?: { min: number; max: number };
+    categories?: string[];
+  }
+) => {
+  return useInfiniteQuery({
+    queryKey: ['artworks-infinite', limit, filter],
+    queryFn: ({ pageParam = 1 }) => getArtworks(pageParam, limit, filter),
+    getNextPageParam: (lastPage, allPages) => {
+      // 마지막 페이지의 데이터가 limit보다 적으면 더 이상 페이지 없음
+      if (lastPage.data.length < limit) {
+        return undefined;
+      }
+      // 다음 페이지 번호 반환
+      return allPages.length + 1;
+    },
+    initialPageParam: 1,
     staleTime: 1000 * 60 * 5, // 5분
   });
 };
@@ -55,15 +85,52 @@ export const useToggleArtworkLike = () => {
 
   return useMutation({
     mutationFn: toggleArtworkLike,
-    onSuccess: (isLiked, artworkId) => {
-      // 관련 쿼리들 무효화하여 최신 데이터 반영
-      queryClient.invalidateQueries({ queryKey: ['artworks'] });
-      queryClient.invalidateQueries({ queryKey: ['artwork', artworkId] });
+    
+    // ✅ Optimistic Update: UI 즉시 업데이트
+    onMutate: async (artworkId) => {
+      // 진행 중인 쿼리 취소
+      await queryClient.cancelQueries({ queryKey: ['artworks-infinite'] });
       
-      // 옵티미스틱 업데이트도 가능하지만 일단은 간단하게 구현
+      // 이전 데이터 백업
+      const previousData = queryClient.getQueryData(['artworks-infinite']);
+      
+      // 즉시 UI 업데이트
+      queryClient.setQueryData(['artworks-infinite'], (old: any) => {
+        if (!old?.pages) return old;
+        
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            artworks: page.artworks.map((artwork: any) =>
+              artwork.id === artworkId
+                ? { 
+                    ...artwork, 
+                    is_liked: !artwork.is_liked,
+                    likes_count: artwork.is_liked 
+                      ? Math.max(0, artwork.likes_count - 1)
+                      : artwork.likes_count + 1
+                  }
+                : artwork
+            ),
+          })),
+        };
+      });
+      
+      return { previousData };
     },
-    onError: (error) => {
-      console.error('좋아요 토글 오류:', error);
+    
+    onError: (error, artworkId, context: any) => {
+      console.error('❌ Like toggle error:', error);
+      // 에러 시 이전 데이터로 롤백
+      if (context?.previousData) {
+        queryClient.setQueryData(['artworks-infinite'], context.previousData);
+      }
+    },
+    
+    onSettled: (isLiked, error, artworkId) => {
+      // 백그라운드에서 실제 데이터 동기화
+      queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
     },
   });
 };
@@ -76,13 +143,46 @@ export const useToggleArtworkBookmark = () => {
 
   return useMutation({
     mutationFn: toggleArtworkBookmark,
-    onSuccess: (isBookmarked, artworkId) => {
-      // 관련 쿼리들 무효화하여 최신 데이터 반영
-      queryClient.invalidateQueries({ queryKey: ['artworks'] });
-      queryClient.invalidateQueries({ queryKey: ['artwork', artworkId] });
+    
+    // ✅ Optimistic Update: UI 즉시 업데이트
+    onMutate: async (artworkId) => {
+      // 진행 중인 쿼리 취소
+      await queryClient.cancelQueries({ queryKey: ['artworks-infinite'] });
+      
+      // 이전 데이터 백업
+      const previousData = queryClient.getQueryData(['artworks-infinite']);
+      
+      // 즉시 UI 업데이트
+      queryClient.setQueryData(['artworks-infinite'], (old: any) => {
+        if (!old?.pages) return old;
+        
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            artworks: page.artworks.map((artwork: any) =>
+              artwork.id === artworkId
+                ? { ...artwork, is_bookmarked: !artwork.is_bookmarked }
+                : artwork
+            ),
+          })),
+        };
+      });
+      
+      return { previousData };
     },
-    onError: (error) => {
-      console.error('북마크 토글 오류:', error);
+    
+    onError: (error, artworkId, context: any) => {
+      console.error('❌ Bookmark toggle error:', error);
+      // 에러 시 이전 데이터로 롤백
+      if (context?.previousData) {
+        queryClient.setQueryData(['artworks-infinite'], context.previousData);
+      }
+    },
+    
+    onSettled: (isBookmarked, error, artworkId) => {
+      // 백그라운드에서 실제 데이터 동기화
+      queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
     },
   });
 };
@@ -98,10 +198,12 @@ export const useUploadArtwork = () => {
     onSuccess: (newArtwork) => {
       // 작품 목록 무효화하여 새 작품이 나타나도록 함
       queryClient.invalidateQueries({ queryKey: ['artworks'] });
-      console.log('작품 업로드 성공:', newArtwork.title);
+      queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
+      console.log('✅ Artwork uploaded successfully:', newArtwork.title);
+      console.log('🔄 Main feed will refresh automatically');
     },
     onError: (error) => {
-      console.error('작품 업로드 오류:', error);
+      console.error('❌ Artwork upload error:', error);
     },
   });
 };

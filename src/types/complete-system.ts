@@ -379,96 +379,66 @@ export interface JoinChallengeRequest {
 // ============================================
 
 /**
- * 수수료 계산
+ * Fee calculation (platform fee included in sale price)
+ * Platform covers payment gateway fees, seller receives exactly 90%
+ * @param salePrice - Total sale price (what buyer pays)
+ * @param platformFeeRate - Platform fee rate (default 0.10 = 10%)
+ * @param paymentFeeRate - Payment gateway fee rate (default 0.035 = 3.5% for 2Checkout)
  */
-export function calculateFees(artworkPrice: number, platformFeeRate: number = 0.10) {
-  const platform_fee = Math.round(artworkPrice * platformFeeRate);
-  const stripe_fee = Math.round(artworkPrice * 0.029) + 300;
-  const seller_amount = artworkPrice - platform_fee - stripe_fee;
+export function calculateFees(
+  salePrice: number, 
+  platformFeeRate: number = 0.10,
+  paymentFeeRate: number = 0.035
+) {
+  const platform_fee = Math.round(salePrice * platformFeeRate);
+  const seller_amount = salePrice - platform_fee;  // Seller gets exactly 90%
+  const payment_fee = Math.round(salePrice * paymentFeeRate);  // Platform covers this
+  const platform_net = platform_fee - payment_fee;  // Platform's actual earnings
   
   return {
-    artwork_price: artworkPrice,
+    sale_price: salePrice,
     platform_fee_rate: platformFeeRate,
     platform_fee,
-    stripe_fee,
+    payment_fee_rate: paymentFeeRate,
+    payment_fee,
     seller_amount,
-    buyer_pays: artworkPrice, // 구매자는 작품 가격만
+    platform_net,
+    buyer_pays: salePrice, // Buyer pays the sale price (no additional fees)
   };
 }
 
 /**
- * 배송비 계산
- */
-export function calculateShippingFee(
-  country: string,
-  artworkPrice: number,
-  settings: ArtworkShippingSettings,
-  expressShipping: boolean = false
-): number {
-  if (country === 'KR') {
-    // 무료 배송 조건
-    if (artworkPrice >= settings.domestic_free_threshold) {
-      return 0;
-    }
-    
-    let fee = settings.domestic_fee;
-    if (expressShipping) {
-      fee += 2000;
-    }
-    return fee;
-  }
-  
-  // 국제 배송
-  if (!settings.international_enabled) {
-    throw new Error('이 작품은 국제 배송을 지원하지 않습니다');
-  }
-  
-  // 국가별 배송비 (간단한 버전)
-  if (['JP', 'CN', 'TW', 'HK'].includes(country)) {
-    return settings.asia_fee;
-  }
-  if (['US', 'CA'].includes(country)) {
-    return settings.north_america_fee;
-  }
-  if (['GB', 'DE', 'FR', 'IT', 'ES'].includes(country)) {
-    return settings.europe_fee;
-  }
-  
-  throw new Error('해당 국가로는 배송할 수 없습니다');
-}
-
-/**
- * 거래 상태 레이블
+ * Transaction status label
  */
 export function getTransactionStatusLabel(status: TransactionStatus): string {
   const labels: Record<TransactionStatus, string> = {
-    pending: '결제 대기',
-    paid: '결제 완료',
-    preparing: '배송 준비 중',
-    shipped: '배송 중',
-    delivered: '배송 완료',
-    confirmed: '거래 완료',
-    refunded: '환불 완료',
-    disputed: '분쟁 중',
-    cancelled: '취소됨',
+    pending: 'Payment Pending',
+    paid: 'Payment Complete (Escrow)',
+    preparing: 'Preparing',
+    shipped: 'Shipped',
+    delivered: 'Delivered',
+    confirmed: 'Confirmed',
+    refunded: 'Refunded',
+    disputed: 'Disputed',
+    cancelled: 'Cancelled',
   };
   return labels[status];
 }
 
 /**
- * 거래 상태 색상
+ * Transaction status color
  */
 export function getTransactionStatusColor(status: TransactionStatus): string {
   const colors: Record<TransactionStatus, string> = {
-    pending: '#FFA500',    // 주황
-    paid: '#4169E1',       // 파랑
-    preparing: '#9370DB',  // 보라
-    shipped: '#1E90FF',    // 하늘
-    delivered: '#32CD32',  // 연두
-    confirmed: '#228B22',  // 초록
-    refunded: '#DC143C',   // 빨강
-    disputed: '#FF6347',   // 토마토
-    cancelled: '#808080',  // 회색
+    pending: '#FFA500',    // Orange
+    paid: '#4169E1',       // Blue (in escrow)
+    preparing: '#9370DB',  // Purple
+    shipped: '#1E90FF',    // Sky blue
+    delivered: '#32CD32',  // Green
+    confirmed: '#228B22',  // Dark green (settled)
+    refunded: '#DC143C',   // Red
+    disputed: '#FF6347',   // Tomato
+    cancelled: '#808080',  // Gray
   };
   return colors[status];
 }
