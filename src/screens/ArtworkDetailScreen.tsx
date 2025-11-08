@@ -117,6 +117,7 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
   const [alertButtons, setAlertButtons] = useState<any[]>([]);
+  const [deleteConfirmResolve, setDeleteConfirmResolve] = useState<((value: boolean) => void) | null>(null);
 
   // Load reviews for this artwork
   const loadReviews = useCallback(async () => {
@@ -438,6 +439,7 @@ export const ArtworkDetailScreen: React.FC = () => {
     const confirmDelete = Platform.OS === 'web' 
       ? window.confirm(`Are you sure you want to delete "${artwork.title}"? This action cannot be undone.`)
       : await new Promise<boolean>((resolve) => {
+          setDeleteConfirmResolve(() => resolve);
           setAlertTitle('Delete Artwork');
           setAlertMessage(`Are you sure you want to delete "${artwork.title}"?\n\nDeleted artworks cannot be recovered.`);
           setAlertButtons([
@@ -446,6 +448,8 @@ export const ArtworkDetailScreen: React.FC = () => {
               style: 'cancel',
               onPress: () => {
                 console.log('❌ User canceled deletion');
+                setAlertVisible(false);
+                setDeleteConfirmResolve(null);
                 resolve(false);
               }
             },
@@ -454,6 +458,8 @@ export const ArtworkDetailScreen: React.FC = () => {
               style: 'destructive',
               onPress: () => {
                 console.log('🔥 User confirmed deletion');
+                setAlertVisible(false);
+                setDeleteConfirmResolve(null);
                 resolve(true);
               },
             },

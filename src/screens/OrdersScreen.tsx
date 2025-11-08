@@ -13,7 +13,9 @@ import {
   useColorScheme,
   Image,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getMyOrders } from '../services/transactionService';
@@ -139,34 +141,71 @@ export const OrdersScreen = () => {
 
   if (loading && !refreshing) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.bg }, styles.centerContent]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: theme.border }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>My Orders</Text>
+          <View style={styles.backButton} />
+        </View>
+        
+        <View style={[styles.centerContent, { flex: 1 }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (orders.length === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.bg }, styles.centerContent]}>
-        <Ionicons name="cart-outline" size={80} color={colors.primary} />
-        <Text style={[styles.emptyTitle, { color: theme.text }]}>
-          No Orders Yet
-        </Text>
-        <Text style={[styles.emptyMessage, { color: theme.textSecondary }]}>
-          Your purchase history will appear here
-        </Text>
-        <TouchableOpacity
-          style={styles.browseButton}
-          onPress={() => navigation.navigate('MainApp' as never)}
-        >
-          <Text style={styles.browseButtonText}>Browse Artworks</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        
+        {/* Header */}
+        <View style={[styles.header, { borderBottomColor: theme.border }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>My Orders</Text>
+          <View style={styles.backButton} />
+        </View>
+        
+        <View style={[styles.centerContent, { flex: 1 }]}>
+          <Ionicons name="cart-outline" size={80} color={colors.primary} />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            No Orders Yet
+          </Text>
+          <Text style={[styles.emptyMessage, { color: theme.textSecondary }]}>
+            Your purchase history will appear here
+          </Text>
+          <TouchableOpacity
+            style={styles.browseButton}
+            onPress={() => navigation.navigate('MainApp' as never)}
+          >
+            <Text style={styles.browseButtonText}>Browse Artworks</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={['top']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={theme.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>My Orders</Text>
+        <View style={styles.backButton} />
+      </View>
+      
       {/* Info Banner */}
       <View style={[styles.infoBanner, { backgroundColor: colors.infoLight }]}>
         <Ionicons name="information-circle" size={20} color={colors.info} />
@@ -188,13 +227,32 @@ export const OrdersScreen = () => {
           />
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    fontFamily: typography.semiBold,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   centerContent: {
     justifyContent: 'center',

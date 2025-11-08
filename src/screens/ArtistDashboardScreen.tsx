@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   metricCard: {
-    width: (width - 40) / 2,
+    width: (width - spacing.md * 2 - spacing.md) / 2, // padding (32px) + gap (16px) 제외
     backgroundColor: '#FFFFFF',
     padding: spacing.lg,
     borderRadius: borderRadius.lg,

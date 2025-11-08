@@ -707,7 +707,7 @@ export const ArtworkUploadScreen: React.FC = () => {
 
             {/* Year & Edition */}
             <View style={styles.rowContainer}>
-              <View style={[styles.fieldContainer, { flex: 1, marginRight: spacing.md }]}>
+              <View style={[styles.fieldContainer, { flex: 0.6, marginRight: spacing.md }]}>
                 <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
                   Year *
                 </Text>
@@ -735,7 +735,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                 )}
               </View>
 
-              <View style={[styles.fieldContainer, { flex: 1 }]}>
+              <View style={[styles.fieldContainer, { flex: 1.4 }]}>
                 <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
                   Edition *
                 </Text>
@@ -1241,21 +1241,22 @@ const styles = StyleSheet.create({
   // Edition 옵션 스타일
   editionOptionsContainer: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
     marginTop: spacing.sm,
   },
   editionOption: {
     flex: 1,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs - 2,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
+    minHeight: 36,
   },
   editionOptionText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
   },
