@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   alertContainer: {
-    width: Math.min(width - 64, 340),
+    width: Math.min(width - 48, 400), // 340 → 400으로 폭 증가
     borderRadius: 20,
     padding: spacing.xl,
     shadowColor: '#000',

@@ -18,6 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Screen } from '../components/Screen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { CustomAlert } from '../components/CustomAlert';
 import { useTheme } from '../hooks/useTheme';
 import { useUpdateArtwork } from '../hooks/useArtworks';
 import { spacing, typography } from '../constants/theme';
@@ -67,6 +68,16 @@ export const ArtworkEditScreen: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // CustomAlert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertButtons, setAlertButtons] = useState<Array<{
+    text: string;
+    style?: 'default' | 'cancel' | 'destructive';
+    onPress?: () => void;
+  }>>([]);
 
   // 폼 유효성 검사
   const validateForm = useCallback(() => {
@@ -132,12 +143,22 @@ export const ArtworkEditScreen: React.FC = () => {
       const successMessage = 'Artwork updated successfully!';
       if (Platform.OS === 'web') {
         window.alert(successMessage);
+        navigation.goBack();
       } else {
-        Alert.alert('Success', successMessage);
+        setAlertTitle('Success');
+        setAlertMessage(successMessage);
+        setAlertButtons([
+          {
+            text: 'OK',
+            style: 'default',
+            onPress: () => {
+              setAlertVisible(false);
+              navigation.goBack();
+            }
+          }
+        ]);
+        setAlertVisible(true);
       }
-
-      // 이전 화면으로 돌아가기
-      navigation.goBack();
 
     } catch (error: any) {
       console.error('💥 작품 수정 실패:', error);
@@ -146,7 +167,16 @@ export const ArtworkEditScreen: React.FC = () => {
       if (Platform.OS === 'web') {
         window.alert(errorMessage);
       } else {
-        Alert.alert('Error', errorMessage);
+        setAlertTitle('Error');
+        setAlertMessage(errorMessage);
+        setAlertButtons([
+          {
+            text: 'OK',
+            style: 'default',
+            onPress: () => setAlertVisible(false)
+          }
+        ]);
+        setAlertVisible(true);
       }
     }
   }, [formData, validateForm, artwork.id, updateArtworkMutation, navigation]);
@@ -397,6 +427,15 @@ export const ArtworkEditScreen: React.FC = () => {
         {/* 하단 여백 */}
         <View style={{ height: spacing.xl }} />
       </ScrollView>
+
+      {/* CustomAlert */}
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        buttons={alertButtons}
+        onClose={() => setAlertVisible(false)}
+      />
     </Screen>
   );
 };

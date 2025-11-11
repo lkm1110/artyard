@@ -113,18 +113,21 @@ export const CheckoutScreen = () => {
         buyer_email: user?.email || '',
         buyer_name: contactName || 'Buyer',
         artwork_title: artwork.title,
+        artwork_id: artwork.id,
+        artwork_image_url: artwork.images?.[0],
+        seller_id: artwork.author_id,
       });
       
       // Open 2Checkout payment page
       const supported = await Linking.canOpenURL(payment_url);
       if (supported) {
         await Linking.openURL(payment_url);
+        // 사용자는 2Checkout 페이지에서 결제 완료 후 x_receipt_link_url로 돌아옴
+        // artyard://payment-success?txId=... 로 자동 리다이렉트됨
+        console.log('✅ Payment page opened, waiting for user to complete payment...');
       } else {
         throw new Error('Cannot open payment page');
       }
-      
-      // Navigate to pending screen
-      navigation.navigate('PaymentPending' as never, { transaction_id } as never);
       
     } catch (error: any) {
       console.error('Purchase error:', error);
