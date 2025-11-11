@@ -63,10 +63,31 @@ export const PushNotificationHandler: React.FC = () => {
           case 'like':
           case 'comment':
             if (data.artworkId) {
+              console.log('📍 Navigating to artwork detail:', data.artworkId);
               navigation.navigate('ArtworkDetail' as never, {
                 artworkId: data.artworkId,
               } as never);
             }
+            break;
+
+          case 'purchase':
+            if (data.artworkId) {
+              console.log('📍 Navigating to sold artwork:', data.artworkId);
+              // 판매된 작품 상세 페이지로 이동
+              navigation.navigate('ArtworkDetail' as never, {
+                artworkId: data.artworkId,
+              } as never);
+            } else if (data.transactionId) {
+              console.log('📍 Navigating to my sales');
+              // 또는 판매 내역으로 이동
+              navigation.navigate('MySales' as never);
+            }
+            break;
+
+          case 'review':
+            console.log('📍 Navigating to artist dashboard for reviews');
+            // 리뷰는 Artist Dashboard에서 확인
+            navigation.navigate('ArtistDashboard' as never);
             break;
 
           case 'follow':

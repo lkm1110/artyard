@@ -336,7 +336,7 @@ export const getDashboardSummary = async (period: 'daily' | 'weekly' | 'monthly'
     for (let i = 6; i >= 0; i--) {
       const date = new Date(now);
       date.setDate(now.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+        const dateStr = date.toISOString().split('T')[0];
       
       const dayTransactions = transactions?.filter(t => 
         t.created_at.startsWith(dateStr)
@@ -361,7 +361,7 @@ export const getDashboardSummary = async (period: 'daily' | 'weekly' | 'monthly'
     } catch (error) {
       console.warn('Followers table not available:', error);
     }
-
+    
     return {
       period,
       // Core metrics

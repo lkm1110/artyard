@@ -56,8 +56,11 @@ export const OrdersScreen = () => {
     loadOrders();
   };
 
-  const handleOrderPress = (orderId: string) => {
-    navigation.navigate('OrderDetail' as never, { transactionId: orderId } as never);
+  const handleOrderPress = (transaction: Transaction) => {
+    // Navigate to artwork detail page
+    if (transaction.artwork?.id) {
+      navigation.navigate('ArtworkDetail' as never, { artworkId: transaction.artwork.id } as never);
+    }
   };
 
   const handleChatWithSeller = (sellerId: string) => {
@@ -79,7 +82,7 @@ export const OrdersScreen = () => {
     return (
       <TouchableOpacity
         style={[styles.orderCard, { backgroundColor: theme.card, borderColor: theme.border }]}
-        onPress={() => handleOrderPress(item.id)}
+        onPress={() => handleOrderPress(item)}
       >
         {/* Artwork Image */}
         {item.artwork?.image_url && (

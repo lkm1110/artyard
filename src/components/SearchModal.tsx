@@ -191,7 +191,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({
                 styles.emptyDescription,
                 { color: isDark ? colors.darkTextMuted : colors.textMuted }
               ]}>
-                Find amazing artworks by title, artist, or material
+                Find amazing artworks by title, artist, or material (minimum 2 characters)
               </Text>
             </View>
           ) : (

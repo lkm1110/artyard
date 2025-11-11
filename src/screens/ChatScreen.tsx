@@ -278,7 +278,10 @@ export const ChatScreen: React.FC = () => {
     } catch (error) {
       console.error('메시지 전송 실패:', error);
       
-      Alert.alert('Error', 'Failed to send message. Please try again.');
+      setAlertTitle('Error');
+      setAlertMessage('Failed to send message. Please try again.');
+      setAlertButtons([{ text: 'OK', style: 'default' }]);
+      setAlertVisible(true);
     }
   }, [newMessage, user, chatId, sendMessageMutation]);
 
@@ -307,29 +310,29 @@ export const ChatScreen: React.FC = () => {
     }
 
     console.log('✅ Message options displayed');
-    Alert.alert(
-      'Message Options',
-      `"${message.content.length > 30 ? message.content.substring(0, 30) + '...' : message.content}"`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Edit',
-          onPress: () => {
-            console.log('📝 Edit mode started:', message.id);
-            setEditingMessageId(message.id);
-            setEditingText(message.content);
-          },
+    setAlertTitle('Message Options');
+    setAlertMessage(`"${message.content.length > 30 ? message.content.substring(0, 30) + '...' : message.content}"`);
+    setAlertButtons([
+      {
+        text: 'Edit',
+        style: 'default',
+        onPress: () => {
+          console.log('📝 Edit mode started:', message.id);
+          setEditingMessageId(message.id);
+          setEditingText(message.content);
         },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            console.log('🗑️ Delete started:', message.id);
-            handleDeleteMessage(message.id);
-          },
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          console.log('🗑️ Delete started:', message.id);
+          handleDeleteMessage(message.id);
         },
-      ]
-    );
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+    setAlertVisible(true);
   };
 
   // 웹 환경을 위한 더블클릭 핸들러 추가
@@ -362,7 +365,10 @@ export const ChatScreen: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['chats'] });
       console.log('✅ Message edited, cache invalidated');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to edit message.');
+      setAlertTitle('Error');
+      setAlertMessage(error.message || 'Failed to edit message.');
+      setAlertButtons([{ text: 'OK', style: 'default' }]);
+      setAlertVisible(true);
     }
   };
 
@@ -375,7 +381,10 @@ export const ChatScreen: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['chats'] });
       console.log('✅ Message deleted, cache invalidated');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to delete message.');
+      setAlertTitle('Error');
+      setAlertMessage(error.message || 'Failed to delete message.');
+      setAlertButtons([{ text: 'OK', style: 'default' }]);
+      setAlertVisible(true);
     }
   };
 
@@ -383,6 +392,186 @@ export const ChatScreen: React.FC = () => {
     setEditingMessageId(null);
     setEditingText('');
   };
+
+  // Chat Options 핸들러
+  const handleDeleteChat = useCallback(async () => {
+    setAlertTitle('Delete Chat');
+    setAlertMessage('Are you sure you want to delete this conversation?\n\nThis action cannot be undone.');
+    setAlertButtons([
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          console.log('🗑️ Deleting chat:', chatId);
+          try {
+            // Delete all messages in the chat
+            await supabase
+              .from('messages')
+              .delete()
+              .eq('chat_id', chatId);
+            
+            // Delete the chat itself
+            await supabase
+              .from('chats')
+              .delete()
+              .eq('id', chatId);
+            
+            // Invalidate queries
+            queryClient.invalidateQueries({ queryKey: ['chats'] });
+            
+            setAlertTitle('Success');
+            setAlertMessage('Chat deleted successfully');
+            setAlertButtons([{ 
+              text: 'OK', 
+              style: 'default',
+              onPress: () => navigation.goBack()
+            }]);
+            setAlertVisible(true);
+          } catch (error) {
+            console.error('❌ Failed to delete chat:', error);
+            setAlertTitle('Error');
+            setAlertMessage('Failed to delete chat. Please try again.');
+            setAlertButtons([{ text: 'OK', style: 'default' }]);
+            setAlertVisible(true);
+          }
+        },
+      },
+    ]);
+    setAlertVisible(true);
+  }, [chatId, navigation, queryClient]);
+
+  const handleReportUser = useCallback(() => {
+    console.log('⚠️ Report user:', otherUser?.id);
+    setAlertTitle('Report User');
+    setAlertMessage('Please provide a reason for reporting this user.');
+    setAlertButtons([
+      { 
+        text: 'Spam', 
+        style: 'default',
+        onPress: async () => {
+          console.log('📝 Reported as spam');
+          try {
+            await supabase.from('reports').insert({
+              reporter_id: user?.id,
+              reported_id: otherUser?.id,
+              reason: 'spam',
+              context: 'chat',
+              created_at: new Date().toISOString(),
+            });
+            setAlertTitle('Report Submitted');
+            setAlertMessage('Thank you for your report. We will review it shortly.');
+            setAlertButtons([{ text: 'OK', style: 'default' }]);
+            setAlertVisible(true);
+          } catch (error) {
+            console.error('❌ Failed to submit report:', error);
+            setAlertTitle('Error');
+            setAlertMessage('Failed to submit report. Please try again.');
+            setAlertButtons([{ text: 'OK', style: 'default' }]);
+            setAlertVisible(true);
+          }
+        }
+      },
+      { 
+        text: 'Inappropriate Content', 
+        style: 'default',
+        onPress: async () => {
+          console.log('📝 Reported as inappropriate');
+          try {
+            await supabase.from('reports').insert({
+              reporter_id: user?.id,
+              reported_id: otherUser?.id,
+              reason: 'inappropriate_content',
+              context: 'chat',
+              created_at: new Date().toISOString(),
+            });
+            setAlertTitle('Report Submitted');
+            setAlertMessage('Thank you for your report. We will review it shortly.');
+            setAlertButtons([{ text: 'OK', style: 'default' }]);
+            setAlertVisible(true);
+          } catch (error) {
+            console.error('❌ Failed to submit report:', error);
+            setAlertTitle('Error');
+            setAlertMessage('Failed to submit report. Please try again.');
+            setAlertButtons([{ text: 'OK', style: 'default' }]);
+            setAlertVisible(true);
+          }
+        }
+      },
+      { 
+        text: 'Other', 
+        style: 'default',
+        onPress: async () => {
+          console.log('📝 Reported as other');
+          try {
+            await supabase.from('reports').insert({
+              reporter_id: user?.id,
+              reported_id: otherUser?.id,
+              reason: 'other',
+              context: 'chat',
+              created_at: new Date().toISOString(),
+            });
+            setAlertTitle('Report Submitted');
+            setAlertMessage('Thank you for your report. We will review it shortly.');
+            setAlertButtons([{ text: 'OK', style: 'default' }]);
+            setAlertVisible(true);
+          } catch (error) {
+            console.error('❌ Failed to submit report:', error);
+            setAlertTitle('Error');
+            setAlertMessage('Failed to submit report. Please try again.');
+            setAlertButtons([{ text: 'OK', style: 'default' }]);
+            setAlertVisible(true);
+          }
+        }
+      },
+      { 
+        text: 'Cancel', 
+        style: 'cancel'
+      },
+    ]);
+    setAlertVisible(true);
+  }, [otherUser, user]);
+
+  const handleChatOptions = useCallback(() => {
+    setAlertTitle('Chat Options');
+    setAlertMessage(`Options for conversation with ${otherUser?.handle || 'this user'}`);
+    setAlertButtons([
+      { 
+        text: 'View Profile', 
+        style: 'default',
+        onPress: () => {
+          console.log('✅ Navigating to user profile:', otherUser?.id);
+          if (otherUser?.id) {
+            navigation.navigate('UserArtworks' as any, { userId: otherUser.id });
+          }
+        }
+      },
+      { 
+        text: 'Delete Chat', 
+        style: 'destructive', 
+        onPress: () => {
+          // 현재 Alert를 닫고, 약간의 delay 후에 Delete Chat Alert 표시
+          setAlertVisible(false);
+          setTimeout(() => {
+            handleDeleteChat();
+          }, 300);
+        }
+      },
+      { 
+        text: 'Report User', 
+        style: 'destructive', 
+        onPress: () => {
+          // 현재 Alert를 닫고, 약간의 delay 후에 Report User Alert 표시
+          setAlertVisible(false);
+          setTimeout(() => {
+            handleReportUser();
+          }, 300);
+        }
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+    setAlertVisible(true);
+  }, [otherUser, navigation, handleDeleteChat, handleReportUser]);
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isFromMe = item.sender_id === user?.id || item.sender_id === 'current-user';
@@ -643,137 +832,7 @@ export const ChatScreen: React.FC = () => {
           
           <TouchableOpacity
             style={styles.moreButton}
-            onPress={() => {
-              Alert.alert(
-                'Chat Options',
-                `Options for conversation with ${otherUser?.handle || 'this user'}`,
-                [
-                  { 
-                    text: 'View Profile', 
-                    onPress: () => {
-                      console.log('✅ Navigating to user profile:', otherUser?.id);
-                      if (otherUser?.id) {
-                        navigation.navigate('UserArtworks' as any, { userId: otherUser.id });
-                      }
-                    }
-                  },
-                  { 
-                    text: 'Delete Chat', 
-                    style: 'destructive', 
-                    onPress: () => {
-                      Alert.alert(
-                        'Delete Chat',
-                        'Are you sure you want to delete this conversation? This action cannot be undone.',
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Delete',
-                            style: 'destructive',
-                            onPress: async () => {
-                              console.log('🗑️ Deleting chat:', chatId);
-                              try {
-                                // Delete all messages in the chat
-                                await supabase
-                                  .from('messages')
-                                  .delete()
-                                  .eq('chat_id', chatId);
-                                
-                                // Delete the chat itself
-                                await supabase
-                                  .from('chats')
-                                  .delete()
-                                  .eq('id', chatId);
-                                
-                                // Invalidate queries
-                                queryClient.invalidateQueries({ queryKey: ['chats'] });
-                                
-                                Alert.alert('Success', 'Chat deleted successfully');
-                                navigation.goBack();
-                              } catch (error) {
-                                console.error('❌ Failed to delete chat:', error);
-                                Alert.alert('Error', 'Failed to delete chat. Please try again.');
-                              }
-                            },
-                          },
-                        ]
-                      );
-                    }
-                  },
-                  { 
-                    text: 'Report User', 
-                    style: 'destructive', 
-                    onPress: () => {
-                      console.log('⚠️ Report user:', otherUser?.id);
-                      Alert.alert(
-                        'Report User',
-                        'Please provide a reason for reporting this user.',
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          { 
-                            text: 'Spam', 
-                            onPress: async () => {
-                              console.log('📝 Reported as spam');
-                              try {
-                                await supabase.from('reports').insert({
-                                  reporter_id: user?.id,
-                                  reported_id: otherUser?.id,
-                                  reason: 'spam',
-                                  context: 'chat',
-                                  created_at: new Date().toISOString(),
-                                });
-                                Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-                              } catch (error) {
-                                console.error('❌ Failed to submit report:', error);
-                                Alert.alert('Error', 'Failed to submit report. Please try again.');
-                              }
-                            }
-                          },
-                          { 
-                            text: 'Inappropriate Content', 
-                            onPress: async () => {
-                              console.log('📝 Reported as inappropriate');
-                              try {
-                                await supabase.from('reports').insert({
-                                  reporter_id: user?.id,
-                                  reported_id: otherUser?.id,
-                                  reason: 'inappropriate_content',
-                                  context: 'chat',
-                                  created_at: new Date().toISOString(),
-                                });
-                                Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-                              } catch (error) {
-                                console.error('❌ Failed to submit report:', error);
-                                Alert.alert('Error', 'Failed to submit report. Please try again.');
-                              }
-                            }
-                          },
-                          { 
-                            text: 'Other', 
-                            onPress: async () => {
-                              console.log('📝 Reported as other');
-                              try {
-                                await supabase.from('reports').insert({
-                                  reporter_id: user?.id,
-                                  reported_id: otherUser?.id,
-                                  reason: 'other',
-                                  context: 'chat',
-                                  created_at: new Date().toISOString(),
-                                });
-                                Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
-                              } catch (error) {
-                                console.error('❌ Failed to submit report:', error);
-                                Alert.alert('Error', 'Failed to submit report. Please try again.');
-                              }
-                            }
-                          },
-                        ]
-                      );
-                    }
-                  },
-                  { text: 'Cancel', style: 'cancel' },
-                ]
-              );
-            }}
+            onPress={handleChatOptions}
             activeOpacity={0.7}
           >
             <Text style={[styles.moreIcon, { color: isDark ? colors.darkText : colors.text }]}>
@@ -905,6 +964,14 @@ export const ChatScreen: React.FC = () => {
           </View>
         </View>
       </KeyboardAvoidingView>
+      
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        buttons={alertButtons}
+        onClose={() => setAlertVisible(false)}
+      />
     </Screen>
   );
 };

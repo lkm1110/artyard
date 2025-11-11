@@ -1,0 +1,36 @@
+[33mcommit 92f94a2e66ee9a473b621f129f3df8b26bee73c3[m
+Author: lkm1110 <lavlna280@gmail.com>
+Date:   Sun Nov 9 21:58:04 2025 +0900
+
+    Fix: 4가지 UI/UX 문제 해결
+    
+    1. 채팅 Loading - 이미 LoadingSpinner 적용되어 있음
+    2. 작품 목록 레이아웃 - flex:1에서 width:47%로 변경하여 반으로 쪼개지는 문제 해결
+    3. 본인 작품 구매 차단 - CustomAlert 팝업 추가
+    4. ArtworkDetail 북마크/좋아요 - mutation onSettled에서 artworkDetail 쿼리 무효화 추가
+
+APPLE_ENV_SETUP.md
+ENV_CHECKLIST.md
+ENV_SETUP_COMPLETE_GUIDE.md
+EXPO_PUSH_NOTIFICATION_SETUP.md
+PUSH_NOTIFICATION_QUICK_START.md
+SECURITY_FIX_GUIDE.md
+URGENT_SECURITY_FIX.md
+database/add-chat-push-notification-trigger-fixed.sql
+database/add-chat-push-notification-trigger.sql
+database/add-expo-push-token.sql
+database/create-push-notification-triggers-fixed.sql
+database/create-push-notification-triggers.sql
+src/components/CustomAlert.tsx
+src/components/PushNotificationHandler.tsx
+src/components/SearchModal.tsx
+src/hooks/useArtworks.ts
+src/screens/ArtworkDetailScreen.tsx
+src/screens/ArtworkUploadScreen.tsx
+src/screens/ChatScreen.tsx
+src/screens/OrdersScreen.tsx
+src/screens/UserArtworksScreen.tsx
+src/services/analyticsService.ts
+src/services/pushNotificationService.ts
+supabase/.temp/cli-latest
+supabase/functions/send-push-notification/index.ts

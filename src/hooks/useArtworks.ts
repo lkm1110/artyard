@@ -131,6 +131,8 @@ export const useToggleArtworkLike = () => {
     onSettled: (isLiked, error, artworkId) => {
       // 백그라운드에서 실제 데이터 동기화
       queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
+      // ✅ ArtworkDetail 화면 강제 refetch (배경에 있어도 갱신)
+      queryClient.refetchQueries({ queryKey: ['artworkDetail', artworkId] });
     },
   });
 };
@@ -183,6 +185,8 @@ export const useToggleArtworkBookmark = () => {
     onSettled: (isBookmarked, error, artworkId) => {
       // 백그라운드에서 실제 데이터 동기화
       queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
+      // ✅ ArtworkDetail 화면 강제 refetch (배경에 있어도 갱신)
+      queryClient.refetchQueries({ queryKey: ['artworkDetail', artworkId] });
     },
   });
 };

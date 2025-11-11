@@ -19,6 +19,7 @@ import {
   Share,
   Modal,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import AIOrchestrationService from '../services/ai/aiOrchestrationService';
 import { useColorScheme } from 'react-native';
@@ -89,7 +90,7 @@ export const ArtworkDetailScreen: React.FC = () => {
   const queryClient = useQueryClient();
 
   // 실제 API 훅들만 사용
-  const { data: artwork, isLoading: artworkLoading, isError: artworkError } = useArtworkDetail(artworkId, user?.id);
+  const { data: artwork, isLoading: artworkLoading, isError: artworkError, refetch: refetchArtwork } = useArtworkDetail(artworkId, user?.id);
   const { data: comments = [], isLoading: commentsLoading, isError: commentsError } = useArtworkComments(artworkId);
   const toggleLike = useToggleArtworkLike();
   const toggleBookmark = useToggleArtworkBookmark();
@@ -118,6 +119,25 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertButtons, setAlertButtons] = useState<any[]>([]);
   const [deleteConfirmResolve, setDeleteConfirmResolve] = useState<((value: boolean) => void) | null>(null);
+
+  // 키보드 이벤트 리스너 - 키보드가 올라오면 자동으로 스크롤
+  useEffect(() => {
+    const scrollToBottom = () => {
+      // 키보드 애니메이션 완료 후 한 번만 스크롤 (적당하게)
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 400);
+    };
+
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      scrollToBottom
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+    };
+  }, []);
 
   // Load reviews for this artwork
   const loadReviews = useCallback(async () => {
@@ -207,13 +227,14 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('⏳ Detail screen: Calling toggleLike API...');
       await toggleLike.mutateAsync(artwork.id);
       console.log('✅ Detail screen: Like toggle successful');
-      // ✅ 즉시 UI 갱신
-      queryClient.invalidateQueries({ queryKey: ['artworkDetail', artworkId] });
+      // ✅ 즉시 UI 갱신 - refetch로 최신 데이터 가져오기
+      await refetchArtwork();
+      console.log('✅ Detail screen: UI refreshed');
     } catch (error) {
       console.error('💥 Detail screen: Like API failed:', error);
       Alert.alert('Error', 'Failed to update like. Please try again.');
     }
-  }, [artwork, user, toggleLike, queryClient, artworkId]);
+  }, [artwork, user, toggleLike, refetchArtwork]);
 
   // 북마크 핸들러
   const handleBookmark = useCallback(async () => {
@@ -230,13 +251,37 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('⏳ Detail screen: Calling toggleBookmark API...');
       await toggleBookmark.mutateAsync(artwork.id);
       console.log('✅ Detail screen: Bookmark toggle successful');
-      // ✅ 즉시 UI 갱신
-      queryClient.invalidateQueries({ queryKey: ['artworkDetail', artworkId] });
+      // ✅ 즉시 UI 갱신 - refetch로 최신 데이터 가져오기
+      await refetchArtwork();
+      console.log('✅ Detail screen: UI refreshed');
     } catch (error) {
       console.error('💥 Detail screen: Bookmark API failed:', error);
       Alert.alert('Error', 'Failed to update bookmark. Please try again.');
     }
-  }, [artwork, user, toggleBookmark, queryClient, artworkId]);
+  }, [artwork, user, toggleBookmark, refetchArtwork]);
+
+  // 구매 핸들러
+  const handlePurchase = useCallback(() => {
+    if (!artwork || !user) return;
+    
+    // 본인 작품 구매 시도 시 팝업
+    if (artwork.author_id === user.id) {
+      setAlertTitle('Cannot Purchase');
+      setAlertMessage('You cannot purchase your own artwork.\n\nThis artwork belongs to you, so purchasing it is not available.');
+      setAlertButtons([
+        {
+          text: 'OK',
+          style: 'default',
+          onPress: () => console.log('Own artwork purchase attempt blocked')
+        }
+      ]);
+      setAlertVisible(true);
+      return;
+    }
+    
+    // 다른 사람 작품은 구매 진행
+    navigation.navigate('Checkout' as never, { artworkId: artwork.id } as never);
+  }, [artwork, user, navigation, setAlertTitle, setAlertMessage, setAlertButtons, setAlertVisible]);
 
   // 댓글 작성 핸들러
   const handleSubmitComment = useCallback(async () => {
@@ -443,16 +488,6 @@ export const ArtworkDetailScreen: React.FC = () => {
           setAlertTitle('Delete Artwork');
           setAlertMessage(`Are you sure you want to delete "${artwork.title}"?\n\nDeleted artworks cannot be recovered.`);
           setAlertButtons([
-            { 
-              text: 'Cancel', 
-              style: 'cancel',
-              onPress: () => {
-                console.log('❌ User canceled deletion');
-                setAlertVisible(false);
-                setDeleteConfirmResolve(null);
-                resolve(false);
-              }
-            },
             {
               text: 'Delete',
               style: 'destructive',
@@ -462,6 +497,16 @@ export const ArtworkDetailScreen: React.FC = () => {
                 setDeleteConfirmResolve(null);
                 resolve(true);
               },
+            },
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => {
+                console.log('❌ User canceled deletion');
+                setAlertVisible(false);
+                setDeleteConfirmResolve(null);
+                resolve(false);
+              }
             },
           ]);
           setAlertVisible(true);
@@ -679,11 +724,6 @@ export const ArtworkDetailScreen: React.FC = () => {
                           setAlertTitle('Delete Comment');
                           setAlertMessage('Are you sure you want to delete this comment?\n\nDeleted comments cannot be recovered.');
                           setAlertButtons([
-                            { 
-                              text: 'Cancel', 
-                              style: 'cancel',
-                              onPress: () => console.log('❌ Comment deletion canceled')
-                            },
                             {
                               text: 'Delete',
                               style: 'destructive',
@@ -699,6 +739,11 @@ export const ArtworkDetailScreen: React.FC = () => {
                                   console.error('💥 Comment deletion mutation failed:', error);
                                 }
                               },
+                            },
+                            { 
+                              text: 'Cancel', 
+                              style: 'cancel',
+                              onPress: () => console.log('❌ Comment deletion canceled')
                             },
                           ]);
                           setAlertVisible(true);
@@ -743,9 +788,21 @@ export const ArtworkDetailScreen: React.FC = () => {
                 }
               ]}
               value={editCommentText}
-              onChangeText={setEditCommentText}
+              onChangeText={(text) => {
+                setEditCommentText(text);
+                // 타이핑 중에도 스크롤을 맨 아래로
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: false });
+                }, 50);
+              }}
               placeholder="Edit your comment..."
               placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+              onFocus={() => {
+                // 포커스 시 한 번만 스크롤 (적당하게)
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 400);
+              }}
               multiline
               maxLength={500}
               autoFocus
@@ -826,6 +883,8 @@ export const ArtworkDetailScreen: React.FC = () => {
       <ScrollView 
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        keyboardShouldPersistTaps="handled"
       >
         {/* 이미지 갤러리 */}
         <View style={styles.imageSection}>
@@ -876,7 +935,7 @@ export const ArtworkDetailScreen: React.FC = () => {
           {/* Purchase 버튼 (모든 작품에 표시) */}
           <TouchableOpacity
             style={[styles.purchaseButton, { backgroundColor: colors.primary }]}
-            onPress={() => navigation.navigate('Checkout' as never, { artworkId: artwork.id } as never)}
+            onPress={handlePurchase}
           >
             <Text style={styles.purchaseButtonText}>💳 Purchase Artwork</Text>
           </TouchableOpacity>
@@ -1171,8 +1230,8 @@ export const ArtworkDetailScreen: React.FC = () => {
       {/* 댓글 입력 */}
       {user && (
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 20}
+          behavior={Platform.OS === 'ios' ? 'position' : 'padding'}
+          keyboardVerticalOffset={0}
         >
           <View style={[styles.commentInput, {
             backgroundColor: isDark ? colors.darkCard : colors.card,
@@ -1190,11 +1249,18 @@ export const ArtworkDetailScreen: React.FC = () => {
               placeholder="Write a comment..."
               placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
               value={newComment}
-              onChangeText={setNewComment}
+              onChangeText={(text) => {
+                setNewComment(text);
+                // 타이핑 중에도 스크롤을 맨 아래로
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: false });
+                }, 50);
+              }}
               onFocus={() => {
+                // 포커스 시 한 번만 스크롤 (적당하게)
                 setTimeout(() => {
                   scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
+                }, 400);
               }}
               multiline
               maxLength={500}

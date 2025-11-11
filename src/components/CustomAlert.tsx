@@ -144,12 +144,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.regular,
   },
   buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
+    flexDirection: 'column',
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
   button: {
-    flex: 1,
+    width: '100%',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: 12,

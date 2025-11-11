@@ -16,6 +16,17 @@ export interface PaymentRequest {
   buyer_email: string;
   buyer_name: string;
   artwork_title: string;
+  artwork_id: string;
+  artwork_image_url?: string;
+  seller_id: string;
+  shipping_address?: {
+    name: string;
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
 }
 
 export interface PaymentResponse {
@@ -42,40 +53,56 @@ export const create2CheckoutPayment = async (
     console.log('🎨 Artwork title:', request.artwork_title);
     console.log('📧 Buyer email:', request.buyer_email);
     
-    // 2Checkout Inline Checkout parameters (최신 방식)
-    // https://knowledgecenter.2checkout.com/Documentation/06Checkout_Links
+    // 2Checkout ConvertPlus Checkout parameters
+    // https://knowledgecenter.2checkout.com/Documentation/07Commerce/ConvertPlus
     const params = new URLSearchParams({
-      // Required parameters
-      'merchant-id': TWOCHECKOUT_ACCOUNT,
-      'buy-link-text': 'Purchase',
+      // Required - Seller/Merchant ID
+      'sid': TWOCHECKOUT_ACCOUNT,
       
-      // Product information
-      'prod': request.artwork_title,
-      'price': request.amount.toString(),
-      'qty': '1',
-      'currency': request.currency,
+      // Mode
+      'mode': '2CO',
       
-      // Product variant (alternative format)
-      'product-1-name': request.artwork_title,
-      'product-1-price': request.amount.toString(),
-      'product-1-qty': '1',
+      // Product information (using li_ prefix for line items)
+      'li_0_type': 'product',
+      'li_0_name': request.artwork_title,
+      'li_0_price': request.amount.toString(),
+      'li_0_quantity': '1',
+      'li_0_tangible': 'Y',
+      'li_0_product_url': `https://artyard.app/artwork/${request.artwork_id}`,
+      'li_0_image': request.artwork_image_url || '',
+      
+      // Currency
+      'currency_code': request.currency,
       
       // Transaction info
-      'merchant-order-id': request.transaction_id,
+      'merchant_order_id': request.transaction_id,
       
       // Buyer info
-      'card-holder-name': request.buyer_name || 'Buyer',
+      'card_holder_name': request.buyer_name || 'Buyer',
       'email': request.buyer_email,
       
-      // Return URLs
-      'return-url': `artyard://payment-success?txId=${request.transaction_id}`,
-      'return-type': 'redirect',
+      // Shipping address (if provided)
+      ...(request.shipping_address && {
+        'ship_name': request.shipping_address.name,
+        'ship_street_address': request.shipping_address.street,
+        'ship_city': request.shipping_address.city,
+        'ship_state': request.shipping_address.state,
+        'ship_zip': request.shipping_address.zip,
+        'ship_country': request.shipping_address.country,
+      }),
+      
+      // Custom fields for seller info (will be in IPN)
+      'custom_field_1': request.seller_id, // 판매자 ID
+      'custom_field_2': request.artwork_id, // 작품 ID
+      
+      // Return URL
+      'x_receipt_link_url': `artyard://payment-success?txId=${request.transaction_id}`,
       
       // Test mode
-      'test': '1', // 테스트 모드
+      'demo': 'Y', // 테스트 모드
     });
     
-    const payment_url = `https://secure.2checkout.com/checkout/buy?${params.toString()}`;
+    const payment_url = `https://www.2checkout.com/checkout/purchase?${params.toString()}`;
     
     console.log('🌐 Generated Payment URL:');
     console.log(payment_url);

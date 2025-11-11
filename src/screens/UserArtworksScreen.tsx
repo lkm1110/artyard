@@ -333,8 +333,6 @@ export const UserArtworksScreen: React.FC = () => {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.1}
         showsVerticalScrollIndicator={false}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
         contentContainerStyle={filteredArtworks.length === 0 ? styles.emptyContainer : styles.contentContainer}
       />
     </Screen>
@@ -443,14 +441,10 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
   },
-  row: {
-    justifyContent: 'space-between',
+  artworkContainer: {
+    width: '100%', // 1열 레이아웃
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
-  },
-  artworkContainer: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
     position: 'relative',
   },
   statusBadge: {

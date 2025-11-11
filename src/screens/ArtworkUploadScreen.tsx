@@ -28,6 +28,7 @@ import { Button } from '../components/Button';
 import { useAuthStore } from '../store/authStore';
 import { useUploadArtwork } from '../hooks/useArtworks';
 import { uploadImagesToStorage } from '../services/imageUploadService';
+import { CustomAlert } from '../components/CustomAlert';
 import { getCurrentLocation, askForLocationConsent, formatLocationText, LocationInfo } from '../services/locationService';
 import { Material } from '../types';
 
@@ -97,6 +98,12 @@ export const ArtworkUploadScreen: React.FC = () => {
   const [showMaterialPicker, setShowMaterialPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   
+  // CustomAlert state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertTitle, setAlertTitle] = useState('');
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertButtons, setAlertButtons] = useState<any[]>([]);
+  
   // 실제 업로드 훅
   const uploadArtworkMutation = useUploadArtwork();
 
@@ -127,7 +134,10 @@ export const ArtworkUploadScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('카메라 에러:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      setAlertTitle('Error');
+      setAlertMessage('Failed to take photo. Please try again.');
+      setAlertButtons([{ text: 'OK', style: 'default' }]);
+      setAlertVisible(true);
     }
   }, []);
 
@@ -159,7 +169,10 @@ export const ArtworkUploadScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('갤러리 에러:', error);
-      Alert.alert('Error', 'Failed to select images. Please try again.');
+      setAlertTitle('Error');
+      setAlertMessage('Failed to select images. Please try again.');
+      setAlertButtons([{ text: 'OK', style: 'default' }]);
+      setAlertVisible(true);
     }
   }, [formData.images.length]);
 
@@ -209,15 +222,14 @@ export const ArtworkUploadScreen: React.FC = () => {
       pickImageFromWeb();
     } else {
       // 모바일에서는 카메라/갤러리 선택
-      Alert.alert(
-        'Add Image',
-        'Choose how you want to add your artwork image',
-        [
-          { text: 'Camera', onPress: pickImageFromCamera },
-          { text: 'Photo Library', onPress: pickImageFromGallery },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
+      setAlertTitle('Add Image');
+      setAlertMessage('Choose how you want to add your artwork image');
+      setAlertButtons([
+        { text: 'Camera', style: 'default', onPress: pickImageFromCamera },
+        { text: 'Photo Library', style: 'default', onPress: pickImageFromGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      setAlertVisible(true);
     }
   }, [pickImageFromCamera, pickImageFromGallery, pickImageFromWeb]);
 
@@ -285,7 +297,10 @@ export const ArtworkUploadScreen: React.FC = () => {
     
     if (!user) {
       console.error('❌ No user logged in');
-      Alert.alert('Error', 'Please log in first');
+      setAlertTitle('Error');
+      setAlertMessage('Please log in first');
+      setAlertButtons([{ text: 'OK', style: 'default' }]);
+      setAlertVisible(true);
       return;
     }
 
@@ -378,21 +393,21 @@ export const ArtworkUploadScreen: React.FC = () => {
           });
         }, 2000);
       } else {
-        // 모바일에서는 Alert 사용
-        Alert.alert(
-          'Success!',
-          'Your artwork has been uploaded successfully! 🎉',
-          [{ 
-            text: 'OK', 
-            onPress: () => {
-              console.log('👈 Navigating to main feed...');
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainApp' as never }],
-              });
-            }
-          }]
-        );
+        // 모바일에서는 CustomAlert 사용
+        setAlertTitle('Success!');
+        setAlertMessage('Your artwork has been uploaded successfully!');
+        setAlertButtons([{ 
+          text: 'OK',
+          style: 'default',
+          onPress: () => {
+            console.log('👈 Navigating to main feed...');
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainApp' as never }],
+            });
+          }
+        }]);
+        setAlertVisible(true);
       }
     } catch (error) {
       console.error('💥 업로드 실패:', error);
@@ -402,7 +417,10 @@ export const ArtworkUploadScreen: React.FC = () => {
         errorMessage = error.message;
       }
       
-      Alert.alert('Upload Failed', errorMessage);
+      setAlertTitle('Upload Failed');
+      setAlertMessage(errorMessage);
+      setAlertButtons([{ text: 'OK', style: 'default' }]);
+      setAlertVisible(true);
     } finally {
       setIsUploading(false);
       console.log('🔄 Upload process finished');
@@ -957,6 +975,14 @@ export const ArtworkUploadScreen: React.FC = () => {
 
         {/* Price Picker Modal 제거됨 - 직접 입력으로 변경 */}
       </KeyboardAvoidingView>
+      
+      <CustomAlert
+        visible={alertVisible}
+        title={alertTitle}
+        message={alertMessage}
+        buttons={alertButtons}
+        onClose={() => setAlertVisible(false)}
+      />
     </Screen>
   );
 };
@@ -979,11 +1005,15 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     paddingVertical: spacing.sm,
-    minWidth: 60,
+    paddingHorizontal: spacing.sm,
+    minWidth: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerButtonText: {
     ...typography.body,
     fontSize: 16,
+    fontWeight: '500',
   },
   headerTitle: {
     ...typography.heading,

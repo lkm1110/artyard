@@ -87,24 +87,19 @@ export const registerForPushNotifications = async (userId: string): Promise<stri
     const pushToken = tokenData.data;
     console.log('✅ Push Token generated:', pushToken);
 
-    // 6. Supabase에 저장
+    // 6. Supabase profiles 테이블에 저장
     const { error } = await supabase
-      .from('push_tokens')
-      .upsert({
-        user_id: userId,
-        push_token: pushToken,
-        platform: Platform.OS,
-        device_name: Device.deviceName || 'Unknown',
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,push_token'
-      });
+      .from('profiles')
+      .update({
+        expo_push_token: pushToken,
+      })
+      .eq('id', userId);
 
     if (error) {
       console.error('❌ Failed to save push token:', error);
       // Don't throw, just log - token is still valid
     } else {
-      console.log('✅ Push token saved to database');
+      console.log('✅ Push token saved to profiles table');
     }
 
     // 5. Android 채널 설정
