@@ -43,10 +43,17 @@ export const SalesScreen = () => {
       setLoading(true);
       const data = await getMySales();
       
+      // 🔍 DEBUG: Check for duplicates
+      console.log('💰 Total sales fetched:', data.length);
+      console.log('💰 Sale IDs:', data.map(s => s.id));
+      
       // 중복 제거 (ID 기준)
       const uniqueSales = data.filter((sale, index, self) =>
         index === self.findIndex((s) => s.id === sale.id)
       );
+      
+      console.log('💰 Unique sales:', uniqueSales.length);
+      console.log('💰 Removed duplicates:', data.length - uniqueSales.length);
       
       setSales(uniqueSales);
     } catch (error) {

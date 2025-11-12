@@ -55,7 +55,7 @@ export const create2CheckoutPayment = async (
     
     // 2Checkout ConvertPlus Checkout parameters
     // https://knowledgecenter.2checkout.com/Documentation/07Commerce/ConvertPlus
-    const params = new URLSearchParams({
+    const params: Record<string, string> = {
       // Required - Seller/Merchant ID
       'sid': TWOCHECKOUT_ACCOUNT,
       
@@ -65,11 +65,11 @@ export const create2CheckoutPayment = async (
       // Product information (using li_ prefix for line items)
       'li_0_type': 'product',
       'li_0_name': request.artwork_title,
-      'li_0_price': request.amount.toString(),
+      'li_0_price': request.amount.toFixed(2), // "1.00" 형식
       'li_0_quantity': '1',
       'li_0_tangible': 'Y',
       'li_0_product_url': `https://artyard.app/artwork/${request.artwork_id}`,
-      'li_0_image': request.artwork_image_url || '',
+      'li_0_image': request.artwork_image_url || '', // ✅ 이미지 URL 추가
       
       // Currency
       'currency_code': request.currency,
@@ -81,16 +81,6 @@ export const create2CheckoutPayment = async (
       'card_holder_name': request.buyer_name || 'Buyer',
       'email': request.buyer_email,
       
-      // Shipping address (if provided)
-      ...(request.shipping_address && {
-        'ship_name': request.shipping_address.name,
-        'ship_street_address': request.shipping_address.street,
-        'ship_city': request.shipping_address.city,
-        'ship_state': request.shipping_address.state,
-        'ship_zip': request.shipping_address.zip,
-        'ship_country': request.shipping_address.country,
-      }),
-      
       // Custom fields for seller info (will be in IPN)
       'custom_field_1': request.seller_id, // 판매자 ID
       'custom_field_2': request.artwork_id, // 작품 ID
@@ -100,15 +90,27 @@ export const create2CheckoutPayment = async (
       
       // Test mode
       'demo': 'Y', // 테스트 모드
-    });
+    };
     
-    const payment_url = `https://www.2checkout.com/checkout/purchase?${params.toString()}`;
+    // Add shipping address if provided
+    if (request.shipping_address) {
+      params['ship_name'] = request.shipping_address.name;
+      params['ship_street_address'] = request.shipping_address.street;
+      params['ship_city'] = request.shipping_address.city;
+      params['ship_state'] = request.shipping_address.state;
+      params['ship_zip'] = request.shipping_address.zip;
+      params['ship_country'] = request.shipping_address.country;
+    }
+    
+    const urlParams = new URLSearchParams(params);
+    
+    const payment_url = `https://www.2checkout.com/checkout/purchase?${urlParams.toString()}`;
     
     console.log('🌐 Generated Payment URL:');
     console.log(payment_url);
     console.log('');
     console.log('📋 URL Parameters:');
-    params.forEach((value, key) => {
+    urlParams.forEach((value, key) => {
       console.log(`  ${key}: ${value}`);
     });
     

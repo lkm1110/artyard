@@ -55,12 +55,18 @@ import { SettlementManagementScreen } from '../screens/admin/SettlementManagemen
 // Push Notifications
 import { PushNotificationHandler } from '../components/PushNotificationHandler';
 
+// Consent Screen
+import { ConsentScreen } from '../screens/ConsentScreen';
+import { supabase } from '../services/supabase';
+
 const Stack = createNativeStackNavigator();
 
 export const RootNavigator: React.FC = () => {
   const isDark = useColorScheme() === 'dark';
   const { isAuthenticated, isLoading, initialize, user, session } = useAuthStore();
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
+  const [needsConsent, setNeedsConsent] = useState<boolean>(false);
+  const [checkingConsent, setCheckingConsent] = useState<boolean>(true);
 
   // 인증 상태 변경 감지 로그
   useEffect(() => {
@@ -102,6 +108,48 @@ export const RootNavigator: React.FC = () => {
     initializeApp();
   }, [initialize]);
 
+  // 🆕 동의 여부 확인 (로그인한 사용자만)
+  useEffect(() => {
+    const checkConsent = async () => {
+      if (!isAuthenticated || !user || isLoading) {
+        setCheckingConsent(false);
+        setNeedsConsent(false);
+        return;
+      }
+
+      try {
+        console.log('🔍 [Consent Check] 사용자 동의 여부 확인 중...');
+        console.log('  - User ID:', user.id);
+
+        // profiles 테이블에서 동의 여부 확인
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('consent_agreed_at')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('❌ [Consent Check] Error:', error);
+          // 에러 발생 시 안전하게 동의 필요로 간주
+          setNeedsConsent(true);
+        } else if (!data?.consent_agreed_at) {
+          console.log('⚠️  [Consent Check] 동의 필요! (consent_agreed_at is NULL)');
+          setNeedsConsent(true);
+        } else {
+          console.log('✅ [Consent Check] 동의 완료:', data.consent_agreed_at);
+          setNeedsConsent(false);
+        }
+      } catch (error) {
+        console.error('❌ [Consent Check] Unexpected error:', error);
+        setNeedsConsent(true); // 안전하게 동의 필요로 간주
+      } finally {
+        setCheckingConsent(false);
+      }
+    };
+
+    checkConsent();
+  }, [isAuthenticated, user, isLoading]);
+
   const handleWelcomeComplete = async () => {
     try {
       await AsyncStorage.setItem('hasSeenWelcome', 'true');
@@ -112,8 +160,14 @@ export const RootNavigator: React.FC = () => {
     }
   };
 
+  // 🆕 동의 완료 핸들러
+  const handleConsentComplete = () => {
+    console.log('✅ [Consent] 동의 완료! 메인 앱으로 이동');
+    setNeedsConsent(false);
+  };
+
   // 초기 로딩 중
-  if (isLoading || isFirstTime === null) {
+  if (isLoading || isFirstTime === null || (isAuthenticated && checkingConsent)) {
     return <LoadingSpinner message="Getting ArtYard ready..." />;
   }
 
@@ -179,6 +233,14 @@ export const RootNavigator: React.FC = () => {
             component={LoginScreen}
             options={{ animation: 'fade' }} 
           />
+        ) : needsConsent ? (
+          // 🆕 동의 필요한 사용자용 동의 화면
+          <Stack.Screen 
+            name="Consent" 
+            options={{ animation: 'fade' }}
+          >
+            {() => <ConsentScreen onComplete={handleConsentComplete} />}
+          </Stack.Screen>
         ) : (
           // 인증된 사용자용 스크린들
           <>

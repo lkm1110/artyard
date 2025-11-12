@@ -14,6 +14,7 @@ import {
   Image,
   RefreshControl,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -42,7 +43,20 @@ export const OrdersScreen = () => {
     try {
       setLoading(true);
       const data = await getMyOrders();
-      setOrders(data);
+      
+      // 🔍 DEBUG: Check for duplicates
+      console.log('📦 Total orders fetched:', data.length);
+      console.log('📦 Order IDs:', data.map(o => o.id));
+      
+      // Remove duplicates based on transaction id
+      const uniqueOrders = data.filter((order, index, self) =>
+        index === self.findIndex((t) => t.id === order.id)
+      );
+      
+      console.log('📦 Unique orders:', uniqueOrders.length);
+      console.log('📦 Removed duplicates:', data.length - uniqueOrders.length);
+      
+      setOrders(uniqueOrders);
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
@@ -64,6 +78,14 @@ export const OrdersScreen = () => {
   };
 
   const handleChatWithSeller = (sellerId: string) => {
+    console.log('💬 Chat with seller clicked:', sellerId);
+    
+    if (!sellerId) {
+      console.error('❌ Seller ID is missing!');
+      Alert.alert('Error', 'Seller information is not available.');
+      return;
+    }
+    
     navigation.navigate('Chat' as never, { userId: sellerId } as never);
   };
 
@@ -78,6 +100,15 @@ export const OrdersScreen = () => {
   const renderOrder = ({ item }: { item: Transaction }) => {
     const statusColor = getTransactionStatusColor(item.status);
     const statusLabel = getTransactionStatusLabel(item.status);
+
+    // 🔍 DEBUG: Check seller info
+    console.log('📦 Order item:', {
+      id: item.id,
+      artwork_title: item.artwork?.title,
+      seller_id: item.seller_id,
+      status: item.status,
+      has_seller: !!item.seller
+    });
 
     return (
       <TouchableOpacity
@@ -249,7 +280,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    fontFamily: typography.semiBold,
   },
   backButton: {
     width: 40,

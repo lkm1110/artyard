@@ -64,10 +64,8 @@ Deno.serve(async (req) => {
         .from('transactions')
         .update({
           status: 'paid',
-          payment_intent_id: saleId,
+          stripe_payment_intent_id: saleId, // 2Checkout Order Number 저장
           paid_at: new Date().toISOString(),
-          // Store shipping info
-          shipping_info: shippingAddress,
         })
         .eq('id', transactionId)
         .select()

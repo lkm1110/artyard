@@ -123,12 +123,24 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
                 >
                   <Image 
                     source={{ uri: imageUrl }} 
-                    style={styles.image}
+                    style={[
+                      styles.image,
+                      artwork.sale_status === 'sold' && styles.imageSold
+                    ]}
                     resizeMode="cover"
                   />
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            
+            {/* SOLD 오버레이 */}
+            {artwork.sale_status === 'sold' && (
+              <View style={styles.soldOverlay}>
+                <View style={styles.soldBadge}>
+                  <Text style={styles.soldText}>SOLD</Text>
+                </View>
+              </View>
+            )}
             
             {/* 이미지 개수 및 페이지 표시 */}
             {artwork.images.length > 1 && (
@@ -345,6 +357,35 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: IMAGE_HEIGHT,
   },
+  imageSold: {
+    opacity: 0.4, // 블러 효과 대신 투명도로 표현
+  },
+  soldOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  soldBadge: {
+    backgroundColor: 'rgba(0, 0, 0, 0.85)', // 고급스러운 반투명 검은색
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.9)', // 흰색 테두리
+    transform: [{ rotate: '-15deg' }],
+    ...shadows.lg,
+  },
+  soldText: {
+    color: colors.white,
+    fontSize: 36,
+    fontWeight: '900',
+    letterSpacing: 4,
+  },
   placeholderImage: {
     width: '100%',
     height: '100%',
@@ -360,7 +401,7 @@ const styles = StyleSheet.create({
     right: spacing.sm,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 4,
     borderRadius: borderRadius.sm,
   },
   imageCountText: {
@@ -422,7 +463,7 @@ const styles = StyleSheet.create({
   },
   location: {
     fontSize: typography.caption.fontSize,
-    marginTop: spacing.xs,
+    marginTop: 4,
   },
   bottomRow: {
     flexDirection: 'row',
@@ -462,10 +503,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   actionButton: {
-    padding: spacing.xs,
+    padding: 4,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs / 2,
+    gap: 2,
   },
   actionIcon: {
     fontSize: 18,

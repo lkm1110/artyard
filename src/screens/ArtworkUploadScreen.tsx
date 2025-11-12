@@ -841,7 +841,11 @@ export const ArtworkUploadScreen: React.FC = () => {
           }
         ]}>
           <TouchableOpacity
-            style={[styles.bottomButton, styles.cancelButton]}
+            style={[
+              styles.bottomButton, 
+              styles.cancelButton,
+              { backgroundColor: isDark ? colors.darkCard : colors.white }
+            ]}
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
@@ -1221,7 +1225,6 @@ const styles = StyleSheet.create({
     ...shadows.sm,
   },
   cancelButton: {
-    backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: colors.border,
   },

@@ -87,8 +87,34 @@ export const CheckoutScreen = () => {
       
       setLoading(true);
       
-      // Parse sale price
-      const salePrice = parseInt(artwork.price.replace(/\D/g, ''));
+      // 🔍 DEBUG: Check artwork data FIRST
+      console.log('🎨 Artwork data:');
+      console.log('  - title:', artwork.title);
+      console.log('  - price (raw):', artwork.price);
+      console.log('  - price type:', typeof artwork.price);
+      console.log('  - images:', artwork.images);
+      console.log('  - first image:', artwork.images?.[0]);
+      console.log('  - author_id:', artwork.author_id);
+      
+      // Parse sale price (handle both string and number)
+      let salePrice = 0;
+      if (typeof artwork.price === 'string') {
+        // String: "$100", "100", "100.00" 등
+        const cleanPrice = artwork.price.replace(/[^0-9.]/g, '');
+        salePrice = parseFloat(cleanPrice) || 0;
+      } else if (typeof artwork.price === 'number') {
+        // Number: 100, 100.00 등
+        salePrice = artwork.price;
+      }
+      
+      console.log('  - salePrice (parsed):', salePrice);
+      console.log('  - salePrice type:', typeof salePrice);
+      
+      if (!salePrice || salePrice === 0 || isNaN(salePrice)) {
+        Alert.alert('Error', `Invalid artwork price: ${artwork.price}`);
+        setLoading(false);
+        return;
+      }
       
       // Calculate fees
       const fees = calculateFees(salePrice);
@@ -106,6 +132,15 @@ export const CheckoutScreen = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       // Create 2Checkout payment
+      console.log('💳 Creating payment with:', {
+        transaction_id,
+        amount: salePrice,
+        artwork_title: artwork.title,
+        artwork_id: artwork.id,
+        artwork_image_url: artwork.images?.[0],
+        seller_id: artwork.author_id,
+      });
+      
       const { payment_url } = await create2CheckoutPayment({
         transaction_id,
         amount: salePrice,

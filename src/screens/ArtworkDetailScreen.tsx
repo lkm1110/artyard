@@ -264,6 +264,21 @@ export const ArtworkDetailScreen: React.FC = () => {
   const handlePurchase = useCallback(() => {
     if (!artwork || !user) return;
     
+    // 판매 완료된 작품
+    if (artwork.sale_status === 'sold') {
+      setAlertTitle('Already Sold');
+      setAlertMessage('This artwork has already been sold.');
+      setAlertButtons([
+        {
+          text: 'OK',
+          style: 'default',
+          onPress: () => console.log('Sold artwork purchase attempt blocked')
+        }
+      ]);
+      setAlertVisible(true);
+      return;
+    }
+    
     // 본인 작품 구매 시도 시 팝업
     if (artwork.author_id === user.id) {
       setAlertTitle('Cannot Purchase');
@@ -932,13 +947,24 @@ export const ArtworkDetailScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* Purchase 버튼 (모든 작품에 표시) */}
-          <TouchableOpacity
-            style={[styles.purchaseButton, { backgroundColor: colors.primary }]}
-            onPress={handlePurchase}
+          {/* Purchase 버튼 (Coming Soon) */}
+          <View
+            style={[
+              styles.purchaseButton,
+              {
+                backgroundColor: artwork.sale_status === 'sold' 
+                  ? colors.textMuted 
+                  : colors.warning
+              },
+              styles.purchaseButtonDisabled
+            ]}
           >
-            <Text style={styles.purchaseButtonText}>💳 Purchase Artwork</Text>
-          </TouchableOpacity>
+            <Text style={styles.purchaseButtonText}>
+              {artwork.sale_status === 'sold' 
+                ? '🔒 Sold Out' 
+                : '🚀 Purchase Coming Soon'}
+            </Text>
+          </View>
 
           <Text style={[styles.description, { color: isDark ? colors.darkTextSecondary : colors.textSecondary }]}>
             {artwork.description}
@@ -1454,11 +1480,20 @@ const styles = StyleSheet.create({
     marginVertical: spacing.md,
     ...shadows.md,
   },
+  purchaseButtonDisabled: {
+    opacity: 0.6,
+  },
   purchaseButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  purchaseButtonSubtext: {
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+    opacity: 0.9,
   },
   description: {
     ...typography.body,
