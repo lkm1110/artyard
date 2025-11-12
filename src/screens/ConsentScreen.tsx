@@ -10,7 +10,9 @@ import {
   Linking,
   Alert,
   useColorScheme,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, shadows } from '../constants/theme';
 import { supabase } from '../services/supabase';
@@ -30,6 +32,7 @@ interface Consents {
 
 export const ConsentScreen: React.FC<ConsentScreenProps> = ({ onComplete }) => {
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const [consents, setConsents] = useState<Consents>({
     terms: false,
     privacy: false,
@@ -314,6 +317,7 @@ export const ConsentScreen: React.FC<ConsentScreenProps> = ({ onComplete }) => {
           {
             backgroundColor: isDark ? colors.darkCard : colors.card,
             borderTopColor: isDark ? colors.darkBorder : colors.border,
+            paddingBottom: Math.max(insets.bottom, spacing.md), // Safe Area 적용
           },
         ]}
       >
@@ -436,7 +440,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
+    // paddingBottom은 동적으로 설정 (insets.bottom + spacing.md)
     borderTopWidth: 1,
   },
   continueButton: {
