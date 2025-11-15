@@ -16,6 +16,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import type { Artwork } from '../types';
 
@@ -291,12 +292,11 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               onPress={onLike}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.actionIcon,
-                { color: artwork.is_liked ? '#FF0000' : (isDark ? colors.darkTextMuted : colors.textMuted) }
-              ]}>
-                {artwork.is_liked ? '❤️' : '🤍'}
-              </Text>
+              <Ionicons 
+                name={artwork.is_liked ? "heart" : "heart-outline"} 
+                size={24} 
+                color={artwork.is_liked ? '#FF0000' : (isDark ? colors.darkTextMuted : colors.textMuted)} 
+              />
               <Text style={[
                 styles.actionCount,
                 { color: isDark ? colors.darkTextMuted : colors.textMuted }
@@ -310,12 +310,11 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               onPress={onBookmark}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.actionIcon,
-                { color: artwork.is_bookmarked ? '#FFD700' : (isDark ? colors.darkTextMuted : colors.textMuted) }
-              ]}>
-                {artwork.is_bookmarked ? '⭐' : '☆'}
-              </Text>
+              <Ionicons 
+                name={artwork.is_bookmarked ? "bookmark" : "bookmark-outline"} 
+                size={24} 
+                color={artwork.is_bookmarked ? '#FFD700' : (isDark ? colors.darkTextMuted : colors.textMuted)} 
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -323,12 +322,11 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               onPress={onShare}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.actionIcon,
-                { color: isDark ? colors.darkTextMuted : colors.textMuted }
-              ]}>
-                📤
-              </Text>
+              <Ionicons 
+                name="share-social-outline" 
+                size={24} 
+                color={isDark ? colors.darkTextMuted : colors.textMuted} 
+              />
             </TouchableOpacity>
           </View>
         </View>

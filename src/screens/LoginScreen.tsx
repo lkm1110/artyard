@@ -69,14 +69,23 @@ export const LoginScreen: React.FC = () => {
   const handleGoogleLogin = async () => {
     try {
       console.log('🔍 Button clicked! Starting Google login...');
-      
       console.log('🔍 Platform detection:', Platform.OS);
       
       // 네이티브 OAuth 사용
       const { data, error } = await signInWithGoogleNative();
 
       if (error) {
+        console.log('🔍 [DEBUG] Google OAuth error 타입:', typeof error);
+        console.log('🔍 [DEBUG] error.message:', error.message);
+        console.log('🔍 [DEBUG] error 전체:', JSON.stringify(error));
         console.error('❌ Google OAuth error:', error);
+        
+        // 사용자가 취소한 경우 (dismiss/cancel)
+        if (error && error.message === 'OAUTH_CANCELLED') {
+          console.log('✅ [CANCEL] 사용자가 로그인을 취소했습니다 - 에러 팝업 표시 안 함');
+          return; // 에러 팝업 없이 조용히 종료
+        }
+        
         throw error;
       }
 
@@ -84,9 +93,41 @@ export const LoginScreen: React.FC = () => {
       
       // 로그인 성공 - 팝업 없이 자동으로 진행
     } catch (error: any) {
+      console.log('🔍 [CATCH DEBUG] error 타입:', typeof error);
+      console.log('🔍 [CATCH DEBUG] error.message:', error?.message);
+      console.log('🔍 [CATCH DEBUG] error 전체:', JSON.stringify(error));
       console.error('Google login error:', error);
-      const errorMessage = error.message || 'An error occurred during Google login.';
-      showAlert('Login Failed', errorMessage, [{ text: 'OK' }]);
+      
+      // 사용자가 취소한 경우 (다시 한번 체크)
+      if (error && error.message === 'OAUTH_CANCELLED') {
+        console.log('✅ [CATCH CANCEL] 사용자가 로그인을 취소했습니다 - 에러 팝업 표시 안 함');
+        return;
+      }
+      
+      // OAUTH_CANCELLED 최종 체크 (더 엄격하게)
+      const errorStr = JSON.stringify(error);
+      if (errorStr.includes('OAUTH_CANCELLED') || errorStr.includes('dismiss')) {
+        console.log('✅ [FINAL CANCEL] OAuth 취소 감지 - 팝업 표시 안 함');
+        console.log('✅ [FINAL CANCEL] error:', errorStr);
+        return; // 팝업 없이 종료
+      }
+      
+      // 타임아웃 에러에 대한 특별 처리
+      let errorTitle = '로그인 실패';
+      let errorMessage = error.message || '구글 로그인 중 오류가 발생했습니다.';
+      
+      if (error.message?.includes('timeout')) {
+        errorTitle = '네트워크 지연 감지';
+        errorMessage = 
+          '로그인 처리가 60초 후 시간 초과되었습니다.\n\n' +
+          '일반적인 원인:\n' +
+          '• 느리거나 불안정한 인터넷 연결\n' +
+          '• 서버 지연\n\n' +
+          '걱정하지 마세요! 시스템이 백그라운드에서 로그인 상태를 확인 중입니다. ' +
+          '잠시 기다리거나 더 나은 연결 상태에서 다시 시도해주세요.';
+      }
+      
+      showAlert(errorTitle, errorMessage, [{ text: '확인' }]);
     }
   };
 
@@ -102,6 +143,13 @@ export const LoginScreen: React.FC = () => {
 
       if (error) {
         console.error('❌ Apple OAuth error details:', error);
+        
+        // 사용자가 취소한 경우
+        if (error.message === 'OAUTH_CANCELLED') {
+          console.log('ℹ️ 사용자가 로그인을 취소했습니다 - 에러 팝업 표시 안 함');
+          return;
+        }
+        
         throw error;
       }
 
@@ -111,11 +159,16 @@ export const LoginScreen: React.FC = () => {
     } catch (error: any) {
       console.error('❌ Apple login error:', error);
       
-      const errorMessage = error.message || 'An error occurred during Apple login.';
-      
-      if (!errorMessage.includes('cancelled')) {
-        showAlert('Login Failed', errorMessage, [{ text: 'OK' }]);
+      // 사용자가 취소한 경우
+      if (error.message === 'OAUTH_CANCELLED') {
+        console.log('ℹ️ 사용자가 로그인을 취소했습니다 - 에러 팝업 표시 안 함');
+        return;
       }
+      
+      const errorTitle = '로그인 실패';
+      const errorMessage = error.message || 'Apple 로그인 중 오류가 발생했습니다.';
+      
+      showAlert(errorTitle, errorMessage, [{ text: '확인' }]);
     }
   };
 
@@ -131,19 +184,32 @@ export const LoginScreen: React.FC = () => {
 
       if (error) {
         console.error('❌ Facebook OAuth error details:', error);
+        
+        // 사용자가 취소한 경우
+        if (error.message === 'OAUTH_CANCELLED') {
+          console.log('ℹ️ 사용자가 로그인을 취소했습니다 - 에러 팝업 표시 안 함');
+          return;
+        }
+        
         throw error;
       }
 
       console.log('✅ Facebook OAuth initiated:', data);
-      // showAlert 제거 - 자동으로 로그인됨
+      
+      // 로그인 성공 - 팝업 없이 자동으로 진행
     } catch (error: any) {
       console.error('❌ Facebook login error:', error);
       
-      const errorMessage = error.message || 'An error occurred during Facebook login.';
-      
-      if (!errorMessage.includes('cancelled')) {
-        // 에러만 콘솔에 기록
+      // 사용자가 취소한 경우
+      if (error.message === 'OAUTH_CANCELLED') {
+        console.log('ℹ️ 사용자가 로그인을 취소했습니다 - 에러 팝업 표시 안 함');
+        return;
       }
+      
+      const errorTitle = '로그인 실패';
+      const errorMessage = error.message || 'Facebook 로그인 중 오류가 발생했습니다.';
+      
+      showAlert(errorTitle, errorMessage, [{ text: '확인' }]);
     }
   };
 

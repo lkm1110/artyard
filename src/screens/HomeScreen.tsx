@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AIOrchestrationService from '../services/ai/aiOrchestrationService';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
@@ -140,12 +141,11 @@ export const HomeScreen: React.FC = () => {
                 onPress={() => setSearchModalVisible(true)}
                 activeOpacity={0.8}
               >
-                <Text style={[
-                  styles.iconOnlyIcon,
-                  { color: isDark ? colors.darkText : colors.text }
-                ]}>
-                  🔍
-                </Text>
+                <Ionicons 
+                  name="search-outline" 
+                  size={22} 
+                  color={isDark ? colors.darkText : colors.text} 
+                />
               </TouchableOpacity>
               
               {/* 필터 버튼 */}
@@ -162,12 +162,11 @@ export const HomeScreen: React.FC = () => {
                 onPress={() => setFilterModalVisible(true)}
                 activeOpacity={0.8}
               >
-                <Text style={[
-                  styles.iconOnlyIcon,
-                  { color: isDark ? colors.darkText : colors.text }
-                ]}>
-                  📊
-                </Text>
+                <Ionicons 
+                  name="options-outline" 
+                  size={22} 
+                  color={isDark ? colors.darkText : colors.text} 
+                />
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -175,12 +174,11 @@ export const HomeScreen: React.FC = () => {
                 onPress={handleNotificationPress}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.actionIcon,
-                  { color: colors.primary }
-                ]}>
-                  🔔
-                </Text>
+                <Ionicons 
+                  name="notifications-outline" 
+                  size={24} 
+                  color={colors.primary} 
+                />
               </TouchableOpacity>
             </View>
           </View>

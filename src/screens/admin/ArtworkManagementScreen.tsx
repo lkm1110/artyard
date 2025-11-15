@@ -21,6 +21,9 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../../constants/theme';
+import { SuccessModal } from '../../components/SuccessModal';
+import { ErrorModal } from '../../components/ErrorModal';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 interface Artwork {
   id: string;
@@ -51,17 +54,28 @@ export const ArtworkManagementScreen = () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('artworks')
-        .select(`
-          *,
-          author:profiles!artworks_author_id_fkey(handle)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      // 직접 fetch 사용 (SDK 우회)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
 
-      if (error) throw error;
+      const response = await fetch(
+        'https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/artworks?select=*,author:profiles!artworks_author_id_fkey(handle)&order=created_at.desc&limit=100',
+        {
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
+      if (!response.ok) {
+        throw new Error(`Failed to load artworks: ${response.status}`);
+      }
+
+      const data = await response.json();
       setArtworks(data || []);
     } catch (error: any) {
       console.error('작품 목록 로드 실패:', error);
@@ -72,35 +86,75 @@ export const ArtworkManagementScreen = () => {
   };
 
   const handleDeleteArtwork = async (artworkId: string, artworkTitle: string) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`
-    );
+    console.log('🔍 [Delete] 버튼 클릭됨:', { artworkId, artworkTitle });
     
-    if (!confirmed) {
-      console.log('❌ Deletion cancelled');
+    // 크로스 플랫폼 confirm
+    if (Platform.OS === 'web') {
+      if (!window.confirm(
+        `Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`
+      )) {
+        console.log('❌ Deletion cancelled');
+        return;
+      }
+    } else {
+      // React Native (모바일)
+      Alert.alert(
+        'Delete Artwork',
+        `Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => console.log('❌ Deletion cancelled') },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await executeDelete(artworkId, artworkTitle);
+            }
+          }
+        ]
+      );
       return;
     }
     
+    await executeDelete(artworkId, artworkTitle);
+  };
+
+  const executeDelete = async (artworkId: string, artworkTitle: string) => {
     try {
       setDeleting(artworkId);
       console.log('🗑️ Deleting artwork:', artworkId);
 
-      const { error } = await supabase
-        .from('artworks')
-        .delete()
-        .eq('id', artworkId);
+      // 직접 fetch 사용 (SDK 우회)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
 
-      if (error) throw error;
+      const response = await fetch(
+        `https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/artworks?id=eq.${artworkId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Delete failed: ${response.status} ${errorText}`);
+      }
 
       console.log('✅ Artwork deleted successfully');
       
       // admin_actions 로그 기능 제거 (CHECK constraint 문제로 비활성화)
 
-      alert('Success: Artwork deleted successfully');
+      Alert.alert('Success', 'Artwork deleted successfully');
       loadArtworks();
     } catch (error: any) {
       console.error('💥 작품 삭제 실패:', error);
-      alert('Error: ' + (error.message || 'Failed to delete artwork'));
+      Alert.alert('Error', error.message || 'Failed to delete artwork');
     } finally {
       setDeleting(null);
     }

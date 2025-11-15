@@ -55,23 +55,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           try {
             console.log('🔔 [AUTH] 인증 상태 변경:', event, session?.user?.email);
 
-            // ⚠️ SIGNED_IN 이벤트는 스킵! (새 세션이 제대로 전파되지 않음)
-            // OAuth 직후 SIGNED_IN이 발생하지만 프로필 조회가 느림 (10초 타임아웃)
-            // 대신 앱이 새로고침되면 INITIAL_SESSION이 발생하고 프로필 조회가 빠름 (1초 이내)
-            if (event === 'SIGNED_IN' && session?.user) {
-              console.log('⚠️ [SIGNED_IN] 이벤트 스킵 - 세션을 저장하고 앱 새로고침 대기');
-              console.log('💡 다음 INITIAL_SESSION 이벤트에서 프로필을 불러옵니다');
-              
-              // 세션만 저장하고 프로필 조회는 스킵
-              set({
-                session,
-                isLoading: false,
-                isAuthenticated: false, // 아직 프로필 없음
-              });
-              return; // 프로필 조회 스킵!
-            }
-            
-            if (event === 'INITIAL_SESSION' && session?.user) {
+            if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
               console.log(`🔑 [${event}] 이벤트 발생:`, session.user.email);
               console.log('👤 User ID:', session.user.id);
               console.log('📧 Email:', session.user.email);
@@ -86,32 +70,37 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 console.log(`🔍 [${event}] 세션 User ID:`, session.user.id);
                 const startTime = Date.now();
                 
-                // 프로필 조회 (타임아웃 10초)
-                const profilePromise = supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .single();
-                
-                const timeoutPromise = new Promise<{ data: any; error: any }>((_, reject) => {
-                  setTimeout(() => {
-                    const elapsed = Date.now() - startTime;
-                    reject({
-                      code: 'PROFILE_TIMEOUT',
-                      message: `Profile fetch timeout after ${elapsed}ms`,
-                      hint: 'Database is too slow or RLS policy is blocking access'
-                    });
-                  }, 10000); // 10초 타임아웃
-                });
-                
+                // 프로필 조회 (직접 fetch 사용 - SDK 우회)
                 let fetchedProfile, profileError;
                 try {
-                  const result = await Promise.race([profilePromise, timeoutPromise]);
-                  fetchedProfile = result.data;
-                  profileError = result.error;
-                } catch (timeoutError: any) {
-                  console.error(`❌ [${event}] 프로필 조회 타임아웃!`, timeoutError);
-                  profileError = timeoutError;
+                  console.log('🌐 [AUTH] 직접 fetch로 프로필 조회 시도...');
+                  const response = await fetch(
+                    `https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/profiles?id=eq.${session.user.id}&select=*`,
+                    {
+                      headers: {
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                      }
+                    }
+                  );
+                  
+                  console.log('📡 [AUTH] fetch 응답:', response.status);
+                  
+                  if (response.ok) {
+                    const data = await response.json();
+                    fetchedProfile = data[0] || null;
+                    profileError = fetchedProfile ? null : { code: 'PGRST116', message: 'No profile found' };
+                    console.log('✅ [AUTH] 직접 fetch 성공!');
+                  } else {
+                    const errorText = await response.text();
+                    console.error('❌ [AUTH] fetch 실패:', response.status, errorText);
+                    profileError = { code: 'FETCH_ERROR', message: errorText };
+                  }
+                } catch (fetchErr: any) {
+                  console.error('❌ [AUTH] fetch 예외:', fetchErr);
+                  profileError = fetchErr;
                 }
                 
                 const elapsedTime = Date.now() - startTime;
@@ -119,16 +108,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
                 // 프로필 조회 에러 로그
                 if (profileError) {
-                  if (profileError.code === 'PROFILE_TIMEOUT') {
-                    console.error('⏰ [AUTH] 프로필 조회 타임아웃 (10초)');
-                    console.error('⚠️ [AUTH] 데이터베이스가 너무 느립니다!');
-                    console.error('💡 [AUTH] 해결 방법:');
-                    console.error('   1. database/OPTIMIZE-PROFILES-RLS.sql을 Supabase에서 실행');
-                    console.error('   2. RLS 정책 확인 (profiles 테이블)');
-                    console.error('   3. 네트워크 연결 확인');
-                    console.error('📊 [AUTH] User ID:', session.user.id);
-                    console.error('📊 [AUTH] Email:', session.user.email);
-                  } else if (profileError.code === 'PGRST116') {
+                  if (profileError.code === 'PGRST116') {
                     console.log('ℹ️ [AUTH] 프로필이 없음 (새 사용자) - 생성합니다');
                   } else {
                     console.error('❌ [AUTH] 프로필 조회 에러:', profileError.code, profileError.message);
@@ -160,12 +140,39 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
                     const createStartTime = Date.now();
                     
-                    // 프로필 생성 (타임아웃 없음)
-                    const { data: createdProfile, error: createError } = await supabase
-                      .from('profiles')
-                      .insert([newProfile])
-                      .select()
-                      .single();
+                    // 프로필 생성 (직접 fetch 사용 - SDK 우회)
+                    let createdProfile, createError;
+                    try {
+                      console.log('🌐 [AUTH] 직접 fetch로 프로필 생성 시도...');
+                      const response = await fetch(
+                        `https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/profiles`,
+                        {
+                          method: 'POST',
+                          headers: {
+                            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+                            'Authorization': `Bearer ${session.access_token}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=representation'
+                          },
+                          body: JSON.stringify(newProfile)
+                        }
+                      );
+                      
+                      console.log('📡 [AUTH] fetch 응답:', response.status);
+                      
+                      if (response.ok) {
+                        const data = await response.json();
+                        createdProfile = data[0] || data;
+                        console.log('✅ [AUTH] 직접 fetch로 생성 성공!');
+                      } else {
+                        const errorText = await response.text();
+                        console.error('❌ [AUTH] fetch 실패:', response.status, errorText);
+                        createError = { code: 'FETCH_ERROR', message: errorText };
+                      }
+                    } catch (fetchErr: any) {
+                      console.error('❌ [AUTH] fetch 예외:', fetchErr);
+                      createError = fetchErr;
+                    }
                     
                     const createElapsed = Date.now() - createStartTime;
                     console.log(`⏱️ [AUTH] 프로필 생성 완료 (${createElapsed}ms)`);
@@ -174,6 +181,43 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                       console.error('❌ [AUTH] 프로필 생성 오류:', createError.code, createError.message);
                       console.error('❌ [AUTH] 생성 오류 상세:', JSON.stringify(createError));
                       console.log('생성하려던 프로필:', newProfile);
+                      
+                      // 🔄 백그라운드에서 재시도 (직접 fetch)
+                      console.log('🔄 [AUTH] 5초 후 프로필 생성 재시도...');
+                      setTimeout(async () => {
+                        try {
+                          console.log('🔄 [AUTH] 프로필 생성 재시도 중...');
+                          const retryResponse = await fetch(
+                            `https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/profiles`,
+                            {
+                              method: 'POST',
+                              headers: {
+                                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+                                'Authorization': `Bearer ${session.access_token}`,
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=representation'
+                              },
+                              body: JSON.stringify(newProfile)
+                            }
+                          );
+                          
+                          if (retryResponse.ok) {
+                            const retryData = await retryResponse.json();
+                            const retryProfile = retryData[0] || retryData;
+                            console.log('✅ [AUTH] 재시도 성공! 앱 상태 업데이트...');
+                            // authStore 상태 업데이트
+                            set({
+                              user: retryProfile,
+                              isAuthenticated: true,
+                              isLoading: false,
+                            });
+                          } else {
+                            console.error('❌ [AUTH] 재시도 실패:', retryResponse.status);
+                          }
+                        } catch (retryException) {
+                          console.error('❌ [AUTH] 재시도 예외:', retryException);
+                        }
+                      }, 5000);
                     } else if (createdProfile) {
                       profile = createdProfile;
                       console.log('✅ [AUTH] 프로필 생성 성공:', profile?.handle);
@@ -192,14 +236,54 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
               console.log('🔄 [AUTH] profile:', !!profile);
               console.log('🔄 [AUTH] session:', !!session);
               
-              // ⚠️ 중요: 프로필이 있어야 인증 완료! (프로필 없으면 앱 사용 불가)
+              // ⚠️ 프로필이 없어도 세션은 저장 (백그라운드에서 재시도 중)
+              if (!profile && session) {
+                console.warn('⚠️ [AUTH] 프로필이 없지만 세션은 저장합니다');
+                console.warn('⚠️ [AUTH] 백그라운드에서 프로필 생성/조회를 재시도합니다');
+                console.log('🔄 [AUTH] 10초 후 프로필 재조회 시도...');
+                
+                // 백그라운드에서 프로필 재조회 (직접 fetch)
+                setTimeout(async () => {
+                  try {
+                    console.log('🔄 [AUTH] 백그라운드 프로필 재조회 중...');
+                    const bgResponse = await fetch(
+                      `https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/profiles?id=eq.${session.user.id}&select=*`,
+                      {
+                        headers: {
+                          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+                          'Authorization': `Bearer ${session.access_token}`,
+                          'Content-Type': 'application/json',
+                          'Prefer': 'return=representation'
+                        }
+                      }
+                    );
+                    
+                    if (bgResponse.ok) {
+                      const bgData = await bgResponse.json();
+                      const retryProfile = bgData[0] || null;
+                      
+                      if (retryProfile) {
+                        console.log('✅ [AUTH] 백그라운드 프로필 조회 성공!', retryProfile.handle);
+                        set({
+                          user: retryProfile,
+                          isAuthenticated: true,
+                          isLoading: false,
+                        });
+                      } else {
+                        console.error('❌ [AUTH] 백그라운드 재조회에도 프로필 없음');
+                      }
+                    } else {
+                      console.error('❌ [AUTH] 백그라운드 fetch 실패:', bgResponse.status);
+                    }
+                  } catch (bgError) {
+                    console.error('❌ [AUTH] 백그라운드 재조회 실패:', bgError);
+                  }
+                }, 10000);
+              }
+              
+              // ✅ 프로필이 있으면 인증 완료, 없으면 세션만 저장
               const isAuthenticated = !!(session && profile);
               console.log('🔄 [AUTH] isAuthenticated:', isAuthenticated);
-              
-              if (!profile && session) {
-                console.error('⚠️ [AUTH] 프로필을 불러오지 못했습니다');
-                console.error('⚠️ [AUTH] 네트워크를 확인하거나 다시 시도해주세요');
-              }
               
               // Zustand set 사용
               set({
@@ -242,11 +326,35 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             set({ isLoading: true });
             
             console.log('⏳ [initialize] 프로필 조회 중...');
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+            
+            // 직접 fetch 사용 (SDK 우회)
+            let profile, profileError;
+            try {
+              console.log('🌐 [initialize] 직접 fetch로 프로필 조회...');
+              const response = await fetch(
+                `https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/profiles?id=eq.${session.user.id}&select=*`,
+                {
+                  headers: {
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                  }
+                }
+              );
+              
+              if (response.ok) {
+                const data = await response.json();
+                profile = data[0] || null;
+                console.log('✅ [initialize] 직접 fetch 성공!');
+              } else {
+                profileError = { code: 'FETCH_ERROR', message: `HTTP ${response.status}` };
+                console.error('❌ [initialize] fetch 실패:', response.status);
+              }
+            } catch (fetchErr: any) {
+              profileError = fetchErr;
+              console.error('❌ [initialize] fetch 예외:', fetchErr);
+            }
             
             if (profileError) {
               console.error('❌ [initialize] 프로필 조회 실패:', profileError);

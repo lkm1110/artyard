@@ -1227,6 +1227,9 @@ const styles = StyleSheet.create({
   cancelButton: {
     borderWidth: 1.5,
     borderColor: colors.border,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   uploadButton: {
     // backgroundColor는 동적으로 설정됨

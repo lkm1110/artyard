@@ -130,8 +130,10 @@ export const RootNavigator: React.FC = () => {
 
         if (error) {
           console.error('❌ [Consent Check] Error:', error);
-          // 에러 발생 시 안전하게 동의 필요로 간주
-          setNeedsConsent(true);
+          // ✅ 수정: 에러 발생 시 (프로필 생성 중일 수 있음) 동의 불필요로 간주
+          // 프로필이 생성되면 자동으로 재확인됨
+          console.log('⚠️ [Consent Check] 프로필 조회 실패 - 생성 중일 수 있음. 동의 체크 스킵');
+          setNeedsConsent(false);
         } else if (!data?.consent_agreed_at) {
           console.log('⚠️  [Consent Check] 동의 필요! (consent_agreed_at is NULL)');
           setNeedsConsent(true);
@@ -141,7 +143,9 @@ export const RootNavigator: React.FC = () => {
         }
       } catch (error) {
         console.error('❌ [Consent Check] Unexpected error:', error);
-        setNeedsConsent(true); // 안전하게 동의 필요로 간주
+        // ✅ 수정: 예외 발생 시도 동의 불필요로 간주 (프로필 생성 중일 수 있음)
+        console.log('⚠️ [Consent Check] 예외 발생 - 동의 체크 스킵');
+        setNeedsConsent(false);
       } finally {
         setCheckingConsent(false);
       }

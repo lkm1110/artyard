@@ -13,6 +13,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { ArtworkCard } from '../components/ArtworkCard';
@@ -22,6 +23,11 @@ import { colors, spacing, typography } from '../constants/theme';
 import { useAuthStore } from '../store/authStore';
 import { getUserArtworks, getUserProfile } from '../services/userService';
 import { Artwork, Profile, SaleStatus } from '../types';
+import { supabase } from '../services/supabase';
+import { ReportUserModal } from '../components/ReportUserModal';
+import { BlockUserModal } from '../components/BlockUserModal';
+import { SuccessModal } from '../components/SuccessModal';
+import { ErrorModal } from '../components/ErrorModal';
 
 type RouteParams = {
   UserArtworks: {
@@ -55,6 +61,13 @@ export const UserArtworksScreen: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [blockModalVisible, setBlockModalVisible] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
 
   useEffect(() => {
     loadUserData();
@@ -116,6 +129,122 @@ export const UserArtworksScreen: React.FC = () => {
     }
   };
 
+  // 🚨 사용자 신고 (App Store 심사 필수)
+  const handleReportUser = () => {
+    if (!user || !userId) {
+      setErrorMessage({
+        title: 'Notice',
+        message: 'Please log in to report',
+      });
+      setErrorModalVisible(true);
+      return;
+    }
+    setReportModalVisible(true);
+  };
+
+  const submitReport = async (reason: string, details?: string) => {
+    try {
+      console.log('🚨 User Report Submitted:', {
+        reportedUserId: userId,
+        reason,
+        details,
+        reportedBy: user?.id,
+      });
+
+      const { error: dbError } = await supabase
+        .from('reports')
+        .insert({
+          reporter_id: user?.id,
+          reported_id: userId,
+          content_type: 'user',
+          reason: details || reason,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        });
+
+      if (dbError) {
+        console.error('❌ Failed to save report:', dbError);
+        throw dbError;
+      }
+
+      console.log('✅ User report saved to database');
+      setSuccessMessage({
+        title: 'Report Submitted',
+        message: 'Thank you for your report. We will review it and take appropriate action.',
+      });
+      setSuccessModalVisible(true);
+    } catch (error) {
+      console.error('신고 제출 실패:', error);
+      setErrorMessage({
+        title: 'Error',
+        message: 'An error occurred while submitting the report.',
+      });
+      setErrorModalVisible(true);
+    }
+  };
+
+  // 🚫 사용자 차단 (App Store 심사 필수)
+  const handleBlockUser = () => {
+    if (!user || !userId) {
+      setErrorMessage({
+        title: 'Notice',
+        message: 'Please log in to block users',
+      });
+      setErrorModalVisible(true);
+      return;
+    }
+    setBlockModalVisible(true);
+  };
+
+  const executeBlock = async () => {
+    try {
+      console.log(isBlocked ? '✅ Unblocking user:' : '🚫 Blocking user:', userId);
+
+      if (isBlocked) {
+        // Unblock: 차단 해제
+        const { error } = await supabase
+          .from('user_blocks')
+          .delete()
+          .eq('blocker_id', user?.id)
+          .eq('blocked_id', userId);
+
+        if (error) throw error;
+
+        setIsBlocked(false);
+        setSuccessMessage({
+          title: 'Success',
+          message: 'User has been unblocked.',
+        });
+        setSuccessModalVisible(true);
+      } else {
+        // Block: 차단
+        const { error } = await supabase
+          .from('user_blocks')
+          .insert({
+            blocker_id: user?.id,
+            blocked_id: userId,
+            created_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+
+        setIsBlocked(true);
+        setSuccessMessage({
+          title: 'Success',
+          message: 'User has been blocked. They will no longer be able to see your content or contact you.',
+        });
+        setSuccessModalVisible(true);
+      }
+    } catch (error) {
+      console.error('차단/차단 해제 실패:', error);
+      setErrorMessage({
+        title: 'Error',
+        message: 'An error occurred. Please try again.',
+      });
+      setErrorModalVisible(true);
+    }
+  };
+
   const getSaleStatusBadge = (saleStatus: SaleStatus) => {
     const statusConfig = SALE_STATUS_FILTERS.find(f => f.key === saleStatus);
     if (!statusConfig || saleStatus === 'available') return null;
@@ -168,15 +297,35 @@ export const UserArtworksScreen: React.FC = () => {
               )}
             </View>
             
-            {/* 팔로우 버튼 (다른 사용자인 경우) */}
+            {/* 팔로우, 신고, 차단 버튼 (다른 사용자인 경우) */}
             {!isOwnProfile && (
-              <FollowButton
-                userId={userId}
-                size="medium"
-                onFollowChange={(isFollowing, stats) => {
-                  console.log('팔로우 상태 변경:', isFollowing, stats);
-                }}
-              />
+              <View style={styles.actionButtonsRow}>
+                <FollowButton
+                  userId={userId}
+                  size="medium"
+                  onFollowChange={(isFollowing, stats) => {
+                    console.log('팔로우 상태 변경:', isFollowing, stats);
+                  }}
+                />
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={handleReportUser}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="warning-outline" size={24} color="#FF6B6B" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  onPress={handleBlockUser}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name={isBlocked ? "checkmark-circle-outline" : "ban-outline"} 
+                    size={24} 
+                    color={isBlocked ? "#10B981" : "#666666"} 
+                  />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
           
@@ -335,6 +484,39 @@ export const UserArtworksScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={filteredArtworks.length === 0 ? styles.emptyContainer : styles.contentContainer}
       />
+
+      {/* Report User Modal */}
+      <ReportUserModal
+        visible={reportModalVisible}
+        userName={userProfile?.handle || userName}
+        onClose={() => setReportModalVisible(false)}
+        onSubmit={submitReport}
+      />
+
+      {/* Block User Modal */}
+      <BlockUserModal
+        visible={blockModalVisible}
+        userName={userProfile?.handle || userName}
+        isBlocked={isBlocked}
+        onClose={() => setBlockModalVisible(false)}
+        onConfirm={executeBlock}
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        title={successMessage.title}
+        message={successMessage.message}
+        onClose={() => setSuccessModalVisible(false)}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
     </Screen>
   );
 };
@@ -386,6 +568,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   userDetails: {
     flex: 1,

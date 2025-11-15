@@ -67,22 +67,23 @@ const createStorage = () => {
       async getItem(key: string) {
         try {
           return await AsyncStorage.getItem(key);
-        } catch {
+        } catch (err) {
+          console.error('❌ [AsyncStorage] getItem error:', key, err);
           return null;
         }
       },
       async setItem(key: string, value: string) {
         try {
           await AsyncStorage.setItem(key, value);
-        } catch {
-          // 실패시 무시
+        } catch (err) {
+          console.error('❌ [AsyncStorage] setItem error:', key, err);
         }
       },
       async removeItem(key: string) {
         try {
           await AsyncStorage.removeItem(key);
-        } catch {
-          // 실패시 무시
+        } catch (err) {
+          console.error('❌ [AsyncStorage] removeItem error:', key, err);
         }
       },
     };

@@ -15,6 +15,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getActiveChallenges, getChallenges } from '../services/challengeService';
 import { Challenge, getChallengeStatusLabel } from '../types/complete-system';
@@ -198,7 +199,12 @@ export const ChallengesScreen = () => {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>🏆</Text>
+            <Ionicons 
+              name="trophy-outline" 
+              size={80} 
+              color={isDark ? colors.darkTextMuted : colors.textMuted} 
+              style={styles.emptyIcon}
+            />
             <Text style={[styles.emptyTitle, { color: isDark ? colors.darkText : colors.text }]}>
               No Challenges Available
             </Text>
@@ -377,8 +383,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 60,
   },
-  emptyText: {
-    fontSize: 48,
+  emptyIcon: {
     marginBottom: 16,
   },
   emptyTitle: {

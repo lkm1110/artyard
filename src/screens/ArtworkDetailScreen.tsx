@@ -15,12 +15,13 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Share,
   Modal,
   ActivityIndicator,
   Keyboard,
+  RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AIOrchestrationService from '../services/ai/aiOrchestrationService';
 import { useColorScheme } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
@@ -37,6 +38,10 @@ import { useAuthStore } from '../store/authStore';
 import { FollowButton } from '../components/FollowButton';
 import { getAddressFromCoordinates } from '../services/locationService';
 import { CustomAlert } from '../components/CustomAlert';
+import { ReportUserModal } from '../components/ReportUserModal';
+import { SuccessModal } from '../components/SuccessModal';
+import { ErrorModal } from '../components/ErrorModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 // 한글 지명을 영문으로 번역
 const translateLocationToEnglish = (text: string | undefined): string | undefined => {
@@ -109,16 +114,45 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [enhancedLocation, setEnhancedLocation] = useState<{country?: string; city?: string} | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [reportingComment, setReportingComment] = useState<Comment | null>(null);
+  const [commentReportModalVisible, setCommentReportModalVisible] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   
-  // CustomAlert state
+  // CustomAlert state (기존)
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
   const [alertButtons, setAlertButtons] = useState<any[]>([]);
   const [deleteConfirmResolve, setDeleteConfirmResolve] = useState<((value: boolean) => void) | null>(null);
+  
+  // 커스텀 모달 state
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleteCommentConfirmVisible, setDeleteCommentConfirmVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Pull-to-Refresh 핸들러
+  const onRefresh = useCallback(async () => {
+    console.log('🔄 [Artwork Detail] Pull-to-refresh 시작...');
+    setRefreshing(true);
+    try {
+      await refetchArtwork();
+      // 댓글도 갱신
+      queryClient.refetchQueries({ queryKey: ['artworkComments', artworkId] });
+      console.log('✅ [Artwork Detail] 갱신 완료!');
+    } catch (error) {
+      console.error('❌ [Artwork Detail] 갱신 실패:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchArtwork, queryClient, artworkId]);
 
   // 키보드 이벤트 리스너 - 키보드가 올라오면 자동으로 스크롤
   useEffect(() => {
@@ -232,7 +266,11 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('✅ Detail screen: UI refreshed');
     } catch (error) {
       console.error('💥 Detail screen: Like API failed:', error);
-      Alert.alert('Error', 'Failed to update like. Please try again.');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to update like. Please try again.',
+      });
+      setErrorModalVisible(true);
     }
   }, [artwork, user, toggleLike, refetchArtwork]);
 
@@ -256,7 +294,11 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('✅ Detail screen: UI refreshed');
     } catch (error) {
       console.error('💥 Detail screen: Bookmark API failed:', error);
-      Alert.alert('Error', 'Failed to update bookmark. Please try again.');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to update bookmark. Please try again.',
+      });
+      setErrorModalVisible(true);
     }
   }, [artwork, user, toggleBookmark, refetchArtwork]);
 
@@ -312,7 +354,11 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('댓글 작성 완료');
     } catch (error) {
       console.error('댓글 작성 실패:', error);
-      Alert.alert('Error', 'Failed to post comment. Please try again.');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to post comment. Please try again.',
+      });
+      setErrorModalVisible(true);
     }
   }, [newComment, user, artworkId, createCommentMutation]);
 
@@ -345,7 +391,11 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('✅ 댓글 수정 완료');
     } catch (error) {
       console.error('💥 댓글 수정 실패:', error);
-      Alert.alert('Error', 'Failed to update comment. Please try again.');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to update comment. Please try again.',
+      });
+      setErrorModalVisible(true);
     }
   }, [editingCommentId, editCommentText, updateCommentMutation]);
 
@@ -485,11 +535,11 @@ export const ArtworkDetailScreen: React.FC = () => {
 
     if (!artwork || !user || artwork.author_id !== user.id) {
       console.log('❌ 권한 없음 - 삭제 불가');
-      if (Platform.OS === 'web') {
-        window.alert('You can only delete your own artworks.');
-      } else {
-        Alert.alert('Error', 'You can only delete your own artworks.');
-      }
+      setErrorMessage({
+        title: 'Error',
+        message: 'You can only delete your own artworks.',
+      });
+      setErrorModalVisible(true);
       return;
     }
 
@@ -583,7 +633,11 @@ export const ArtworkDetailScreen: React.FC = () => {
   // 작품 신고 (앱스토어 심의 필수!)
   const handleReportArtwork = useCallback(() => {
     if (!artwork || !user) {
-      Alert.alert('Notice', 'Please log in to report');
+      setErrorMessage({
+        title: 'Notice',
+        message: 'Please log in to report',
+      });
+      setErrorModalVisible(true);
       return;
     }
     setReportModalVisible(true);
@@ -591,29 +645,114 @@ export const ArtworkDetailScreen: React.FC = () => {
 
   const submitReport = async () => {
     if (!reportReason.trim()) {
-      Alert.alert('Notice', 'Please enter a reason for the report');
+      setErrorMessage({
+        title: 'Notice',
+        message: 'Please enter a reason for the report',
+      });
+      setErrorModalVisible(true);
       return;
     }
     
-    const category = 'user_report';
     try {
       console.log('🚨 Artwork Report Submitted:', { 
         artworkId: artwork?.id, 
-        category, 
         reason: reportReason,
         reportedBy: user?.id,
         timestamp: new Date().toISOString()
       });
       
-      // In a real app, this would send to your backend/moderation system
-      // For now, we just log and show success message for app store review
+      // ✅ Save to database (reports table)
+      const { error: dbError } = await supabase
+        .from('reports')
+        .insert({
+          reporter_id: user?.id,
+          reported_id: artwork?.author_id,
+          content_id: artwork?.id,
+          content_type: 'artwork',
+          reason: reportReason,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        });
       
+      if (dbError) {
+        console.error('❌ Failed to save report:', dbError);
+        throw dbError;
+      }
+      
+      console.log('✅ Report saved to database');
       setReportModalVisible(false);
       setReportReason('');
-      Alert.alert('Report Submitted', 'Your report has been received. We will review it and take appropriate action.');
+      setSuccessMessage({
+        title: 'Report Submitted',
+        message: 'Your report has been received. We will review it and take appropriate action.',
+      });
+      setSuccessModalVisible(true);
     } catch (error) {
       console.error('신고 제출 실패:', error);
-      Alert.alert('Error', 'An error occurred while submitting the report.');
+      setErrorMessage({
+        title: 'Error',
+        message: 'An error occurred while submitting the report.',
+      });
+      setErrorModalVisible(true);
+    }
+  };
+
+  // 🚨 댓글 신고 (App Store 심사 필수)
+  const handleReportComment = useCallback((comment: Comment) => {
+    if (!user) {
+      setErrorMessage({
+        title: 'Notice',
+        message: 'Please log in to report',
+      });
+      setErrorModalVisible(true);
+      return;
+    }
+    setReportingComment(comment);
+    setCommentReportModalVisible(true);
+  }, [user]);
+
+  const submitCommentReport = async (reason: string, details?: string) => {
+    if (!reportingComment) return;
+
+    try {
+      console.log('🚨 Comment Report Submitted:', {
+        commentId: reportingComment.id,
+        commentAuthorId: reportingComment.author_id,
+        reason,
+        details,
+        reportedBy: user?.id,
+      });
+
+      const { error: dbError } = await supabase
+        .from('reports')
+        .insert({
+          reporter_id: user?.id,
+          reported_id: reportingComment.author_id,
+          content_id: reportingComment.id,
+          content_type: 'comment',
+          reason: details || reason,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        });
+
+      if (dbError) {
+        console.error('❌ Failed to save comment report:', dbError);
+        throw dbError;
+      }
+
+      console.log('✅ Comment report saved to database');
+      setSuccessMessage({
+        title: 'Report Submitted',
+        message: 'Thank you for reporting this comment. We will review it and take appropriate action.',
+      });
+      setSuccessModalVisible(true);
+    } catch (error) {
+      console.error('댓글 신고 제출 실패:', error);
+      setErrorMessage({
+        title: 'Error',
+        message: 'An error occurred while submitting the report.',
+      });
+      setErrorModalVisible(true);
     }
   };
 
@@ -651,7 +790,11 @@ export const ArtworkDetailScreen: React.FC = () => {
       } as never);
     } catch (error) {
       console.error('채팅방 생성/찾기 실패:', error);
-      Alert.alert('Error', 'Failed to start chat. Please try again.');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to start chat. Please try again.',
+      });
+      setErrorModalVisible(true);
     }
   }, [artwork, user, navigation, createOrFindChatMutation]);
 
@@ -787,6 +930,17 @@ export const ArtworkDetailScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             )}
+            
+            {/* 다른 사용자 댓글인 경우 신고 버튼 (App Store 심사 필수!) */}
+            {user && item.author_id !== user.id && (
+              <TouchableOpacity
+                style={styles.commentActionButton}
+                onPress={() => handleReportComment(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="warning-outline" size={18} color="#FF6B6B" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         
@@ -899,6 +1053,14 @@ export const ArtworkDetailScreen: React.FC = () => {
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
         keyboardShouldPersistTaps="handled"
       >
         {/* 이미지 갤러리 */}
@@ -1092,7 +1254,7 @@ export const ArtworkDetailScreen: React.FC = () => {
                   onPress={handleReportArtwork}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.reportButtonText, { color: colors.textMuted }]}>⚠️</Text>
+                  <Ionicons name="warning-outline" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
             )}
@@ -1127,12 +1289,11 @@ export const ArtworkDetailScreen: React.FC = () => {
               onPress={handleLike}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.actionIcon,
-                { color: artwork.is_liked ? '#FF0000' : (isDark ? colors.darkTextMuted : colors.textMuted) }
-              ]}>
-                {artwork.is_liked ? '❤️' : '🤍'}
-              </Text>
+              <Ionicons 
+                name={artwork.is_liked ? "heart" : "heart-outline"} 
+                size={24} 
+                color={artwork.is_liked ? '#FF0000' : (isDark ? colors.darkTextMuted : colors.textMuted)} 
+              />
               <Text style={[
                 styles.actionLabel,
                 { color: isDark ? colors.darkText : colors.text }
@@ -1146,12 +1307,11 @@ export const ArtworkDetailScreen: React.FC = () => {
               onPress={handleBookmark}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.actionIcon,
-                { color: artwork.is_bookmarked ? '#FFD700' : (isDark ? colors.darkTextMuted : colors.textMuted) }
-              ]}>
-                {artwork.is_bookmarked ? '⭐' : '☆'}
-              </Text>
+              <Ionicons 
+                name={artwork.is_bookmarked ? "bookmark" : "bookmark-outline"} 
+                size={24} 
+                color={artwork.is_bookmarked ? '#FFD700' : (isDark ? colors.darkTextMuted : colors.textMuted)} 
+              />
               <Text style={[
                 styles.actionLabel,
                 { color: isDark ? colors.darkText : colors.text }
@@ -1165,12 +1325,11 @@ export const ArtworkDetailScreen: React.FC = () => {
               onPress={handleShare}
               activeOpacity={0.7}
             >
-              <Text style={[
-                styles.actionIcon,
-                { color: isDark ? colors.darkTextMuted : colors.textMuted }
-              ]}>
-                📤
-              </Text>
+              <Ionicons 
+                name="share-social-outline" 
+                size={24} 
+                color={isDark ? colors.darkTextMuted : colors.textMuted} 
+              />
               <Text style={[
                 styles.actionLabel,
                 { color: isDark ? colors.darkText : colors.text }
@@ -1381,6 +1540,33 @@ export const ArtworkDetailScreen: React.FC = () => {
         message={alertMessage}
         buttons={alertButtons}
         onClose={() => setAlertVisible(false)}
+      />
+
+      {/* 댓글 신고 모달 (App Store 심사 필수!) */}
+      <ReportUserModal
+        visible={commentReportModalVisible}
+        userName={reportingComment?.author?.handle}
+        onClose={() => {
+          setCommentReportModalVisible(false);
+          setReportingComment(null);
+        }}
+        onSubmit={submitCommentReport}
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        title={successMessage.title}
+        message={successMessage.message}
+        onClose={() => setSuccessModalVisible(false)}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
       />
     </Screen>
   );

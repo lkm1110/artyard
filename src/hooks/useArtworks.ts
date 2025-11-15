@@ -129,10 +129,11 @@ export const useToggleArtworkLike = () => {
     },
     
     onSettled: (isLiked, error, artworkId) => {
-      // 백그라운드에서 실제 데이터 동기화
-      queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
-      // ✅ ArtworkDetail 화면 강제 refetch (배경에 있어도 갱신)
+      // ✅ 즉시 모든 관련 쿼리 refetch (invalidate보다 확실함)
+      queryClient.refetchQueries({ queryKey: ['artworks-infinite'] });
       queryClient.refetchQueries({ queryKey: ['artworkDetail', artworkId] });
+      // 북마크 페이지도 갱신
+      queryClient.refetchQueries({ queryKey: ['bookmarks'] });
     },
   });
 };
@@ -183,10 +184,11 @@ export const useToggleArtworkBookmark = () => {
     },
     
     onSettled: (isBookmarked, error, artworkId) => {
-      // 백그라운드에서 실제 데이터 동기화
-      queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
-      // ✅ ArtworkDetail 화면 강제 refetch (배경에 있어도 갱신)
+      // ✅ 즉시 모든 관련 쿼리 refetch (invalidate보다 확실함)
+      queryClient.refetchQueries({ queryKey: ['artworks-infinite'] });
       queryClient.refetchQueries({ queryKey: ['artworkDetail', artworkId] });
+      // 북마크 페이지도 갱신
+      queryClient.refetchQueries({ queryKey: ['bookmarks'] });
     },
   });
 };
@@ -253,15 +255,17 @@ export const useDeleteArtwork = () => {
   return useMutation({
     mutationFn: deleteArtwork,
     onSuccess: (_, artworkId) => {
-      // 관련 쿼리들 무효화
-      queryClient.invalidateQueries({ queryKey: ['artworks'] });
-      queryClient.invalidateQueries({ queryKey: ['artwork', artworkId] });
-      queryClient.invalidateQueries({ queryKey: ['userArtworks'] });
-      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
-      console.log('작품 삭제 성공:', artworkId);
+      // ✅ 즉시 모든 관련 쿼리 refetch (invalidate보다 확실함)
+      queryClient.refetchQueries({ queryKey: ['artworks'] });
+      queryClient.refetchQueries({ queryKey: ['artworks-infinite'] }); // 메인 피드
+      queryClient.refetchQueries({ queryKey: ['artwork', artworkId] });
+      queryClient.refetchQueries({ queryKey: ['userArtworks'] }); // 프로필 작품 목록
+      queryClient.refetchQueries({ queryKey: ['bookmarks'] }); // 북마크 목록
+      console.log('✅ 작품 삭제 성공:', artworkId);
+      console.log('✅ 모든 화면 갱신 완료');
     },
     onError: (error) => {
-      console.error('작품 삭제 오류:', error);
+      console.error('❌ 작품 삭제 오류:', error);
     },
   });
 };

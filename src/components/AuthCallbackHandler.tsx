@@ -144,19 +144,39 @@ export const AuthCallbackHandler: React.FC = () => {
                     debugLog('❌ 네트워크 테스트 실패: ' + netErr.message, 'error');
                   }
                   
-                  // 타임아웃이 있는 토큰 교환 시도
+                  // 타임아웃이 있는 토큰 교환 시도 (60초 - 느린 네트워크 고려)
                   const exchangePromise = supabase.auth.exchangeCodeForSession(code);
                   const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('토큰 교환 타임아웃 (15초)')), 15000)
+                    setTimeout(() => reject(new Error('Token exchange timeout (60s). Network may be slow.')), 60000)
                   );
                   
                   let exchangeResult;
                   try {
                     exchangeResult = await Promise.race([exchangePromise, timeoutPromise]) as any;
                   } catch (networkError: any) {
-                    debugLog('❌ 네트워크 호출 자체 실패: ' + networkError.message, 'error');
+                    debugLog('❌ 타임아웃 발생: ' + networkError.message, 'error');
+                    debugLog('🔄 백그라운드에서 세션 확인 중...', 'warning');
+                    
+                    // 🔄 백그라운드에서 세션 확인 재시도 (서버에 세션이 생성되었을 수 있음)
+                    setTimeout(async () => {
+                      try {
+                        debugLog('🔍 백그라운드 세션 확인 중...', 'info');
+                        const { data: { session: retrySession } } = await supabase.auth.getSession();
+                        
+                        if (retrySession) {
+                          debugLog('✅ 백그라운드 세션 발견! 로그인 처리 중...', 'success');
+                          await initialize();
+                          debugLog('🎉 백그라운드 로그인 성공!', 'success');
+                        } else {
+                          debugLog('❌ 백그라운드에서도 세션을 찾을 수 없습니다.', 'error');
+                        }
+                      } catch (retryError: any) {
+                        debugLog('❌ 백그라운드 세션 확인 실패: ' + retryError.message, 'error');
+                      }
+                    }, 3000);
+                    
                     console.error('Network call failed:', networkError);
-                    alert('네트워크 연결 실패: ' + networkError.message);
+                    alert('Login timeout. Please wait a moment - checking your login status in the background...');
                     return;
                   }
                   

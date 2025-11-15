@@ -351,6 +351,7 @@ export const AdminDashboardScreen = () => {
       
       <ScrollView
         style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

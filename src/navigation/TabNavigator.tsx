@@ -6,6 +6,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useColorScheme, Text, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/theme';
 
 // 스크린 import
@@ -13,9 +14,6 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { MessagesScreen } from '../screens/MessagesScreen';
 import { ChallengesScreen } from '../screens/ChallengesScreen';
-
-// TODO: 아이콘 라이브러리 설치 후 아이콘 추가
-// import { Home, User, Plus, MessageCircle, Search } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 
@@ -45,11 +43,13 @@ export const TabNavigator: React.FC = () => {
         component={HomeScreen}
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🏠</Text>,
-          // TODO: 아이콘 추가
-          // tabBarIcon: ({ color, size }) => (
-          //   <Home color={color} size={size} />
-          // ),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "home" : "home-outline"} 
+              size={size} 
+              color={color} 
+            />
+          ),
         }}
       />
       
@@ -58,11 +58,13 @@ export const TabNavigator: React.FC = () => {
         component={HomeScreen}
         options={{
           title: 'Upload',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>➕</Text>,
-          // TODO: 아이콘 추가
-          // tabBarIcon: ({ color, size }) => (
-          //   <Plus color={color} size={size} />
-          // ),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons 
+              name="add-circle" 
+              size={size + 8} 
+              color={color} 
+            />
+          ),
         }}
         listeners={{
           tabPress: (e) => {
@@ -79,7 +81,13 @@ export const TabNavigator: React.FC = () => {
         component={ChallengesScreen}
         options={{
           title: 'Challenges',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>🏆</Text>,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "trophy" : "trophy-outline"} 
+              size={size} 
+              color={color} 
+            />
+          ),
         }}
       />
       
@@ -88,7 +96,13 @@ export const TabNavigator: React.FC = () => {
         component={MessagesScreen}
         options={{
           title: 'Messages',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>💬</Text>,
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "chatbubbles" : "chatbubbles-outline"} 
+              size={size} 
+              color={color} 
+            />
+          ),
         }}
       />
       
@@ -97,11 +111,13 @@ export const TabNavigator: React.FC = () => {
         component={ProfileScreen}
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 24 }}>👤</Text>,
-          // TODO: 아이콘 추가
-          // tabBarIcon: ({ color, size }) => (
-          //   <User color={color} size={size} />
-          // ),
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "person" : "person-outline"} 
+              size={size} 
+              color={color} 
+            />
+          ),
         }}
       />
     </Tab.Navigator>

@@ -100,7 +100,10 @@ export const ArtistDashboardScreen = () => {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={isDark ? colors.darkBg : colors.bg}
       />
-      <ScrollView style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
+      <ScrollView 
+        style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         {/* Header */}
         <View style={[
           styles.headerContainer,

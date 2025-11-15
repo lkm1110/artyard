@@ -377,9 +377,9 @@ export const ChatScreen: React.FC = () => {
       await deleteMessage(messageId, 'Deleted by user');
       
       // 채팅 메시지 목록 강제 새로고침
-      queryClient.invalidateQueries({ queryKey: ['chatMessages', chatId] });
-      queryClient.invalidateQueries({ queryKey: ['chats'] });
-      console.log('✅ Message deleted, cache invalidated');
+      await queryClient.refetchQueries({ queryKey: ['chatMessages', chatId] });
+      await queryClient.refetchQueries({ queryKey: ['chats'] });
+      console.log('✅ Message deleted, UI refreshed');
     } catch (error: any) {
       setAlertTitle('Error');
       setAlertMessage(error.message || 'Failed to delete message.');

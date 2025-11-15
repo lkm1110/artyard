@@ -3,10 +3,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { colors, spacing, borderRadius } from '../../constants/theme';
+import { ErrorModal } from '../../components/ErrorModal';
 
 interface Transaction {
   id: string;
@@ -20,6 +21,8 @@ export const OrderManagementScreen = () => {
   const isDark = useColorScheme() === 'dark';
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Transaction[]>([]);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
 
   useEffect(() => {
     loadOrders();
@@ -36,7 +39,11 @@ export const OrderManagementScreen = () => {
       if (error) throw error;
       setOrders(data || []);
     } catch (error: any) {
-      Alert.alert('Error', 'Failed to load orders');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to load orders',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
@@ -73,6 +80,14 @@ export const OrderManagementScreen = () => {
           contentContainerStyle={styles.list}
         />
       )}
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
     </View>
   );
 };

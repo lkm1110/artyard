@@ -136,6 +136,29 @@ export const ConsentScreen: React.FC<ConsentScreenProps> = ({ onComplete }) => {
         backgroundColor={isDark ? colors.darkBackground : colors.background}
       />
 
+      {/* 뒤로가기 버튼 */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => {
+          Alert.alert(
+            '로그아웃',
+            '동의하지 않으면 로그아웃됩니다.\n계속하시겠습니까?',
+            [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '로그아웃',
+                style: 'destructive',
+                onPress: async () => {
+                  await supabase.auth.signOut();
+                }
+              }
+            ]
+          );
+        }}
+      >
+        <Ionicons name="arrow-back" size={24} color={isDark ? colors.darkText : colors.text} />
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>
           Welcome to ArtYard! 🎨
@@ -345,6 +368,13 @@ export const ConsentScreen: React.FC<ConsentScreenProps> = ({ onComplete }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    left: spacing.md,
+    zIndex: 10,
+    padding: spacing.sm,
   },
   header: {
     paddingHorizontal: spacing.lg,
