@@ -36,6 +36,13 @@ export const getArtworks = async (
       console.log('⚠️ getUser() 실패, authStore 사용:', currentUserId);
     }
 
+    // 챌린지 작품 ID 목록 가져오기 (메인 페이지에서 제외)
+    const { data: challengeEntries } = await supabase
+      .from('challenge_entries')
+      .select('artwork_id');
+    
+    const challengeArtworkIds = challengeEntries?.map(entry => entry.artwork_id).filter(Boolean) || [];
+
     let query = supabase
       .from('artworks')
       .select(`
@@ -44,6 +51,12 @@ export const getArtworks = async (
       `, { count: 'exact' })
       .eq('is_hidden', false)
       .order('created_at', { ascending: false });
+    
+    // 챌린지 작품 제외 (올바른 Supabase 문법 사용)
+    if (challengeArtworkIds.length > 0) {
+      // PostgREST 문법: not.in.(value1,value2,...)
+      query = query.not('id', 'in', `(${challengeArtworkIds.join(',')})`);
+    }
 
     // 필터 적용
     if (filter?.material) {

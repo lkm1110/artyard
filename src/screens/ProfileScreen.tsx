@@ -10,6 +10,8 @@ import {
   useColorScheme,
   TouchableOpacity,
   ScrollView,
+  Linking,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -46,10 +48,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Viewing another user's profile
   const viewingUserId = route?.params?.userId;
   const isOwnProfile = !viewingUserId || viewingUserId === user?.id;
+  
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Simulate refresh
+    setTimeout(() => setRefreshing(false), 1000);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -269,6 +278,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
         style={styles.content}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
         {user ? (
           <View style={styles.profileInfo}>
@@ -377,6 +393,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
               />
               
               <Button
+                title="My Likes"
+                onPress={() => navigation.navigate('LikedArtworks')}
+                variant="outline"
+                style={styles.button}
+              />
+              
+              <Button
                 title="My Artworks"
                 onPress={() => navigation.navigate('MyArtworks')}
                 variant="outline"
@@ -420,6 +443,146 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
                   style={styles.button}
                 />
               )}
+              
+              {/* 🔒 Apple 가이드라인 1.2 필수: 고객 지원 및 정책 */}
+              <View style={styles.sectionDivider} />
+              <Text style={[styles.sectionTitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                Support & Policies
+              </Text>
+              
+              <Button
+                title="Contact Support"
+                onPress={async () => {
+                  const email = 'support@artyard.app';
+                  const subject = 'Support Request - Artyard App';
+                  const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+                  
+                  try {
+                    const supported = await Linking.canOpenURL(mailtoUrl);
+                    if (supported) {
+                      await Linking.openURL(mailtoUrl);
+                    } else {
+                      setSuccessMessage({
+                        title: 'Contact Support',
+                        message: `Email: ${email}\n\nWe typically respond within 24 hours.`,
+                      });
+                      setSuccessModalVisible(true);
+                    }
+                  } catch (error) {
+                    setSuccessMessage({
+                      title: 'Contact Support',
+                      message: `Email: ${email}\n\nWe typically respond within 24 hours.`,
+                    });
+                    setSuccessModalVisible(true);
+                  }
+                }}
+                variant="outline"
+                icon={<Ionicons name="mail-outline" size={20} color={colors.primary} />}
+                style={styles.button}
+              />
+              
+              <Button
+                title="Community Guidelines"
+                onPress={() => {
+                  setSuccessMessage({
+                    title: 'Community Guidelines',
+                    message: 
+                      '• Be respectful and kind\n' +
+                      '• No hate speech or harassment\n' +
+                      '• No spam or misleading content\n' +
+                      '• No explicit or inappropriate content\n' +
+                      '• Respect intellectual property rights\n' +
+                      '\n' +
+                      'Violations may result in content removal or account suspension.\n' +
+                      '\n' +
+                      'Contact: support@artyard.app',
+                  });
+                  setSuccessModalVisible(true);
+                }}
+                variant="outline"
+                icon={<Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />}
+                style={styles.button}
+              />
+              
+              <Button
+                title="Privacy Policy"
+                onPress={async () => {
+                  const privacyUrl = 'https://lkm1110.github.io/artyard/privacy-policy.html';
+                  try {
+                    const supported = await Linking.canOpenURL(privacyUrl);
+                    if (supported) {
+                      await Linking.openURL(privacyUrl);
+                    } else {
+                      setSuccessMessage({
+                        title: 'Privacy Policy',
+                        message: 
+                          'Please visit our website:\n\n' +
+                          'https://lkm1110.github.io/artyard/privacy-policy.html\n\n' +
+                          'Or contact us:\n' +
+                          'support@artyard.app',
+                      });
+                      setSuccessModalVisible(true);
+                    }
+                  } catch (error) {
+                    setSuccessMessage({
+                      title: 'Privacy Policy',
+                      message: 
+                        'Please visit our website:\n\n' +
+                        'https://lkm1110.github.io/artyard/privacy-policy.html\n\n' +
+                        'Or contact us:\n' +
+                        'support@artyard.app',
+                    });
+                    setSuccessModalVisible(true);
+                  }
+                }}
+                variant="outline"
+                icon={<Ionicons name="document-text-outline" size={20} color={colors.primary} />}
+                style={styles.button}
+              />
+              
+              <Button
+                title="Terms of Service"
+                onPress={async () => {
+                  const termsUrl = 'https://lkm1110.github.io/artyard/terms-of-service.html';
+                  try {
+                    const supported = await Linking.canOpenURL(termsUrl);
+                    if (supported) {
+                      await Linking.openURL(termsUrl);
+                    } else {
+                      setSuccessMessage({
+                        title: 'Terms of Service',
+                        message: 
+                          'Please visit our website:\n\n' +
+                          'https://lkm1110.github.io/artyard/terms-of-service.html\n\n' +
+                          'Key points:\n' +
+                          '• Follow Community Guidelines\n' +
+                          '• Respect other users\n' +
+                          '• Fair use of the platform\n\n' +
+                          'Contact: support@artyard.app',
+                      });
+                      setSuccessModalVisible(true);
+                    }
+                  } catch (error) {
+                    setSuccessMessage({
+                      title: 'Terms of Service',
+                      message: 
+                        'Please visit our website:\n\n' +
+                        'https://lkm1110.github.io/artyard/terms-of-service.html\n\n' +
+                        'Key points:\n' +
+                        '• Follow Community Guidelines\n' +
+                        '• Respect other users\n' +
+                        '• Fair use of the platform\n\n' +
+                        'Contact: support@artyard.app',
+                    });
+                    setSuccessModalVisible(true);
+                  }
+                }}
+                variant="outline"
+                icon={<Ionicons name="reader-outline" size={20} color={colors.primary} />}
+                style={styles.button}
+              />
+              
+              <View style={styles.sectionDivider} />
               
               <Button
                 title="Sign Out"
@@ -583,6 +746,20 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    marginVertical: spacing.lg,
+    width: '100%',
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.md,
+    marginTop: spacing.xs,
   },
   signOutButton: {
     marginTop: spacing.lg,

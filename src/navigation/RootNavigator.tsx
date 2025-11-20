@@ -22,6 +22,7 @@ import { ProfileEditScreen } from '../screens/ProfileEditScreen';
 import { ArtworkUploadScreen } from '../screens/ArtworkUploadScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { BookmarksScreen } from '../screens/BookmarksScreen';
+import { LikedArtworksScreen } from '../screens/LikedArtworksScreen';
 import { MyArtworksScreen } from '../screens/MyArtworksScreen';
 import { UserArtworksScreen } from '../screens/UserArtworksScreen';
 import { NotificationsScreen } from '../screens/NotificationsScreen';
@@ -30,6 +31,8 @@ import { TwoCheckoutPaymentScreen } from '../screens/TwoCheckoutPaymentScreen';
 import { AddressFormScreen } from '../screens/AddressFormScreen';
 import { ChallengesScreen } from '../screens/ChallengesScreen';
 import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
+import { AuctionsScreen } from '../screens/AuctionsScreen';
+import { AuctionDetailScreen } from '../screens/AuctionDetailScreen';
 import { ArtistDashboardScreen } from '../screens/ArtistDashboardScreen';
 // OAuth 콜백은 nativeOAuth.ts의 AuthSession이 처리하므로 AuthCallbackHandler 비활성화
 // import { AuthCallbackHandlerSimple as AuthCallbackHandler } from '../components/AuthCallbackHandler.simple';
@@ -41,6 +44,7 @@ import { ArtworkManagementScreen } from '../screens/admin/ArtworkManagementScree
 import { UserManagementScreen } from '../screens/admin/UserManagementScreen';
 import { OrderManagementScreen } from '../screens/admin/OrderManagementScreen';
 import { ChallengeManagementScreen } from '../screens/admin/ChallengeManagementScreen';
+import { AuctionManagementScreen } from '../screens/admin/AuctionManagementScreen';
 import { AdminManagementScreen } from '../screens/admin/AdminManagementScreen';
 
 // User screens
@@ -298,6 +302,13 @@ export const RootNavigator: React.FC = () => {
               }} 
             />
             <Stack.Screen 
+              name="LikedArtworks" 
+              component={LikedArtworksScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
               name="MyArtworks" 
               component={MyArtworksScreen}
               options={{ 
@@ -357,6 +368,20 @@ export const RootNavigator: React.FC = () => {
               }} 
             />
             <Stack.Screen 
+              name="Auctions" 
+              component={AuctionsScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="AuctionDetail" 
+              component={AuctionDetailScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
               name="ArtistDashboard" 
               component={ArtistDashboardScreen}
               options={{ 
@@ -403,6 +428,13 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen 
               name="ChallengeManagement" 
               component={ChallengeManagementScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="AuctionManagement" 
+              component={AuctionManagementScreen}
               options={{ 
                 animation: 'slide_from_right'
               }} 
