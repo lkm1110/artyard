@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
@@ -284,13 +285,29 @@ export const UserArtworksScreen: React.FC = () => {
       {/* 사용자 정보 */}
       {userProfile && (
         <View style={styles.userInfo}>
+          {/* 프로필 사진 */}
+          <View style={styles.profileAvatarContainer}>
+            {userProfile.avatar_url ? (
+              <Image
+                source={{ uri: userProfile.avatar_url }}
+                style={styles.profileAvatar}
+              />
+            ) : (
+              <View style={[styles.profileAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={styles.profileAvatarText}>
+                  {userProfile.handle?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              </View>
+            )}
+          </View>
+          
           <View style={styles.userHeader}>
             <View style={styles.userDetails}>
               <Text style={[
                 styles.userName,
                 { color: isDark ? colors.darkText : colors.text }
               ]}>
-                {userProfile.handle}
+                @{userProfile.handle}
               </Text>
               {userProfile.is_verified_school && (
                 <Text style={styles.verifiedIcon}> ✓</Text>
@@ -562,12 +579,29 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     marginBottom: spacing.xl,
+    alignItems: 'center',
+  },
+  profileAvatarContainer: {
+    marginBottom: spacing.md,
+  },
+  profileAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileAvatarText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.white,
   },
   userHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.sm,
+    width: '100%',
   },
   actionButtonsRow: {
     flexDirection: 'row',

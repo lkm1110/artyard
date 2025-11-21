@@ -259,14 +259,21 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
             onPress={onUserPress}
             activeOpacity={0.7}
           >
-            <View style={[
-              styles.authorAvatar,
-              { backgroundColor: colors.primary }
-            ]}>
-              <Text style={styles.authorAvatarText}>
-                {artwork.author?.handle?.[0]?.toUpperCase() || 'U'}
-              </Text>
-            </View>
+            {artwork.author?.avatar_url ? (
+              <Image
+                source={{ uri: artwork.author.avatar_url }}
+                style={styles.authorAvatar}
+              />
+            ) : (
+              <View style={[
+                styles.authorAvatar,
+                { backgroundColor: colors.primary }
+              ]}>
+                <Text style={styles.authorAvatarText}>
+                  {artwork.author?.handle?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              </View>
+            )}
             <View style={styles.authorText}>
               <Text style={[
                 styles.authorName,
