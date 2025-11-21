@@ -280,12 +280,12 @@ export const ChallengesScreen = () => {
         
         <View style={styles.challengeStats}>
           <View style={styles.stat}>
-            <Text style={styles.statLabel}>Participants</Text>
-            <Text style={styles.statValue}>{item.participants_count}</Text>
-          </View>
-          <View style={styles.stat}>
             <Text style={styles.statLabel}>Entries</Text>
             <Text style={styles.statValue}>{item.entries_count}</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Votes</Text>
+            <Text style={styles.statValue}>{(item as any).total_votes || 0}</Text>
           </View>
           {!isActive && (
             <View style={styles.stat}>

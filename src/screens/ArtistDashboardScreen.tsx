@@ -141,7 +141,7 @@ export const ArtistDashboardScreen = () => {
 
     const { data, error } = await supabase
       .from('artworks')
-      .select('id, title, images, likes_count, views_count, price')
+      .select('id, title, images, likes_count, price')
       .eq('author_id', user.id)
       .order('likes_count', { ascending: false })
       .limit(5);
@@ -153,7 +153,7 @@ export const ArtistDashboardScreen = () => {
       title: art.title,
       image_url: art.images && art.images.length > 0 ? art.images[0] : '',
       likes: art.likes_count || 0,
-      views: art.views_count || 0,
+      views: 0, // views_count 추후 구현 예정
       price: art.price,
     }));
   };

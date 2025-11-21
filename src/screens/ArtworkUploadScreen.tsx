@@ -774,9 +774,9 @@ export const ArtworkUploadScreen: React.FC = () => {
                   placeholder="Width"
                   placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
                   value={formData.sizeWidth}
-                  onChangeText={(text) => updateField('sizeWidth', text.replace(/[^0-9]/g, ''))}
-                  keyboardType="numeric"
-                  maxLength={4}
+                  onChangeText={(text) => updateField('sizeWidth', text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+                  keyboardType="decimal-pad"
+                  maxLength={6}
                 />
                 <Text style={[styles.sizeMultiply, { color: isDark ? colors.darkText : colors.text }]}>×</Text>
                 <TextInput
@@ -791,9 +791,9 @@ export const ArtworkUploadScreen: React.FC = () => {
                   placeholder="Height"
                   placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
                   value={formData.sizeHeight}
-                  onChangeText={(text) => updateField('sizeHeight', text.replace(/[^0-9]/g, ''))}
-                  keyboardType="numeric"
-                  maxLength={4}
+                  onChangeText={(text) => updateField('sizeHeight', text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+                  keyboardType="decimal-pad"
+                  maxLength={6}
                 />
                 <Text style={[styles.sizeUnit, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>cm</Text>
               </View>

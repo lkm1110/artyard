@@ -33,22 +33,21 @@ export const getChallenges = async (
     
     if (error) throw error;
     
-    // 각 챌린지에 대한 실제 entries와 participants 수 계산
+    // 각 챌린지에 대한 실제 entries와 votes 수 계산
     const challengesWithCounts = await Promise.all(
       (data || []).map(async (challenge) => {
         const { data: entries } = await supabase
           .from('challenge_entries')
-          .select('id, author_id')
+          .select('id, votes_count')
           .eq('challenge_id', challenge.id);
         
         const entriesCount = entries?.length || 0;
-        const uniqueAuthors = new Set(entries?.map(e => e.author_id) || []);
-        const participantsCount = uniqueAuthors.size;
+        const totalVotes = entries?.reduce((sum, e) => sum + (e.votes_count || 0), 0) || 0;
         
         return {
           ...challenge,
           entries_count: entriesCount,
-          participants_count: participantsCount,
+          total_votes: totalVotes,
         };
       })
     );
@@ -81,22 +80,21 @@ export const getActiveChallenges = async (): Promise<Challenge[]> => {
     
     if (error) throw error;
     
-    // 각 챌린지에 대한 실제 entries와 participants 수 계산
+    // 각 챌린지에 대한 실제 entries와 votes 수 계산
     const challengesWithCounts = await Promise.all(
       (data || []).map(async (challenge) => {
         const { data: entries } = await supabase
           .from('challenge_entries')
-          .select('id, author_id')
+          .select('id, votes_count')
           .eq('challenge_id', challenge.id);
         
         const entriesCount = entries?.length || 0;
-        const uniqueAuthors = new Set(entries?.map(e => e.author_id) || []);
-        const participantsCount = uniqueAuthors.size;
+        const totalVotes = entries?.reduce((sum, e) => sum + (e.votes_count || 0), 0) || 0;
         
         return {
           ...challenge,
           entries_count: entriesCount,
-          participants_count: participantsCount,
+          total_votes: totalVotes,
         };
       })
     );

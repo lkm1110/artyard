@@ -122,16 +122,15 @@ export const ChallengeDetailScreen = () => {
       if (entriesError) throw entriesError;
       setEntries(entriesData || []);
       
-      // 실제 entries와 participants 수 계산
+      // 실제 entries와 votes 수 계산
       const actualEntriesCount = entriesData?.length || 0;
-      const uniqueAuthors = new Set(entriesData?.map(e => e.author_id) || []);
-      const actualParticipantsCount = uniqueAuthors.size;
+      const totalVotes = entriesData?.reduce((sum, entry) => sum + (entry.votes_count || 0), 0) || 0;
       
       // 챌린지 데이터에 실제 카운트 반영
       setChallenge({
         ...challengeData,
         entries_count: actualEntriesCount,
-        participants_count: actualParticipantsCount,
+        total_votes: totalVotes,
       });
       
       // 3. 내 투표 확인
@@ -370,28 +369,30 @@ export const ChallengeDetailScreen = () => {
             {challenge?.description}
           </Text>
           
-          <View style={styles.stats}>
-            <View style={styles.stat}>
-              <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
-                {challenge?.entries_count || 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Entries
-              </Text>
+          <View style={styles.statsContainer}>
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
+                <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
+                  {challenge?.entries_count || 0}
+                </Text>
+                <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                  Entries
+                </Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
+                  {(challenge as any)?.total_votes || 0}
+                </Text>
+                <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                  Votes
+                </Text>
+              </View>
             </View>
-            <View style={styles.stat}>
-              <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
-                {challenge?.participants_count || 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Participants
-              </Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={[styles.statValue, { color: getStatusColor(challenge?.status || 'upcoming') }]}>
+            <View style={styles.timeLeftContainer}>
+              <Text style={[styles.timeLeftValue, { color: getStatusColor(challenge?.status || 'upcoming') }]}>
                 {getTimeRemaining()}
               </Text>
-              <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+              <Text style={[styles.timeLeftLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
                 Time Left
               </Text>
             </View>
@@ -780,25 +781,42 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: spacing.md,
   },
-  stats: {
-    flexDirection: 'row',
-    gap: spacing.md,
+  statsContainer: {
     marginBottom: spacing.md,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   stat: {
     flex: 1,
     alignItems: 'center',
-    minWidth: 0,
   },
   statValue: {
     ...typography.h3,
     fontWeight: 'bold',
     textAlign: 'center',
-    flexWrap: 'nowrap',
   },
   statLabel: {
     ...typography.caption,
     textAlign: 'center',
+  },
+  timeLeftContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  timeLeftValue: {
+    ...typography.body,
+    fontWeight: '600',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  timeLeftLabel: {
+    ...typography.caption,
+    textAlign: 'center',
+    fontSize: 11,
+    marginTop: 2,
   },
   submitButton: {
     flexDirection: 'row',
