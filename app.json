@@ -17,7 +17,6 @@
       "**/*"
     ],
     "notification": {
-      "icon": "./assets/icon.png",
       "color": "#E91E63",
       "androidMode": "default",
       "androidCollapsedTitle": "{{unread_count}} new notifications"
@@ -42,11 +41,11 @@
             ]
           }
         ],
-          "NSCameraUsageDescription": "Take photos of your artwork to share with the ArtYard community.",
-          "NSPhotoLibraryUsageDescription": "Select images from your photo library to upload your artwork.",
-          "NSMicrophoneUsageDescription": "Record audio for your artwork presentations.",
-          "NSLocationWhenInUseUsageDescription": "Add location information to your artworks to show where they were created.",
-          "NSLocationAlwaysAndWhenInUseUsageDescription": "Add location information to your artworks to show where they were created.",
+          "NSCameraUsageDescription": "ArtYard needs camera access to take photos of your artwork. This permission is only used when you choose to capture artwork photos.",
+          "NSPhotoLibraryUsageDescription": "ArtYard needs photo library access to let you select artwork images to upload. This permission is only used when you choose to upload artwork.",
+          "NSPhotoLibraryAddUsageDescription": "ArtYard needs permission to save images to your photo library when you download artworks.",
+          "NSMicrophoneUsageDescription": "ArtYard may need microphone access for future video features.",
+          "NSLocationWhenInUseUsageDescription": "ArtYard needs location access to tag where your artwork was created. This is completely optional and only used when you choose to add location to your artwork.",
           "LSApplicationQueriesSchemes": [
             "https",
             "http"
@@ -133,7 +132,6 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
           "color": "#E91E63",
           "sounds": [],
           "mode": "production"
