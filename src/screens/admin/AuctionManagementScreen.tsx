@@ -117,13 +117,13 @@ export const AuctionManagementScreen = () => {
   const loadWinners = async () => {
     try {
       // 경매에 추가되지 않은 Top 3 작품 조회 (1, 2, 3등)
-      // 종료된 챌린지만 포함 (voting_end_date가 과거인 것)
+      // 종료된 챌린지만 포함 (end_date가 과거인 것)
       const { data, error } = await supabase
         .from('challenge_entries')
         .select(`
           id,
           challenge_id,
-          challenges:challenge_id (title, voting_end_date),
+          challenges:challenge_id (title, end_date),
           artwork_id,
           artworks:artwork_id (title),
           author_id,
@@ -139,12 +139,12 @@ export const AuctionManagementScreen = () => {
 
       if (error) throw error;
 
-      // 종료된 챌린지만 필터링 (voting_end_date < now)
+      // 종료된 챌린지만 필터링 (end_date < now)
       const now = new Date();
       const endedChallenges = data?.filter(entry => {
-        const votingEndDate = (entry.challenges as any)?.voting_end_date;
-        if (!votingEndDate) return false;
-        return new Date(votingEndDate) < now;
+        const endDate = (entry.challenges as any)?.end_date;
+        if (!endDate) return false;
+        return new Date(endDate) < now;
       }) || [];
 
       // 이미 경매에 추가된 작품 확인
