@@ -23,7 +23,7 @@ export const getChallenges = async (
         *,
         creator:profiles!challenges_created_by_fkey(*)
       `)
-      .order('end_date', { ascending: false });
+      .order('end_date', { ascending: false});
     
     if (status) {
       query = query.eq('status', status);
@@ -32,7 +32,28 @@ export const getChallenges = async (
     const { data, error } = await query;
     
     if (error) throw error;
-    return data || [];
+    
+    // 각 챌린지에 대한 실제 entries와 participants 수 계산
+    const challengesWithCounts = await Promise.all(
+      (data || []).map(async (challenge) => {
+        const { data: entries } = await supabase
+          .from('challenge_entries')
+          .select('id, author_id')
+          .eq('challenge_id', challenge.id);
+        
+        const entriesCount = entries?.length || 0;
+        const uniqueAuthors = new Set(entries?.map(e => e.author_id) || []);
+        const participantsCount = uniqueAuthors.size;
+        
+        return {
+          ...challenge,
+          entries_count: entriesCount,
+          participants_count: participantsCount,
+        };
+      })
+    );
+    
+    return challengesWithCounts;
     
   } catch (error: any) {
     console.error('Challenge 조회 오류:', error);
@@ -59,7 +80,28 @@ export const getActiveChallenges = async (): Promise<Challenge[]> => {
       .order('end_date', { ascending: true });
     
     if (error) throw error;
-    return data || [];
+    
+    // 각 챌린지에 대한 실제 entries와 participants 수 계산
+    const challengesWithCounts = await Promise.all(
+      (data || []).map(async (challenge) => {
+        const { data: entries } = await supabase
+          .from('challenge_entries')
+          .select('id, author_id')
+          .eq('challenge_id', challenge.id);
+        
+        const entriesCount = entries?.length || 0;
+        const uniqueAuthors = new Set(entries?.map(e => e.author_id) || []);
+        const participantsCount = uniqueAuthors.size;
+        
+        return {
+          ...challenge,
+          entries_count: entriesCount,
+          participants_count: participantsCount,
+        };
+      })
+    );
+    
+    return challengesWithCounts;
     
   } catch (error: any) {
     console.error('활성 Challenge 조회 오류:', error);

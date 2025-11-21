@@ -96,7 +96,6 @@ export const ChallengeDetailScreen = () => {
         .single();
       
       if (challengeError) throw challengeError;
-      setChallenge(challengeData);
       
       // 2. 참가 작품 (Top 10 우선, 나머지는 투표수 순)
       const { data: entriesData, error: entriesError } = await supabase
@@ -112,6 +111,18 @@ export const ChallengeDetailScreen = () => {
       
       if (entriesError) throw entriesError;
       setEntries(entriesData || []);
+      
+      // 실제 entries와 participants 수 계산
+      const actualEntriesCount = entriesData?.length || 0;
+      const uniqueAuthors = new Set(entriesData?.map(e => e.author_id) || []);
+      const actualParticipantsCount = uniqueAuthors.size;
+      
+      // 챌린지 데이터에 실제 카운트 반영
+      setChallenge({
+        ...challengeData,
+        entries_count: actualEntriesCount,
+        participants_count: actualParticipantsCount,
+      });
       
       // 3. 내 투표 확인
       if (user) {
