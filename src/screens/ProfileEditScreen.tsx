@@ -15,10 +15,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
 import { Screen } from '../components/Screen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -26,6 +28,8 @@ import { Button } from '../components/Button';
 import { useAuthStore } from '../store/authStore';
 import { updateProfile, checkHandleAvailability } from '../services/profileService';
 import { validateNickname, suggestNickname } from '../services/nicknameValidationService';
+import { uploadImagesToStorage } from '../services/imageUploadService';
+import { supabase } from '../services/supabase';
 import { Profile } from '../types';
 import { CustomAlert } from '../components/CustomAlert';
 
@@ -61,6 +65,8 @@ export const ProfileEditScreen: React.FC = () => {
   const [originalData, setOriginalData] = useState<FormData>();
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar_url || null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -130,8 +136,10 @@ export const ProfileEditScreen: React.FC = () => {
 
   const hasChanges = useCallback((): boolean => {
     if (!originalData) return false;
-    return JSON.stringify(formData) !== JSON.stringify(originalData);
-  }, [formData, originalData]);
+    const formChanged = JSON.stringify(formData) !== JSON.stringify(originalData);
+    const avatarChanged = avatarUrl !== user?.avatar_url;
+    return formChanged || avatarChanged;
+  }, [formData, originalData, avatarUrl, user]);
 
   const handleSave = useCallback(async () => {
     if (!user) return;
@@ -299,6 +307,84 @@ export const ProfileEditScreen: React.FC = () => {
     }
   }, [errors]);
 
+  const handlePickImage = async () => {
+    try {
+      console.log('📸 프로필 사진 선택 시작...');
+      
+      // 권한 요청
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setAlertTitle('Permission Required');
+        setAlertMessage('Please allow access to your photos to change your profile picture.');
+        setAlertButtons([{ text: 'OK', style: 'default' }]);
+        setAlertVisible(true);
+        return;
+      }
+
+      // 이미지 선택
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setIsUploadingAvatar(true);
+        const selectedImage = result.assets[0];
+        console.log('✅ 이미지 선택됨:', selectedImage.uri);
+
+        try {
+          // 이미지 업로드
+          console.log('⬆️ 이미지 업로드 시작...');
+          const uploadedUrls = await uploadImagesToStorage([selectedImage.uri]);
+          
+          if (uploadedUrls && uploadedUrls.length > 0) {
+            const newAvatarUrl = uploadedUrls[0];
+            console.log('✅ 프로필 사진 업로드 성공:', newAvatarUrl);
+            
+            // 로컬 상태 업데이트
+            setAvatarUrl(newAvatarUrl);
+            
+            // Supabase에 즉시 업데이트
+            if (user?.id) {
+              const { error } = await supabase
+                .from('profiles')
+                .update({ avatar_url: newAvatarUrl })
+                .eq('id', user.id);
+
+              if (error) {
+                console.error('❌ 프로필 사진 DB 업데이트 실패:', error);
+                throw error;
+              }
+
+              // 로컬 user 상태 업데이트
+              setUser({ ...user, avatar_url: newAvatarUrl });
+              
+              console.log('✅ 프로필 사진 DB 업데이트 성공');
+              
+              setAlertTitle('Success!');
+              setAlertMessage('Your profile picture has been updated successfully.');
+              setAlertButtons([{ text: 'OK', style: 'default' }]);
+              setAlertVisible(true);
+            }
+          }
+        } catch (error) {
+          console.error('❌ 프로필 사진 업로드 실패:', error);
+          setAlertTitle('Upload Failed');
+          setAlertMessage('Failed to upload profile picture. Please try again.');
+          setAlertButtons([{ text: 'OK', style: 'default' }]);
+          setAlertVisible(true);
+        } finally {
+          setIsUploadingAvatar(false);
+        }
+      }
+    } catch (error) {
+      console.error('❌ 이미지 선택 오류:', error);
+      setIsUploadingAvatar(false);
+    }
+  };
+
   if (!user) {
     return (
       <Screen>
@@ -367,24 +453,27 @@ export const ProfileEditScreen: React.FC = () => {
             <View style={styles.avatarContainer}>
               <Image
                 source={{ 
-                  uri: user.avatar_url || 'https://picsum.photos/100/100?random=profile' 
+                  uri: avatarUrl || user.avatar_url || 'https://via.placeholder.com/100/EC4899/FFFFFF?text=' + (user?.handle?.[0]?.toUpperCase() || 'U')
                 }}
                 style={styles.avatar}
               />
+              {isUploadingAvatar && (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="large" color={colors.white} />
+                </View>
+              )}
               <TouchableOpacity
                 style={[styles.changePhotoButton, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  // TODO: 이미지 선택 기능
-                  setAlertTitle('Coming Soon');
-                  setAlertMessage('Profile picture editing will be available soon!');
-                  setAlertButtons([{ text: 'OK', style: 'default' }]);
-                  setAlertVisible(true);
-                }}
+                onPress={handlePickImage}
+                disabled={isUploadingAvatar}
                 activeOpacity={0.8}
               >
                 <Text style={styles.changePhotoText}>📷</Text>
               </TouchableOpacity>
             </View>
+            <Text style={[styles.avatarHint, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+              Tap the camera icon to change your profile picture
+            </Text>
           </View>
 
           {/* Form Fields */}
@@ -631,6 +720,19 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
   },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   changePhotoButton: {
     position: 'absolute',
     bottom: 0,
@@ -644,6 +746,12 @@ const styles = StyleSheet.create({
   },
   changePhotoText: {
     fontSize: 16,
+  },
+  avatarHint: {
+    ...typography.caption,
+    fontSize: 12,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   formContainer: {
     paddingHorizontal: spacing.md,
