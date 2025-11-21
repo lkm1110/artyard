@@ -456,8 +456,17 @@ export const ChallengeDetailScreen = () => {
             </View>
             {entries
               .filter(e => e.is_winner && e.final_rank === 1)
-              .map((entry) => (
-                <View key={entry.id} style={[styles.winnerCard, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+              .map((entry) => {
+                const goldBorder = getRankBorderColor(1);
+                return (
+                <View key={entry.id} style={[
+                  styles.winnerCard, 
+                  { 
+                    backgroundColor: isDark ? colors.darkCard : colors.card,
+                    borderColor: goldBorder,
+                    borderWidth: 4,
+                  }
+                ]}>
                   {/* Winner Crown */}
                   <View style={styles.winnerCrown}>
                     <Ionicons name="trophy" size={48} color={colors.warning} />
@@ -520,7 +529,8 @@ export const ChallengeDetailScreen = () => {
                     </View>
                   </View>
                 </View>
-              ))}
+                );
+              })}
           </View>
         )}
         

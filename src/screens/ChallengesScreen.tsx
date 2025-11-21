@@ -287,14 +287,14 @@ export const ChallengesScreen = () => {
             <Text style={styles.statLabel}>Votes</Text>
             <Text style={styles.statValue}>{(item as any).total_votes || 0}</Text>
           </View>
-          {!isActive && (
+          {isEnded && (
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Status</Text>
               <Text style={[
                 styles.statValue,
                 styles.statValueEnded,
               ]}>
-                {timeRemaining}
+                Ended
               </Text>
             </View>
           )}
