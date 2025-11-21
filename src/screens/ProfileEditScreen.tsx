@@ -361,6 +361,13 @@ export const ProfileEditScreen: React.FC = () => {
               // 로컬 user 상태 업데이트
               setUser({ ...user, avatar_url: newAvatarUrl });
               
+              // React Query 캐시 무효화
+              queryClient.invalidateQueries({ queryKey: ['artworks'] });
+              queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
+              queryClient.invalidateQueries({ queryKey: ['userArtworks'] });
+              queryClient.invalidateQueries({ queryKey: ['chats'] });
+              queryClient.invalidateQueries({ queryKey: ['comments'] });
+              
               console.log('✅ 프로필 사진 DB 업데이트 성공');
               
               setAlertTitle('Success!');

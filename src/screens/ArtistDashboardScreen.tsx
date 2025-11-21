@@ -139,7 +139,7 @@ export const ArtistDashboardScreen = () => {
 
     const { data, error } = await supabase
       .from('artworks')
-      .select('id, title, image_url, likes_count, views_count, price')
+      .select('id, title, images, likes_count, views_count, price')
       .eq('author_id', user.id)
       .order('likes_count', { ascending: false })
       .limit(5);
@@ -149,7 +149,7 @@ export const ArtistDashboardScreen = () => {
     return (data || []).map((art) => ({
       id: art.id,
       title: art.title,
-      image_url: art.image_url,
+      image_url: art.images && art.images.length > 0 ? art.images[0] : '',
       likes: art.likes_count || 0,
       views: art.views_count || 0,
       price: art.price,

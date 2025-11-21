@@ -69,7 +69,25 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
   
   const handleRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      // 사용자 정보 다시 로드
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (!error && data) {
+          const { setUser } = useAuthStore.getState();
+          setUser({ ...user, ...data });
+        }
+      }
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
   };
 
   const handleSignOut = async () => {
@@ -234,7 +252,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
           title: 'My Orders',
           icon: 'receipt-outline',
           iconColor: '#3b82f6',
-          onPress: () => navigation.navigate('Orders'),
+          onPress: () => navigation.navigate('Orders' as any),
           showArrow: true,
         },
         {
