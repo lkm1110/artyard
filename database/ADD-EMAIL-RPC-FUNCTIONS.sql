@@ -20,8 +20,8 @@ BEGIN
   RETURN QUERY
   SELECT 
     p.id,
-    p.handle,
-    COALESCE(au.email, p.handle || '@artyard.com') as email,
+    p.handle::TEXT,
+    COALESCE(au.email::TEXT, (p.handle || '@artyard.com')::TEXT) as email,
     p.created_at,
     p.is_admin
   FROM profiles p
@@ -48,8 +48,8 @@ BEGIN
   RETURN QUERY
   SELECT 
     p.id,
-    p.handle,
-    COALESCE(au.email, p.handle || '@artyard.com') as email,
+    p.handle::TEXT,
+    COALESCE(au.email::TEXT, (p.handle || '@artyard.com')::TEXT) as email,
     p.created_at,
     COALESCE(p.is_admin, false) as is_admin
   FROM profiles p
