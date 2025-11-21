@@ -29,6 +29,26 @@ import { ConfirmModal } from '../components/ConfirmModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+// 순위별 테두리 색상
+const getRankBorderColor = (rank?: number) => {
+  if (!rank) return undefined;
+  switch (rank) {
+    case 1: return '#FFD700'; // Gold
+    case 2: return '#C0C0C0'; // Silver
+    case 3: return '#CD7F32'; // Bronze
+    default: return undefined;
+  }
+};
+
+const getRankIcon = (rank?: number) => {
+  switch (rank) {
+    case 1: return '🥇';
+    case 2: return '🥈';
+    case 3: return '🥉';
+    default: return '#' + rank;
+  }
+};
+
 interface Challenge {
   id: string;
   title: string;
@@ -504,11 +524,26 @@ export const ChallengeDetailScreen = () => {
             </Text>
             {entries
               .filter(e => e.is_top_10 && !(e.is_winner && e.final_rank === 1))
-              .map((entry) => (
-                <View key={entry.id} style={[styles.entryCard, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
-                  <View style={[styles.rankBadge, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.rankText}>#{entry.final_rank}</Text>
-                  </View>
+              .map((entry) => {
+                const rankBorderColor = getRankBorderColor(entry.final_rank);
+                return (
+                  <View 
+                    key={entry.id} 
+                    style={[
+                      styles.entryCard, 
+                      { 
+                        backgroundColor: isDark ? colors.darkCard : colors.card,
+                        borderColor: rankBorderColor || (isDark ? colors.darkBorder : colors.border),
+                        borderWidth: rankBorderColor ? 3 : 1,
+                      }
+                    ]}
+                  >
+                    <View style={[
+                      styles.rankBadge, 
+                      { backgroundColor: rankBorderColor || colors.primary }
+                    ]}>
+                      <Text style={styles.rankText}>{getRankIcon(entry.final_rank)}</Text>
+                    </View>
                   
                   {entry.artwork?.images?.[0] && (
                     <View>
@@ -587,7 +622,8 @@ export const ChallengeDetailScreen = () => {
                     </View>
                   </View>
                 </View>
-              ))}
+                );
+              })}
           </View>
         )}
         

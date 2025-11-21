@@ -47,6 +47,7 @@ interface ChallengeWinner {
   auction_reserve_price: number;
   votes_count: number;
   is_in_auction: boolean;
+  final_rank: number;
 }
 
 export const AuctionManagementScreen = () => {
@@ -116,12 +117,13 @@ export const AuctionManagementScreen = () => {
   const loadWinners = async () => {
     try {
       // 경매에 추가되지 않은 Top 3 작품 조회 (1, 2, 3등)
+      // 종료된 챌린지만 포함 (voting_end_date가 과거인 것)
       const { data, error } = await supabase
         .from('challenge_entries')
         .select(`
           id,
           challenge_id,
-          challenges:challenge_id (title),
+          challenges:challenge_id (title, voting_end_date),
           artwork_id,
           artworks:artwork_id (title),
           author_id,
@@ -131,10 +133,19 @@ export const AuctionManagementScreen = () => {
           final_rank
         `)
         .in('final_rank', [1, 2, 3])
+        .not('final_rank', 'is', null)
         .order('created_at', { ascending: false })
         .order('final_rank', { ascending: true });
 
       if (error) throw error;
+
+      // 종료된 챌린지만 필터링 (voting_end_date < now)
+      const now = new Date();
+      const endedChallenges = data?.filter(entry => {
+        const votingEndDate = (entry.challenges as any)?.voting_end_date;
+        if (!votingEndDate) return false;
+        return new Date(votingEndDate) < now;
+      }) || [];
 
       // 이미 경매에 추가된 작품 확인
       const { data: auctionItems } = await supabase
@@ -143,17 +154,18 @@ export const AuctionManagementScreen = () => {
 
       const auctionArtworkIds = new Set(auctionItems?.map(item => item.artwork_id) || []);
 
-      const formatted: ChallengeWinner[] = data?.map(entry => ({
+      const formatted: ChallengeWinner[] = endedChallenges.map(entry => ({
         id: entry.id,
         challenge_id: entry.challenge_id,
         challenge_title: (entry.challenges as any)?.title || 'Unknown',
         artwork_id: entry.artwork_id,
-        artwork_title: `#${entry.final_rank} ${(entry.artworks as any)?.title || 'Untitled'}`,
+        artwork_title: `${(entry.artworks as any)?.title || 'Untitled'}`,
         artist_id: entry.author_id,
         artist_name: (entry.profiles as any)?.handle || 'Unknown',
         auction_reserve_price: entry.auction_reserve_price || 0,
         votes_count: entry.votes_count || 0,
         is_in_auction: auctionArtworkIds.has(entry.artwork_id),
+        final_rank: entry.final_rank,
       })) || [];
 
       setWinners(formatted);
@@ -333,6 +345,41 @@ export const AuctionManagementScreen = () => {
     return `Q${q} ${year}`;
   };
 
+  const getRankColor = (rank: number) => {
+    switch (rank) {
+      case 1: return '#FFD700'; // Gold
+      case 2: return '#C0C0C0'; // Silver
+      case 3: return '#CD7F32'; // Bronze
+      default: return colors.border;
+    }
+  };
+
+  const getRankLabel = (rank: number) => {
+    switch (rank) {
+      case 1: return '🥇 1st';
+      case 2: return '🥈 2nd';
+      case 3: return '🥉 3rd';
+      default: return `#${rank}`;
+    }
+  };
+
+  // 챌린지별로 그룹화
+  const groupedWinners = winners
+    .filter(w => !w.is_in_auction)
+    .reduce((acc, winner) => {
+      if (!acc[winner.challenge_id]) {
+        acc[winner.challenge_id] = {
+          challenge_id: winner.challenge_id,
+          challenge_title: winner.challenge_title,
+          winners: [],
+        };
+      }
+      acc[winner.challenge_id].winners.push(winner);
+      return acc;
+    }, {} as Record<string, { challenge_id: string; challenge_title: string; winners: ChallengeWinner[] }>);
+
+  const challengeGroups = Object.values(groupedWinners);
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
@@ -424,10 +471,10 @@ export const AuctionManagementScreen = () => {
               onChangeText={setQuarter}
             />
 
-            {/* Available Winners */}
+            {/* Available Winners - Grouped by Challenge */}
             <View style={styles.winnersSection}>
               <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
-                Select Challenge Winners ({winners.filter(w => !w.is_in_auction).length} available)
+                Select Challenge Winners ({winners.filter(w => !w.is_in_auction).length} available from {challengeGroups.length} challenges)
               </Text>
 
               {winners.filter(w => !w.is_in_auction).length === 0 ? (
@@ -435,46 +482,76 @@ export const AuctionManagementScreen = () => {
                   No available winners. Announce challenge winners first!
                 </Text>
               ) : (
-                winners
-                  .filter(w => !w.is_in_auction)
-                  .map(winner => (
-                    <TouchableOpacity
-                      key={winner.id}
-                      style={[
-                        styles.winnerItem,
-                        {
-                          backgroundColor: selectedWinners.includes(winner.id)
-                            ? `${colors.primary}20`
-                            : isDark ? colors.darkBackground : colors.background,
-                          borderColor: selectedWinners.includes(winner.id)
-                            ? colors.primary
-                            : isDark ? colors.darkBorder : colors.border,
-                        },
-                      ]}
-                      onPress={() => toggleWinnerSelection(winner.id)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.winnerInfo}>
-                        <Text style={[styles.winnerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-                          {winner.artwork_title}
+                challengeGroups.map(group => (
+                  <View key={group.challenge_id} style={styles.challengeGroup}>
+                    <View style={styles.challengeHeader}>
+                      <Text style={[styles.challengeTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                        {group.challenge_title}
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.selectAllButton, { backgroundColor: colors.primary + '20' }]}
+                        onPress={() => {
+                          const allSelected = group.winners.every(w => selectedWinners.includes(w.id));
+                          if (allSelected) {
+                            // Deselect all
+                            setSelectedWinners(prev => prev.filter(id => !group.winners.map(w => w.id).includes(id)));
+                          } else {
+                            // Select all
+                            setSelectedWinners(prev => [...new Set([...prev, ...group.winners.map(w => w.id)])]);
+                          }
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.selectAllText, { color: colors.primary }]}>
+                          {group.winners.every(w => selectedWinners.includes(w.id)) ? 'Deselect All' : 'Select All'}
                         </Text>
-                        <Text style={[styles.winnerSubtitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                          {winner.challenge_title} • by @{winner.artist_name}
-                        </Text>
-                        <View style={styles.winnerStats}>
-                          <Text style={[styles.winnerStat, { color: colors.success }]}>
-                            ❤️ {winner.votes_count} votes
-                          </Text>
-                          <Text style={[styles.winnerStat, { color: colors.warning }]}>
-                            Min: ${winner.auction_reserve_price}
-                          </Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {group.winners.map(winner => (
+                      <TouchableOpacity
+                        key={winner.id}
+                        style={[
+                          styles.winnerItem,
+                          {
+                            backgroundColor: selectedWinners.includes(winner.id)
+                              ? `${colors.primary}20`
+                              : isDark ? colors.darkBackground : colors.background,
+                            borderColor: selectedWinners.includes(winner.id)
+                              ? colors.primary
+                              : getRankColor(winner.final_rank),
+                            borderWidth: 3,
+                          },
+                        ]}
+                        onPress={() => toggleWinnerSelection(winner.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.rankBadge, { backgroundColor: getRankColor(winner.final_rank) }]}>
+                          <Text style={styles.rankBadgeText}>{getRankLabel(winner.final_rank)}</Text>
                         </View>
-                      </View>
-                      {selectedWinners.includes(winner.id) && (
-                        <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                      )}
-                    </TouchableOpacity>
-                  ))
+                        <View style={styles.winnerInfo}>
+                          <Text style={[styles.winnerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                            {winner.artwork_title}
+                          </Text>
+                          <Text style={[styles.winnerSubtitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                            by @{winner.artist_name}
+                          </Text>
+                          <View style={styles.winnerStats}>
+                            <Text style={[styles.winnerStat, { color: colors.success }]}>
+                              ❤️ {winner.votes_count} votes
+                            </Text>
+                            <Text style={[styles.winnerStat, { color: colors.warning }]}>
+                              Min: ${winner.auction_reserve_price}
+                            </Text>
+                          </View>
+                        </View>
+                        {selectedWinners.includes(winner.id) && (
+                          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ))
               )}
             </View>
 
@@ -685,17 +762,61 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.md,
   },
+  challengeGroup: {
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary + '40',
+  },
+  challengeTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    flex: 1,
+  },
+  selectAllButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  selectAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   winnerItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: spacing.md,
     borderRadius: borderRadius.md,
-    borderWidth: 2,
     marginBottom: spacing.sm,
+    position: 'relative',
+  },
+  rankBadge: {
+    position: 'absolute',
+    top: -8,
+    left: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    zIndex: 10,
+  },
+  rankBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#000',
   },
   winnerInfo: {
     flex: 1,
+    marginTop: spacing.sm,
   },
   winnerTitle: {
     fontSize: 16,
