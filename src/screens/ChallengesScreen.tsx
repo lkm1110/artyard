@@ -601,6 +601,21 @@ const styles = StyleSheet.create({
     color: '#F57C00',
     fontWeight: '600',
   },
+  timerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  timerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+    flexWrap: 'nowrap',
+  },
   
   // Empty
   emptyContainer: {

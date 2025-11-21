@@ -782,18 +782,23 @@ const styles = StyleSheet.create({
   },
   stats: {
     flexDirection: 'row',
-    gap: spacing.xl,
+    gap: spacing.md,
     marginBottom: spacing.md,
   },
   stat: {
+    flex: 1,
     alignItems: 'center',
+    minWidth: 0,
   },
   statValue: {
     ...typography.h3,
     fontWeight: 'bold',
+    textAlign: 'center',
+    flexWrap: 'nowrap',
   },
   statLabel: {
     ...typography.caption,
+    textAlign: 'center',
   },
   submitButton: {
     flexDirection: 'row',
