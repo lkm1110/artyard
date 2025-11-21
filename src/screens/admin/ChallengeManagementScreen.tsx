@@ -14,9 +14,12 @@ import {
   useColorScheme,
   ActivityIndicator,
   StatusBar,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, borderRadius } from '../../constants/theme';
 import { supabase } from '../../services/supabase';
 import { SuccessModal } from '../../components/SuccessModal';
@@ -35,15 +38,17 @@ interface Challenge {
   tier_requirement: 'all' | 'new' | 'trusted' | 'verified' | 'pro';
   prize_description?: string;
   entries_count: number;
-  participants_count: number;
+  total_votes: number;
 }
 
 export const ChallengeManagementScreen = () => {
+  const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   
   // State
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
   
   // Form state
@@ -65,22 +70,51 @@ export const ChallengeManagementScreen = () => {
     loadChallenges();
   }, []);
   
-  const loadChallenges = async () => {
+  const loadChallenges = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
       const { data, error } = await supabase
         .from('challenges')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false});
       
       if (error) throw error;
-      setChallenges(data || []);
+      
+      // entries_count와 total_votes 계산
+      const challengesWithCounts = await Promise.all(
+        (data || []).map(async (challenge) => {
+          // entries_count
+          const { data: entries } = await supabase
+            .from('challenge_entries')
+            .select('id')
+            .eq('challenge_id', challenge.id);
+          
+          // total_votes
+          const { data: votes } = await supabase
+            .from('challenge_votes')
+            .select('id')
+            .eq('challenge_id', challenge.id);
+          
+          return {
+            ...challenge,
+            entries_count: entries?.length || 0,
+            total_votes: votes?.length || 0,
+          };
+        })
+      );
+      
+      setChallenges(challengesWithCounts);
     } catch (error: any) {
       console.error('Failed to load challenges:', error);
-      setErrorMessage(error.message || 'Failed to load challenges');
-      setErrorModalVisible(true);
+      Alert.alert('Error', error.message || 'Failed to load challenges');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
   
@@ -213,38 +247,75 @@ export const ChallengeManagementScreen = () => {
   
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, styles.centered, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView 
+        style={[styles.safeArea, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+        edges={['top', 'left', 'right']}
+      >
+        <StatusBar 
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={isDark ? colors.darkBackground : colors.background}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: isDark ? colors.darkText : colors.text }]}>
+            Loading challenges...
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
   
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTitleRow}>
-            <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>
-              Challenge Management
-            </Text>
-          </View>
+    <SafeAreaView 
+      style={[styles.safeArea, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={isDark ? colors.darkBackground : colors.background}
+      />
+      <View style={{ flex: 1 }}>
+        {/* 헤더 */}
+        <View style={[
+          styles.header,
+          { 
+            backgroundColor: isDark ? colors.darkCard : colors.card,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          }
+        ]}>
           <TouchableOpacity
-            style={[styles.createButton, { backgroundColor: colors.primary }]}
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+              ←
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+            Challenge Management
+          </Text>
+          <TouchableOpacity
+            style={styles.addButton}
             onPress={() => setShowCreateForm(!showCreateForm)}
             activeOpacity={0.7}
           >
-            <Ionicons name={showCreateForm ? "close" : "add-circle"} size={20} color={colors.white} />
-            <Text style={styles.createButtonText}>
-              {showCreateForm ? 'Cancel' : 'Create Challenge'}
-            </Text>
+            <Ionicons name={showCreateForm ? "close" : "add-circle"} size={28} color={colors.primary} />
           </TouchableOpacity>
         </View>
+
+      <ScrollView 
+        style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadChallenges(true)}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+      >
         
         {/* Create Form */}
         {showCreateForm && (
@@ -405,9 +476,9 @@ export const ChallengeManagementScreen = () => {
               
               <View style={styles.challengeStats}>
                 <View style={styles.stat}>
-                  <Ionicons name="people" size={16} color={isDark ? colors.darkTextMuted : colors.textMuted} />
+                  <Ionicons name="heart" size={16} color={isDark ? colors.darkTextMuted : colors.textMuted} />
                   <Text style={[styles.statText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                    {challenge.participants_count} participants
+                    {challenge.total_votes} votes
                   </Text>
                 </View>
                 <View style={styles.stat}>
@@ -456,6 +527,7 @@ export const ChallengeManagementScreen = () => {
           )}
         </View>
       </ScrollView>
+      </View>
       
       {/* Modals */}
       <SuccessModal
@@ -492,8 +564,50 @@ export const ChallengeManagementScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.sizes.md,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    fontSize: 28,
+    fontWeight: '300',
+  },
+  headerTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold as any,
+    flex: 1,
+    textAlign: 'center',
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   centered: {
     justifyContent: 'center',
