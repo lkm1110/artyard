@@ -390,6 +390,7 @@ export const AdminDashboardScreen = () => {
           value={`$${stats.totalRevenue.toFixed(0)}`}
           icon="💵"
           color="#8B5CF6"
+          onPress={() => navigation.navigate('RevenueDetail' as never)}
         />
         <StatCard
           title="Pending Reports"
@@ -405,10 +406,11 @@ export const AdminDashboardScreen = () => {
           color="#06B6D4"
         />
         <StatCard
-          title="Today's Revenue"
-          value={`$${stats.todayRevenue.toFixed(0)}`}
-          icon="📈"
-          color="#14B8A6"
+          title="Auction Management"
+          value="Manage"
+          icon="🔨"
+          color="#8B5CF6"
+          onPress={() => navigation.navigate('AuctionManagement' as never)}
         />
         <StatCard
           title="Active Challenges"
@@ -504,30 +506,6 @@ export const AdminDashboardScreen = () => {
           icon="💰"
           color="#F59E0B"
           onPress={() => navigation.navigate('OrderManagement' as never)}
-        />
-
-        <MenuButton
-          title="Challenge Management"
-          description="Create, edit, or end challenges"
-          icon="🏆"
-          color="#F97316"
-          onPress={() => navigation.navigate('ChallengeManagement' as never)}
-        />
-
-        <MenuButton
-          title="Auction Management"
-          description="Create auctions & add challenge winners"
-          icon="🔨"
-          color="#8B5CF6"
-          onPress={() => navigation.navigate('AuctionManagement' as never)}
-        />
-
-        <MenuButton
-          title="Admin Management"
-          description="Add or remove administrators"
-          icon="🛡️"
-          color="#6366F1"
-          onPress={() => navigation.navigate('AdminManagement' as never)}
         />
 
         <MenuButton

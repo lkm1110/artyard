@@ -43,6 +43,7 @@ import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 
 // Admin screens
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
+import { RevenueDetailScreen } from '../screens/admin/RevenueDetailScreen';
 import { ReportsManagementScreen } from '../screens/admin/ReportsManagementScreen';
 import { ArtworkManagementScreen } from '../screens/admin/ArtworkManagementScreen';
 import { UserManagementScreen } from '../screens/admin/UserManagementScreen';
@@ -425,6 +426,13 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen 
               name="AdminDashboard" 
               component={AdminDashboardScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="RevenueDetail" 
+              component={RevenueDetailScreen}
               options={{ 
                 animation: 'slide_from_right'
               }} 
