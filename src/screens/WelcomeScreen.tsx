@@ -52,31 +52,38 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
               styles.subtitle,
               { color: isDark ? colors.darkTextMuted : colors.textMuted }
             ]}>
-              The art community for college students{'\n'}
-              Share and discover amazing artworks
+              Global art marketplace for emerging artists{'\n'}
+              Share, discover, and sell original artworks
             </Text>
           </View>
 
           {/* 주요 기능 소개 */}
           <View style={styles.features}>
             <FeatureItem
-              emoji="🎭"
+              emoji="🎨"
               title="Share Your Art"
-              description="Upload and share illustrations, photography, prints, crafts, and more with a vibrant community"
+              description="Upload and share illustrations, photography, printmaking, crafts, posters, drawings, and more"
               isDark={isDark}
             />
             
             <FeatureItem
-              emoji="💬"
-              title="Connect & Get Feedback"
-              description="Engage with fellow artists through comments and likes, exchange valuable feedback on each other's work"
+              emoji="💰"
+              title="Sell Your Artwork"
+              description="Direct trade (0% fee) or secure escrow (10% fee). You choose what works best for you!"
               isDark={isDark}
             />
             
             <FeatureItem
-              emoji="🛒"
-              title="Direct Trade"
-              description="Buy and sell artworks directly with artists. Fair 10% commission!"
+              emoji="🏆"
+              title="Join Challenges"
+              description="Participate in biweekly art challenges, get community votes, and win featured placement"
+              isDark={isDark}
+            />
+            
+            <FeatureItem
+              emoji="🌍"
+              title="Global Community"
+              description="Connect with artists worldwide, get feedback, and build your following"
               isDark={isDark}
             />
           </View>
@@ -99,8 +106,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
             styles.footerText,
             { color: isDark ? colors.darkTextMuted : colors.textMuted }
           ]}>
-            to push your creativity and improve your skills{'\n'}
-            Already have an account? login to get started quickly!
+            Join thousands of artists sharing their creativity{'\n'}
+            Already have an account? Log in to get started!
           </Text>
         </View>
       </SafeAreaView>

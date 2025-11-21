@@ -34,6 +34,7 @@ import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { AuctionsScreen } from '../screens/AuctionsScreen';
 import { AuctionDetailScreen } from '../screens/AuctionDetailScreen';
 import { ArtistDashboardScreen } from '../screens/ArtistDashboardScreen';
+import { FollowersListScreen } from '../screens/FollowersListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { NotificationSettingsScreen } from '../screens/NotificationSettingsScreen';
 import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
@@ -387,6 +388,13 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen 
               name="ArtistDashboard" 
               component={ArtistDashboardScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="FollowersList" 
+              component={FollowersListScreen}
               options={{ 
                 animation: 'slide_from_right'
               }} 

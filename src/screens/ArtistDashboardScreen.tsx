@@ -303,11 +303,15 @@ export const ArtistDashboardScreen = () => {
               </Text>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Views</Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: theme.card }]}>
+            <TouchableOpacity 
+              style={[styles.statCard, { backgroundColor: theme.card }]}
+              onPress={() => navigation.navigate('FollowersList' as never, { userId: user?.id } as never)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="people-outline" size={28} color="#10b981" />
               <Text style={[styles.statValue, { color: theme.text }]}>{stats.total_followers}</Text>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Followers</Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
