@@ -306,6 +306,11 @@ export const ChallengeDetailScreen = () => {
   const getTimeRemaining = () => {
     if (!challenge) return '';
     
+    // 종료된 챌린지는 카운트다운 없음
+    if (challenge.status === 'ended') {
+      return null; // null 반환 시 UI에서 숨김
+    }
+    
     const now = currentTime;
     const targetDate = challenge.status === 'voting' 
       ? new Date(challenge.voting_end_date).getTime()
@@ -408,14 +413,17 @@ export const ChallengeDetailScreen = () => {
                 </Text>
               </View>
             </View>
-            <View style={styles.timeLeftContainer}>
-              <Text style={[styles.timeLeftValue, { color: getStatusColor(challenge?.status || 'upcoming') }]}>
-                {getTimeRemaining()}
-              </Text>
-              <Text style={[styles.timeLeftLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Time Left
-              </Text>
-            </View>
+            {/* Time Left - 종료되지 않은 챌린지만 표시 */}
+            {getTimeRemaining() && (
+              <View style={styles.timeLeftContainer}>
+                <Text style={[styles.timeLeftValue, { color: getStatusColor(challenge?.status || 'upcoming') }]}>
+                  {getTimeRemaining()}
+                </Text>
+                <Text style={[styles.timeLeftLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                  Time Left
+                </Text>
+              </View>
+            )}
           </View>
           
           {/* Submit Button */}
@@ -634,8 +642,31 @@ export const ChallengeDetailScreen = () => {
           </Text>
           {entries
             .filter(e => !e.is_top_10)
-            .map((entry) => (
-              <View key={entry.id} style={[styles.entryCard, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+            .map((entry) => {
+              // 종료된 챌린지는 모든 작품에 순위 테두리 표시
+              const rankBorderColor = challenge?.status === 'ended' ? getRankBorderColor(entry.final_rank) : undefined;
+              return (
+                <View 
+                  key={entry.id} 
+                  style={[
+                    styles.entryCard, 
+                    { 
+                      backgroundColor: isDark ? colors.darkCard : colors.card,
+                      borderColor: rankBorderColor || (isDark ? colors.darkBorder : colors.border),
+                      borderWidth: rankBorderColor ? 3 : 1,
+                    }
+                  ]}
+                >
+                {/* 종료된 챌린지일 때 순위 뱃지 표시 */}
+                {challenge?.status === 'ended' && entry.final_rank && entry.final_rank <= 3 && (
+                  <View style={[
+                    styles.rankBadge, 
+                    { backgroundColor: rankBorderColor || colors.primary }
+                  ]}>
+                    <Text style={styles.rankText}>{getRankIcon(entry.final_rank)}</Text>
+                  </View>
+                )}
+                
                 {entry.artwork?.images?.[0] && (
                   <View>
                     <Image
@@ -704,7 +735,8 @@ export const ChallengeDetailScreen = () => {
                   </View>
                 </View>
               </View>
-            ))}
+              );
+            })}
           
           {entries.length === 0 && (
             <View style={styles.emptyState}>

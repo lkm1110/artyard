@@ -231,7 +231,7 @@ export const ChallengesScreen = () => {
   const renderChallenge = ({ item }: { item: Challenge }) => {
     const timeRemaining = getChallengeTimeRemaining(item.end_date);
     const isActive = item.status === 'active';
-    const isEnded = timeRemaining === 'Ended';
+    const isEnded = timeRemaining === 'Ended' || item.status === 'ended';
     
     return (
       <TouchableOpacity
@@ -258,22 +258,22 @@ export const ChallengesScreen = () => {
           {item.description}
         </Text>
         
-        {/* Countdown Timer for Active Challenges */}
-        {isActive && (
+        {/* Countdown Timer for Active Challenges - 종료된 챌린지는 표시 안 함 */}
+        {isActive && !isEnded && (
           <View style={[
             styles.timerBadge,
-            { backgroundColor: isEnded ? `${colors.error}15` : `${colors.success}15` }
+            { backgroundColor: `${colors.success}15` }
           ]}>
             <Ionicons 
-              name={isEnded ? 'close-circle' : 'time-outline'} 
+              name='time-outline' 
               size={16} 
-              color={isEnded ? colors.error : colors.success} 
+              color={colors.success} 
             />
             <Text style={[
               styles.timerText,
-              { color: isEnded ? colors.error : colors.success }
+              { color: colors.success }
             ]}>
-              {isEnded ? 'Ended' : `Ends in: ${timeRemaining}`}
+              Ends in: {timeRemaining}
             </Text>
           </View>
         )}
