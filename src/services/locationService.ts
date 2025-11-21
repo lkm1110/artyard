@@ -18,7 +18,7 @@ export const getAddressFromCoordinates = async (latitude: number, longitude: num
       {
         method: 'GET',
         headers: {
-          'User-Agent': 'ArtYard-App/1.0 (contact: support@artyard.app)',
+          'User-Agent': 'ArtYard-App/1.0 (contact: artyard2025@gmail.com)',
           'Accept': 'application/json',
         },
       }

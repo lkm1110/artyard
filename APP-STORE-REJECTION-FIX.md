@@ -107,7 +107,7 @@ assets/ios/
 **파일**: `src/screens/ProfileScreen.tsx` Line 430-507
 
 **기능**:
-- ✅ **"Contact Support" 버튼** (support@artyard.app)
+- ✅ **"Contact Support" 버튼** (artyard2025@gmail.com)
   - 이메일 앱 자동 연결
   - 24시간 내 응답 보장
   - 앱 내 연락처 정보 표시
@@ -171,7 +171,7 @@ assets/ios/
 
 4. ✅ 연락처 정보 (새로 추가!)
    - 프로필 화면 → "Contact Support" 버튼
-   - Email: support@artyard.app
+   - Email: artyard2025@gmail.com
    - 응답 시간: 24시간 이내
    - 이메일 앱 자동 연결
 
@@ -196,7 +196,7 @@ assets/ios/
 감사합니다.
 임강민
 Co-Founder & CEO, Artyard
-Email: lavlna280@gmail.com
+Email: artyard2025@gmail.com
 Phone: 010-3352-3001
 ```
 

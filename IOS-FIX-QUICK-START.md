@@ -69,7 +69,7 @@ eas build --platform ios --profile production
 감사합니다.
 임강민
 Co-Founder & CEO, Artyard
-Email: lavlna280@gmail.com
+Email: artyard2025@gmail.com
 Phone: 010-3352-3001
 ```
 

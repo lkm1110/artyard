@@ -1267,7 +1267,7 @@ Artyard는 단순한 마켓플레이스가 아닙니다.
 Co-Founder & CEO  
 Artyard
 
-Email: lavlna280@gmail.com  
+Email: artyard2025@gmail.com  
 Phone: 010-3352-3001  
 LinkedIn: (준비 중)
 

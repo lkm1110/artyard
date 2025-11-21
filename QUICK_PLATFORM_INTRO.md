@@ -169,7 +169,7 @@ supabase/functions/
 
 - Supabase Dashboard: https://supabase.com/dashboard/project/bkvycanciimgyftdtqpx
 - Privacy Policy: https://lkm1110.github.io/artyard/privacy-policy.html
-- Contact: lavlna280@gmail.com
+- Contact: artyard2025@gmail.com
 
 ---
 

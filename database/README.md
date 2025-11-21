@@ -46,7 +46,7 @@ delete-user-account-rpc.sql
 set-admin-lavlna280.sql
 ```
 **Purpose:** Set specific user as admin.
-**When to use:** To grant admin privileges to lavlna280@gmail.com.
+**When to use:** To grant admin privileges to artyard2025@gmail.com.
 
 ### Category System
 ```sql

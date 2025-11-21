@@ -72,7 +72,7 @@ Apple은 사용자 생성 콘텐츠가 있는 앱에 **4가지 필수 기능**�
 
 **연락 방법**:
 1. **프로필 → Contact Support 버튼**
-   - 📧 Email: `support@artyard.app`
+   - 📧 Email: `artyard2025@gmail.com`
    - ⏱️ 응답 시간: 24시간 이내
    - 📱 이메일 앱으로 자동 연결 또는 앱 내 표시
 
@@ -227,7 +227,7 @@ Apple은 사용자 생성 콘텐츠가 있는 앱에 **4가지 필수 기능**�
 
 [4. 연락처 정보] ⭐ 새로 추가!
 ✅ 프로필 화면 → "Contact Support" 버튼
-   • Email: support@artyard.app
+   • Email: artyard2025@gmail.com
    • 응답 시간: 24시간 이내
    • 이메일 앱 자동 연결
 ✅ "Community Guidelines" 버튼
@@ -256,8 +256,8 @@ Apple은 사용자 생성 콘텐츠가 있는 앱에 **4가지 필수 기능**�
 감사합니다.
 임강민
 Co-Founder & CEO, Artyard
-Email: lavlna280@gmail.com (Business)
-Support: support@artyard.app (User Support)
+Email: artyard2025@gmail.com (Business)
+Support: artyard2025@gmail.com (User Support)
 Phone: 010-3352-3001
 ```
 

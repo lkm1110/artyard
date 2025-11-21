@@ -743,7 +743,7 @@ Artyard는 단순한 마켓플레이스가 아닙니다.
 ---
 
 **연락처**:
-- Email: lavlna280@gmail.com
+- Email: artyard2025@gmail.com
 - Phone: 010-3352-3001
 - Website: (개발 중)
 - LinkedIn: (준비 중)

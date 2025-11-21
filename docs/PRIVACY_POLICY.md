@@ -122,7 +122,7 @@ We use analytics to understand:
 
 **1. Access Your Data:**
 - View all personal information we have about you
-- Request: Contact us at privacy@artyard.app
+- Request: Contact us at artyard2025@gmail.com
 
 **2. Correct Your Data:**
 - Update your profile, artwork information anytime in the app
@@ -130,11 +130,11 @@ We use analytics to understand:
 **3. Delete Your Data:**
 - Delete your account and all associated data
 - Go to: Settings → Account → Delete Account
-- Or contact: privacy@artyard.app
+- Or contact: artyard2025@gmail.com
 
 **4. Export Your Data:**
 - Request a copy of your data in a portable format
-- Contact: privacy@artyard.app
+- Contact: artyard2025@gmail.com
 
 **5. Opt-Out of Communications:**
 - Email marketing: Unsubscribe link in emails
@@ -147,7 +147,7 @@ We use analytics to understand:
 
 **7. Restrict Data Processing:**
 - Request limitations on how we use your data
-- Contact: privacy@artyard.app
+- Contact: artyard2025@gmail.com
 
 ---
 
@@ -180,7 +180,7 @@ ArtYard is **not intended for users under 13 years old** (or 16 in the EU).
 
 - We do not knowingly collect data from children
 - If we discover we have collected data from a child, we will delete it immediately
-- Parents: If you believe your child has provided information, contact us at privacy@artyard.app
+- Parents: If you believe your child has provided information, contact us at artyard2025@gmail.com
 
 ---
 
@@ -216,9 +216,9 @@ ArtYard is **not intended for users under 13 years old** (or 16 in the EU).
 
 If you have questions, concerns, or requests regarding this Privacy Policy:
 
-**Email**: privacy@artyard.app  
+**Email**: artyard2025@gmail.com  
 **Address**: [Your Business Address - Required for App Store]  
-**Support**: support@artyard.app  
+**Support**: artyard2025@gmail.com  
 **Website**: https://artyard.app/privacy
 
 ---
@@ -229,7 +229,7 @@ If you have questions, concerns, or requests regarding this Privacy Policy:
 - Right to data portability
 - Right to object to processing
 - Right to lodge a complaint with a supervisory authority
-- Contact our Data Protection Officer: dpo@artyard.app
+- Contact our Data Protection Officer: artyard2025@gmail.com
 
 ### For California Residents (CCPA):
 - Right to know what personal information is collected
@@ -241,7 +241,7 @@ If you have questions, concerns, or requests regarding this Privacy Policy:
 - Right to access and correct personal information
 - Right to request suspension of processing
 - Right to delete personal information
-- Contact: privacy@artyard.app
+- Contact: artyard2025@gmail.com
 
 ---
 

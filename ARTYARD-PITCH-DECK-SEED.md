@@ -1388,7 +1388,7 @@ Global Art Marketplace for Emerging Artists
 
 임강민
 Co-Founder & CEO
-Email: lavlna280@gmail.com
+Email: artyard2025@gmail.com
 Phone: 010-3352-3001
 
 김현아
@@ -1420,7 +1420,7 @@ Equity: 21%
 - 원형 프로필 영역 (실루엣)
 - "임강민" (흰색, 큰 폰트)
 - "Co-Founder & CEO"
-- 이메일 아이콘: lavlna280@gmail.com
+- 이메일 아이콘: artyard2025@gmail.com
 - 전화 아이콘: 010-3352-3001
 
 카드 2 (김현아):

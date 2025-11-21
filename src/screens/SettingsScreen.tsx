@@ -229,7 +229,7 @@ export const SettingsScreen = () => {
           icon: 'mail-outline',
           iconColor: '#6b7280',
           onPress: () => {
-            Linking.openURL('mailto:support@artyard.app');
+            Linking.openURL('mailto:artyard2025@gmail.com');
           },
           showArrow: true,
         },

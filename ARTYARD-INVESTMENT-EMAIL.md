@@ -90,7 +90,7 @@ Artyard는 단순한 마켓플레이스를 넘어, 작가들이 공정하게 성
 
 임강민
 Co-Founder & CEO, Artyard
-Email: lavlna280@gmail.com
+Email: artyard2025@gmail.com
 Phone: 010-3352-3001
 ```
 

@@ -1,4 +1,4 @@
--- Check lavlna280@gmail.com account details
+-- Check artyard2025@gmail.com account details
 -- 계정 정보 확인
 
 -- 1. Auth 사용자 확인
@@ -9,7 +9,7 @@ SELECT
   confirmed_at,
   last_sign_in_at
 FROM auth.users
-WHERE email = 'lavlna280@gmail.com';
+WHERE email = 'artyard2025@gmail.com';
 
 -- 2. Profile 정보 확인
 SELECT 
@@ -23,7 +23,7 @@ SELECT
   created_at
 FROM profiles
 WHERE id IN (
-  SELECT id FROM auth.users WHERE email = 'lavlna280@gmail.com'
+  SELECT id FROM auth.users WHERE email = 'artyard2025@gmail.com'
 );
 
 -- 3. 해당 계정의 모든 작품 확인
@@ -35,7 +35,7 @@ SELECT
   created_at
 FROM artworks
 WHERE artist_id IN (
-  SELECT id FROM auth.users WHERE email = 'lavlna280@gmail.com'
+  SELECT id FROM auth.users WHERE email = 'artyard2025@gmail.com'
 )
 ORDER BY created_at DESC;
 
@@ -48,6 +48,6 @@ WHERE status = 'approved';
 SELECT COUNT(*) as user_artworks
 FROM artworks
 WHERE artist_id IN (
-  SELECT id FROM auth.users WHERE email = 'lavlna280@gmail.com'
+  SELECT id FROM auth.users WHERE email = 'artyard2025@gmail.com'
 );
 

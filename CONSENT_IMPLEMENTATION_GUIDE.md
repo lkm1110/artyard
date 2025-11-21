@@ -471,7 +471,7 @@ const handleRevokeConsent = async () => {
 ## 📞 **문의 및 지원**
 
 ```
-Email: lavlna280@gmail.com
+Email: artyard2025@gmail.com
 Privacy Policy: https://lkm1110.github.io/artyard/privacy-policy.html
 Terms of Service: https://lkm1110.github.io/artyard/terms-of-service-full.html
 Data Deletion: https://lkm1110.github.io/artyard/data-deletion.html

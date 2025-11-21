@@ -103,7 +103,7 @@ eas submit --platform ios
 
 감사합니다.
 임강민, Artyard CEO
-lavlna280@gmail.com
+artyard2025@gmail.com
 ```
 
 ---

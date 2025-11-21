@@ -48,7 +48,7 @@
 ### 2. 필수 링크 준비
 - [ ] 개인정보 보호 정책 웹페이지: https://artyard.app/privacy
 - [ ] 이용약관 웹페이지: https://artyard.app/terms
-- [ ] 지원 이메일: support@artyard.app
+- [ ] 지원 이메일: artyard2025@gmail.com
 - [ ] 웹사이트: https://artyard.app
 
 ### 3. 테스트 계정 준비

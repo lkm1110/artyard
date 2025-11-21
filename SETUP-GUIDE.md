@@ -31,7 +31,7 @@
 
 ---
 
-### **Step 2: lavlna280@gmail.com을 어드민으로 설정** ✅
+### **Step 2: artyard2025@gmail.com을 어드민으로 설정** ✅
 
 ```sql
 -- set-admin-lavlna280.sql 실행
@@ -39,7 +39,7 @@
 ```
 
 **이 파일이 하는 일:**
-- `lavlna280@gmail.com` 계정을 어드민으로 설정
+- `artyard2025@gmail.com` 계정을 어드민으로 설정
 - `is_admin = true`로 업데이트
 
 **확인 방법:**
@@ -52,7 +52,7 @@ SELECT
   p.is_admin
 FROM profiles p
 JOIN auth.users au ON p.id = au.id
-WHERE au.email = 'lavlna280@gmail.com';
+WHERE au.email = 'artyard2025@gmail.com';
 
 -- 결과에서 is_admin = true 확인
 ```
@@ -96,7 +96,7 @@ WHERE p.is_admin = true;
 ```
 handle         | email                    | is_admin
 ---------------|--------------------------|----------
-lavlna280      | lavlna280@gmail.com      | true
+lavlna280      | artyard2025@gmail.com      | true
 ```
 
 ---
@@ -137,7 +137,7 @@ ORDER BY table_name;
 ## 🎯 **앱에서 확인**
 
 ### **1. 로그인**
-1. `lavlna280@gmail.com` 계정으로 로그인
+1. `artyard2025@gmail.com` 계정으로 로그인
 2. 홈 화면으로 이동
 
 ### **2. 프로필 확인**
@@ -208,7 +208,7 @@ ORDER BY table_name;
 A: admin-schema-safe.sql을 먼저 실행하세요.
 ```
 
-### **Q: lavlna280@gmail.com이 어드민 버튼이 안 보임**
+### **Q: artyard2025@gmail.com이 어드민 버튼이 안 보임**
 ```
 A: 
 1. set-admin-lavlna280.sql 실행 확인
@@ -216,7 +216,7 @@ A:
 3. 로그아웃 → 재로그인
 4. SQL 확인:
    SELECT is_admin FROM profiles 
-   WHERE id = (SELECT id FROM auth.users WHERE email = 'lavlna280@gmail.com');
+   WHERE id = (SELECT id FROM auth.users WHERE email = 'artyard2025@gmail.com');
 ```
 
 ### **Q: Admin Management에서 사용자 검색이 안됨**
@@ -298,7 +298,7 @@ A: 정상입니다. 아직 실제 결제가 없기 때문입니다.
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ admin-schema-safe.sql 실행
 ✅ set-admin-lavlna280.sql 실행
-✅ lavlna280@gmail.com 어드민 확인
+✅ artyard2025@gmail.com 어드민 확인
 ✅ 앱에서 Admin Dashboard 버튼 확인
 ✅ Orders/Sales 버튼 확인
 ✅ Admin Management 메뉴 확인

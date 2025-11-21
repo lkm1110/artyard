@@ -28,7 +28,7 @@ Apple이 가이드라인 1.2 (사용자 생성 콘텐츠)를 거부한 이유:
 ```
 Support & Policies 섹션
 ├── 📧 Contact Support
-│   • Email: support@artyard.app
+│   • Email: artyard2025@gmail.com
 │   • 24시간 내 응답
 │   • 이메일 앱 자동 연결
 │
@@ -106,7 +106,7 @@ eas build --platform ios --profile production
 
 [연락처 정보 - 새로 추가!]
 ✅ 프로필 화면 → "Contact Support" 버튼
-   • Email: support@artyard.app
+   • Email: artyard2025@gmail.com
    • 응답 시간: 24시간 이내
    • 이메일 앱 자동 연결 또는 앱 내 표시
    
@@ -142,8 +142,8 @@ eas build --platform ios --profile production
 감사합니다.
 임강민
 Co-Founder & CEO, Artyard
-Business: lavlna280@gmail.com
-Support: support@artyard.app
+Business: artyard2025@gmail.com
+Support: artyard2025@gmail.com
 Phone: 010-3352-3001
 ```
 
@@ -227,7 +227,7 @@ Phone: 010-3352-3001
 ```
 ✅ 신고/차단 기능 ✓
 ✅ "Contact Support" 버튼 추가 ⭐
-✅ support@artyard.app 명시
+✅ artyard2025@gmail.com 명시
 ✅ 커뮤니티 가이드라인 추가
 ✅ 프로필 화면에서 쉽게 접근
 ```

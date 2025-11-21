@@ -80,7 +80,7 @@ DECLARE
   admin_user_id UUID;
 BEGIN
   -- 관리자 계정 가져오기 (첫 번째 사용자 또는 특정 admin)
-  SELECT id INTO admin_user_id FROM profiles WHERE email = 'lavlna280@gmail.com' LIMIT 1;
+  SELECT id INTO admin_user_id FROM profiles WHERE email = 'artyard2025@gmail.com' LIMIT 1;
   IF admin_user_id IS NULL THEN
     SELECT id INTO admin_user_id FROM profiles ORDER BY created_at LIMIT 1;
   END IF;

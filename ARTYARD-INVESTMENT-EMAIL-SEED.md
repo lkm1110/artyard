@@ -130,7 +130,7 @@ We're building an ecosystem where artists can thrive."
 Co-Founder & CEO
 Artyard
 
-Email: lavlna280@gmail.com
+Email: artyard2025@gmail.com
 Phone: 010-3352-3001
 LinkedIn: (준비 중)
 Website: (개발 중)
@@ -212,7 +212,7 @@ MVP 완성, 2026년 3월 글로벌 런칭 예정.
 감사합니다.
 
 임강민
-Email: lavlna280@gmail.com
+Email: artyard2025@gmail.com
 Phone: 010-3352-3001
 ```
 
@@ -238,7 +238,7 @@ Seed $2.5M 모집 중입니다. (Post-money $16.67M, 15%)
 15분 간단히 소개드릴 수 있을까요?
 
 투자제안서: [링크]
-연락처: lavlna280@gmail.com
+연락처: artyard2025@gmail.com
 
 감사합니다.
 임강민, Artyard CEO
