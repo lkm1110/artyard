@@ -135,6 +135,9 @@ export const ArtworkDetailScreen: React.FC = () => {
   const [deleteCommentConfirmVisible, setDeleteCommentConfirmVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
+  
+  // 드롭다운 메뉴 state
+  const [menuVisible, setMenuVisible] = useState(false);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -521,6 +524,51 @@ export const ArtworkDetailScreen: React.FC = () => {
     }
   }, [artwork]);
 
+  // 판매 완료 핸들러
+  const handleMarkAsSold = useCallback(async () => {
+    if (!artwork || !user || artwork.author_id !== user.id) {
+      setErrorMessage({
+        title: 'Error',
+        message: 'You can only mark your own artworks as sold.',
+      });
+      setErrorModalVisible(true);
+      return;
+    }
+
+    try {
+      const newStatus = artwork.sale_status === 'sold' ? 'available' : 'sold';
+      
+      const { error } = await supabase
+        .from('artworks')
+        .update({ sale_status: newStatus })
+        .eq('id', artwork.id);
+
+      if (error) throw error;
+
+      setSuccessMessage({
+        title: 'Success',
+        message: newStatus === 'sold' 
+          ? 'Artwork marked as sold out!' 
+          : 'Artwork is now available again!',
+      });
+      setSuccessModalVisible(true);
+      
+      // 데이터 새로고침
+      refetchArtwork();
+      queryClient.invalidateQueries({ queryKey: ['artworks'] });
+      queryClient.invalidateQueries({ queryKey: ['myArtworks'] });
+    } catch (error) {
+      console.error('Error updating sale status:', error);
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to update sale status. Please try again.',
+      });
+      setErrorModalVisible(true);
+    }
+    
+    setMenuVisible(false);
+  }, [artwork, user, refetchArtwork, queryClient]);
+
   // 작품 삭제 핸들러
   const handleDeleteArtwork = useCallback(async () => {
     console.log('🗑️ 작품 삭제 버튼 클릭됨');
@@ -859,9 +907,7 @@ export const ArtworkDetailScreen: React.FC = () => {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.commentActionIcon, { color: colors.primary }]}>
-                    ✏️
-                  </Text>
+                  <Ionicons name="create-outline" size={18} color={isDark ? colors.darkTextMuted : colors.textMuted} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.commentActionButton}
@@ -924,9 +970,7 @@ export const ArtworkDetailScreen: React.FC = () => {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.commentActionIcon, { color: colors.danger }]}>
-                    ✕
-                  </Text>
+                  <Ionicons name="trash-outline" size={18} color={isDark ? colors.darkTextMuted : colors.textMuted} />
                 </TouchableOpacity>
               </View>
             )}
@@ -938,7 +982,7 @@ export const ArtworkDetailScreen: React.FC = () => {
                 onPress={() => handleReportComment(item)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="warning-outline" size={18} color="#FF6B6B" />
+                <Ionicons name="alert-circle-outline" size={18} color={isDark ? colors.darkTextMuted : colors.textMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -1022,32 +1066,82 @@ export const ArtworkDetailScreen: React.FC = () => {
           Artwork Details
         </Text>
         
-        {/* 작성자만 볼 수 있는 수정/삭제 버튼 */}
+        {/* 작성자만 볼 수 있는 메뉴 버튼 */}
         {artwork && user && artwork.author_id === user.id ? (
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.headerActionButton}
-              onPress={handleEditArtwork}
+              onPress={() => setMenuVisible(!menuVisible)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.headerActionIcon, { color: colors.primary }]}>
-                ✏️
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerActionButton}
-              onPress={handleDeleteArtwork}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.headerActionIcon, { color: colors.danger }]}>
-                ✕
-              </Text>
+              <Ionicons 
+                name="ellipsis-vertical" 
+                size={24} 
+                color={isDark ? colors.darkText : colors.text} 
+              />
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.headerRight} />
         )}
       </View>
+
+      {/* 드롭다운 메뉴 */}
+      {menuVisible && artwork && user && artwork.author_id === user.id && (
+        <View style={[styles.dropdownMenu, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => {
+              setMenuVisible(false);
+              handleEditArtwork();
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="create-outline" size={20} color={isDark ? colors.darkText : colors.text} />
+            <Text style={[styles.menuItemText, { color: isDark ? colors.darkText : colors.text }]}>
+              Edit
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleMarkAsSold}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name={artwork.sale_status === 'sold' ? "checkmark-circle-outline" : "close-circle-outline"} 
+              size={20} 
+              color={isDark ? colors.darkText : colors.text} 
+            />
+            <Text style={[styles.menuItemText, { color: isDark ? colors.darkText : colors.text }]}>
+              {artwork.sale_status === 'sold' ? 'Mark as Available' : 'Mark as Sold Out'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.menuItem, { borderBottomWidth: 0 }]}
+            onPress={() => {
+              setMenuVisible(false);
+              handleDeleteArtwork();
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.danger} />
+            <Text style={[styles.menuItemText, { color: colors.danger }]}>
+              Delete
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 메뉴 외부 클릭시 닫기 */}
+      {menuVisible && (
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        />
+      )}
 
       <ScrollView 
         ref={scrollViewRef}
@@ -1250,11 +1344,11 @@ export const ArtworkDetailScreen: React.FC = () => {
                 
                 {/* 작품 신고 버튼 (앱스토어 심의 필수!) */}
                 <TouchableOpacity 
-                  style={[styles.reportButton, { borderColor: colors.textMuted, borderWidth: 1, marginLeft: spacing.sm }]}
+                  style={[styles.reportButton, { marginLeft: spacing.sm }]}
                   onPress={handleReportArtwork}
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons name="warning-outline" size={20} color={colors.textMuted} />
+                  <Ionicons name="alert-circle-outline" size={24} color={isDark ? colors.darkTextMuted : colors.textMuted} />
                 </TouchableOpacity>
               </View>
             )}
@@ -1604,6 +1698,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    position: 'relative',
     gap: spacing.xs,
   },
   headerActionButton: {
@@ -1797,15 +1892,45 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   reportButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    padding: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
   reportButtonText: {
     fontSize: 18,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 60,
+    right: spacing.md,
+    borderRadius: borderRadius.md,
+    ...shadows.lg,
+    zIndex: 1000,
+    minWidth: 180,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + '30',
+  },
+  menuItemText: {
+    ...typography.body,
+    fontWeight: '500',
+  },
+  menuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
   actionSection: {
     padding: spacing.lg,

@@ -1340,13 +1340,13 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     flex: 1,
-    paddingVertical: spacing.md + 6, // 패딩 더 증가
-    paddingHorizontal: spacing.md, // 좌우 패딩 증가
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56, // 최소 높이 더 증가
-    overflow: 'hidden', // 텍스트가 밖으로 나가지 않도록
+    minHeight: 44,
+    overflow: 'hidden',
     ...shadows.sm,
   },
   cancelButton: {
