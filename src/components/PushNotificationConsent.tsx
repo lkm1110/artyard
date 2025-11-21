@@ -113,11 +113,6 @@ export const PushNotificationConsent: React.FC = () => {
             },
           ]}
         >
-          {/* Icon */}
-          <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🔔</Text>
-          </View>
-
           {/* Title */}
           <Text
             style={[
@@ -125,7 +120,7 @@ export const PushNotificationConsent: React.FC = () => {
               { color: isDark ? colors.darkText : colors.text },
             ]}
           >
-            Stay Updated!
+            Stay Updated
           </Text>
 
           {/* Description */}
@@ -135,17 +130,8 @@ export const PushNotificationConsent: React.FC = () => {
               { color: isDark ? colors.darkTextMuted : colors.textMuted },
             ]}
           >
-            Get notified about:
+            Get notified about sales, messages, likes, new followers, and challenge results
           </Text>
-
-          {/* Features List */}
-          <View style={styles.featuresList}>
-            <FeatureItem icon="💰" text="Sales & Orders" />
-            <FeatureItem icon="💬" text="New Messages" />
-            <FeatureItem icon="❤️" text="Likes & Comments" />
-            <FeatureItem icon="👥" text="New Followers" />
-            <FeatureItem icon="🏆" text="Challenge Results" />
-          </View>
 
           {/* Note */}
           <Text
@@ -165,7 +151,7 @@ export const PushNotificationConsent: React.FC = () => {
               disabled={isRegistering}
             >
               <Text style={styles.allowButtonText}>
-                {isRegistering ? 'Enabling...' : '🔔 Allow Notifications'}
+                {isRegistering ? 'Enabling...' : 'Allow Notifications'}
               </Text>
             </TouchableOpacity>
 
@@ -194,23 +180,6 @@ export const PushNotificationConsent: React.FC = () => {
   );
 };
 
-const FeatureItem: React.FC<{ icon: string; text: string }> = ({ icon, text }) => {
-  const isDark = useColorScheme() === 'dark';
-  
-  return (
-    <View style={styles.featureItem}>
-      <Text style={styles.featureIcon}>{icon}</Text>
-      <Text
-        style={[
-          styles.featureText,
-          { color: isDark ? colors.darkText : colors.text },
-        ]}
-      >
-        {text}
-      </Text>
-    </View>
-  );
-};
 
 const styles = StyleSheet.create({
   overlay: {
@@ -227,41 +196,18 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     ...shadows.lg,
   },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  icon: {
-    fontSize: 64,
-  },
   title: {
     ...typography.h2,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+    marginTop: spacing.md,
   },
   description: {
     ...typography.body,
     textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  featuresList: {
-    marginBottom: spacing.lg,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  featureIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
-    width: 32,
-    textAlign: 'center',
-  },
-  featureText: {
-    ...typography.body,
-    flex: 1,
+    marginBottom: spacing.xl,
+    lineHeight: 22,
   },
   note: {
     ...typography.caption,
