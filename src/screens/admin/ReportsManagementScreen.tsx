@@ -122,7 +122,6 @@ export const ReportsManagementScreen = () => {
         .update({
           status: action,
           resolved_by: user?.id,
-          resolved_at: new Date().toISOString(),
           admin_notes: adminNotes || null,
         })
         .eq('id', reportId);

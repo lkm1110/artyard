@@ -47,19 +47,19 @@ export const AdminManagementScreen = () => {
     try {
       setLoading(true);
 
-      // is_admin = true인 사용자 조회 (handle과 email 모두 가져오기)
+      // is_admin = true인 사용자 조회 (handle만 사용 - profiles 테이블에 email 컬럼 없음)
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, handle, email, created_at, is_admin')
+        .select('id, handle, created_at, is_admin')
         .eq('is_admin', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // 실제 email 또는 표시용 email 사용
+      // 표시용 email 생성
       const adminsData = (data || []).map((profile) => ({
         ...profile,
-        email: profile.email || `${profile.handle}@artyard.com`, // 실제 이메일 또는 표시용
+        email: `${profile.handle}@artyard.com`, // 표시용 이메일
       }));
 
       setAdmins(adminsData);
@@ -73,7 +73,7 @@ export const AdminManagementScreen = () => {
 
   const handleSearchUser = async () => {
     if (!searchEmail.trim()) {
-      alert('Notice: Please enter handle or email');
+      alert('Notice: Please enter handle');
       return;
     }
 
@@ -82,45 +82,29 @@ export const AdminManagementScreen = () => {
       
       console.log('🔍 검색 시작:', searchEmail);
 
-      // profiles 테이블에서 handle 또는 email로 검색
+      // profiles 테이블에서 handle로 검색 (email 컬럼 없음)
       const searchTerm = searchEmail.trim();
       
-      // handle로 검색
-      const { data: profilesByHandle, error: handleError } = await supabase
+      // handle로만 검색
+      const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, handle, email, created_at, is_admin')
+        .select('id, handle, created_at, is_admin')
         .ilike('handle', `%${searchTerm}%`);
 
-      if (handleError) throw handleError;
+      if (error) throw error;
 
-      // email로 검색
-      const { data: profilesByEmail, error: emailError } = await supabase
-        .from('profiles')
-        .select('id, handle, email, created_at, is_admin')
-        .ilike('email', `%${searchTerm}%`);
+      console.log('📊 검색 결과:', profiles?.length || 0);
 
-      if (emailError) throw emailError;
-
-      // 중복 제거하며 병합
-      const allProfiles = [...(profilesByHandle || []), ...(profilesByEmail || [])];
-      const uniqueProfiles = Array.from(
-        new Map(allProfiles.map(p => [p.id, p])).values()
-      );
-
-      console.log('📊 검색 결과 (handle):', profilesByHandle?.length || 0);
-      console.log('📊 검색 결과 (email):', profilesByEmail?.length || 0);
-      console.log('📊 총 검색 결과:', uniqueProfiles.length);
-
-      if (uniqueProfiles.length === 0) {
+      if (!profiles || profiles.length === 0) {
         console.log('⚠️ 검색 결과 없음');
-        alert(`Notice: No users found with handle or email containing "${searchTerm}"`);
+        alert(`Notice: No users found with handle containing "${searchTerm}"`);
         setSearchResults([]);
         return;
       }
 
-      const results = uniqueProfiles.map(p => ({
+      const results = profiles.map(p => ({
         id: p.id,
-        email: p.email || `${p.handle}@artyard.com`, // 실제 이메일 또는 표시용
+        email: `${p.handle}@artyard.com`, // 표시용 이메일
         handle: p.handle,
         created_at: p.created_at,
         is_admin: p.is_admin || false,
@@ -344,7 +328,7 @@ export const AdminManagementScreen = () => {
 
           <View style={styles.modalContent}>
             <Text style={[styles.inputLabel, { color: isDark ? colors.darkText : colors.text }]}>
-              Search by Handle or Email
+              Search by Handle (Username)
             </Text>
 
             <View style={styles.searchContainer}>
@@ -357,11 +341,11 @@ export const AdminManagementScreen = () => {
                     borderColor: isDark ? colors.darkBorder : colors.border,
                   },
                 ]}
-                placeholder="Enter username or email (e.g., kangmin or artyard2025@gmail.com)"
+                placeholder="Enter username (e.g., kangmin)"
                 placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
                 value={searchEmail}
                 onChangeText={setSearchEmail}
-                keyboardType="email-address"
+                keyboardType="default"
                 autoCapitalize="none"
               />
 
