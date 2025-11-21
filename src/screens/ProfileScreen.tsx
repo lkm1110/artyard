@@ -371,20 +371,17 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
               />
             </>
           )}
-
-          {/* Edit button for own profile only */}
-          {isOwnProfile && (
-            <Button
-              title="Edit Profile"
-              onPress={() => navigation.navigate('ProfileEdit')}
-              variant="outline"
-              style={styles.button}
-            />
-          )}
           
-          {/* Bookmarks, My Artworks, Logout buttons for own profile only */}
+          {/* Settings and menu buttons for own profile only */}
           {isOwnProfile && (
             <>
+              <Button
+                title="Settings"
+                onPress={() => navigation.navigate('Settings' as never)}
+                variant="outline"
+                style={styles.button}
+              />
+              
               <Button
                 title="My Bookmarks"
                 onPress={() => navigation.navigate('Bookmarks')}
@@ -430,13 +427,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
               <Button
                 title="Artist Dashboard"
                 onPress={() => navigation.navigate('ArtistDashboard' as never)}
-                variant="outline"
-                style={styles.button}
-              />
-              
-              <Button
-                title="Settings"
-                onPress={() => navigation.navigate('Settings' as never)}
                 variant="outline"
                 style={styles.button}
               />
