@@ -47,22 +47,29 @@ export const AdminManagementScreen = () => {
     try {
       setLoading(true);
 
-      // is_admin = true인 사용자 조회 (handle만 사용 - profiles 테이블에 email 컬럼 없음)
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, handle, created_at, is_admin')
-        .eq('is_admin', true)
-        .order('created_at', { ascending: false });
+      // RPC 함수로 실제 이메일 포함해서 가져오기
+      const { data, error } = await supabase.rpc('get_admin_users');
 
-      if (error) throw error;
+      if (error) {
+        console.error('RPC 에러, fallback 사용:', error);
+        // Fallback: profiles만 조회
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, handle, created_at, is_admin')
+          .eq('is_admin', true)
+          .order('created_at', { ascending: false });
 
-      // 표시용 email 생성
-      const adminsData = (data || []).map((profile) => ({
-        ...profile,
-        email: `${profile.handle}@artyard.com`, // 표시용 이메일
-      }));
+        if (profilesError) throw profilesError;
 
-      setAdmins(adminsData);
+        const adminsData = (profiles || []).map((profile) => ({
+          ...profile,
+          email: `${profile.handle}@artyard.com`, // Fallback
+        }));
+        setAdmins(adminsData);
+        return;
+      }
+
+      setAdmins(data || []);
     } catch (error: any) {
       console.error('관리자 목록 로드 실패:', error);
       alert('Error: Failed to load admin list');
@@ -82,35 +89,49 @@ export const AdminManagementScreen = () => {
       
       console.log('🔍 검색 시작:', searchEmail);
 
-      // profiles 테이블에서 handle로 검색 (email 컬럼 없음)
       const searchTerm = searchEmail.trim();
       
-      // handle로만 검색
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, handle, created_at, is_admin')
-        .ilike('handle', `%${searchTerm}%`);
+      // RPC 함수로 실제 이메일 포함해서 검색
+      const { data, error } = await supabase.rpc('search_users_with_email', {
+        search_term: searchTerm
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('RPC 에러, fallback 사용:', error);
+        // Fallback: profiles만 검색
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, handle, created_at, is_admin')
+          .ilike('handle', `%${searchTerm}%`);
 
-      console.log('📊 검색 결과:', profiles?.length || 0);
+        if (profilesError) throw profilesError;
 
-      if (!profiles || profiles.length === 0) {
-        console.log('⚠️ 검색 결과 없음');
+        if (!profiles || profiles.length === 0) {
+          alert(`Notice: No users found with handle containing "${searchTerm}"`);
+          setSearchResults([]);
+          return;
+        }
+
+        const results = profiles.map(p => ({
+          id: p.id,
+          email: `${p.handle}@artyard.com`, // Fallback
+          handle: p.handle,
+          created_at: p.created_at,
+          is_admin: p.is_admin || false,
+        }));
+        setSearchResults(results);
+        return;
+      }
+
+      console.log('📊 검색 결과:', data?.length || 0);
+
+      if (!data || data.length === 0) {
         alert(`Notice: No users found with handle containing "${searchTerm}"`);
         setSearchResults([]);
         return;
       }
 
-      const results = profiles.map(p => ({
-        id: p.id,
-        email: `${p.handle}@artyard.com`, // 표시용 이메일
-        handle: p.handle,
-        created_at: p.created_at,
-        is_admin: p.is_admin || false,
-      }));
-
-      setSearchResults(results);
+      setSearchResults(data);
     } catch (error: any) {
       console.error('사용자 검색 실패:', error);
       alert('Error: ' + (error.message || 'Failed to search users'));
@@ -122,96 +143,105 @@ export const AdminManagementScreen = () => {
   const handleAddAdmin = async (userId: string, handle: string) => {
     console.log('🎯 Add Admin 클릭:', { userId, handle });
     
-    // 웹에서는 window.confirm 사용
-    const confirmed = window.confirm(`Add "${handle}" as an administrator?`);
-    
-    if (!confirmed) {
-      console.log('❌ 취소됨');
-      return;
-    }
-    
-    try {
-      console.log('✅ 관리자 추가 시작...');
-      console.log('📝 대상 userId:', userId);
-      console.log('📝 현재 admin userId:', user?.id);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ is_admin: true })
-        .eq('id', userId)
-        .select();
+    // React Native Alert 사용
+    Alert.alert(
+      'Add Administrator',
+      `Add "${handle}" as an administrator?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => console.log('❌ 취소됨'),
+        },
+        {
+          text: 'Add',
+          onPress: async () => {
+            try {
+              console.log('✅ 관리자 추가 시작...');
+              console.log('📝 대상 userId:', userId);
+              console.log('📝 현재 admin userId:', user?.id);
+              
+              const { data, error } = await supabase
+                .from('profiles')
+                .update({ is_admin: true })
+                .eq('id', userId)
+                .select();
 
-      console.log('📊 업데이트 결과 (data):', data);
-      console.log('📊 업데이트 결과 (data length):', data?.length);
-      console.log('❌ 에러:', error);
-      console.log('❌ 에러 상세:', error ? {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-      } : 'null');
+              console.log('📊 업데이트 결과 (data):', data);
+              console.log('📊 업데이트 결과 (data length):', data?.length);
+              console.log('❌ 에러:', error);
 
-      if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        throw new Error('Update succeeded but no rows were affected. This might be an RLS policy issue.');
-      }
+              if (error) throw error;
+              
+              if (!data || data.length === 0) {
+                throw new Error('Update succeeded but no rows were affected. This might be an RLS policy issue.');
+              }
 
-      console.log('✅ 관리자 추가 성공! 실제 업데이트된 데이터:', data[0]);
+              console.log('✅ 관리자 추가 성공! 실제 업데이트된 데이터:', data[0]);
 
-      // admin_actions 로그 기능 제거 (CHECK constraint 문제로 비활성화)
-
-      alert(`Success: "${handle}" has been added as an administrator`);
-      setModalVisible(false);
-      setSearchEmail('');
-      setSearchResults([]);
-      loadAdmins();
-    } catch (error: any) {
-      console.error('💥 관리자 추가 실패:', error);
-      alert('Error: ' + (error.message || 'Failed to add administrator'));
-    }
+              Alert.alert('Success', `"${handle}" has been added as an administrator`);
+              setModalVisible(false);
+              setSearchEmail('');
+              setSearchResults([]);
+              loadAdmins();
+            } catch (error: any) {
+              console.error('💥 관리자 추가 실패:', error);
+              Alert.alert('Error', error.message || 'Failed to add administrator');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleRemoveAdmin = async (userId: string, handle: string) => {
     if (userId === user?.id) {
-      alert('Notice: You cannot remove yourself as admin');
+      Alert.alert('Notice', 'You cannot remove yourself as admin');
       return;
     }
 
     console.log('🗑️ Remove Admin 클릭:', { userId, handle });
 
-    // 웹에서는 window.confirm 사용
-    const confirmed = window.confirm(`Remove "${handle}" from administrators?`);
-    
-    if (!confirmed) {
-      console.log('❌ 취소됨');
-      return;
-    }
-    
-    try {
-      console.log('🗑️ 관리자 제거 시작...');
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ is_admin: false })
-        .eq('id', userId)
-        .select();
+    // React Native Alert 사용
+    Alert.alert(
+      'Remove Administrator',
+      `Remove "${handle}" from administrators?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => console.log('❌ 취소됨'),
+        },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🗑️ 관리자 제거 시작...');
+              
+              const { data, error } = await supabase
+                .from('profiles')
+                .update({ is_admin: false })
+                .eq('id', userId)
+                .select();
 
-      console.log('📊 업데이트 결과:', data);
-      console.log('❌ 에러:', error);
+              console.log('📊 업데이트 결과:', data);
+              console.log('❌ 에러:', error);
 
-      if (error) throw error;
+              if (error) throw error;
 
-      console.log('✅ 관리자 제거 성공!');
+              console.log('✅ 관리자 제거 성공!');
 
-      // admin_actions 로그 기능 제거 (CHECK constraint 문제로 비활성화)
-
-      alert(`Success: "${handle}" has been removed from administrators`);
-      loadAdmins();
-    } catch (error: any) {
-      console.error('💥 관리자 제거 실패:', error);
-      alert('Error: ' + (error.message || 'Failed to remove administrator'));
-    }
+              Alert.alert('Success', `"${handle}" has been removed from administrators`);
+              loadAdmins();
+            } catch (error: any) {
+              console.error('💥 관리자 제거 실패:', error);
+              Alert.alert('Error', error.message || 'Failed to remove administrator');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderAdmin = ({ item }: { item: Admin }) => (
