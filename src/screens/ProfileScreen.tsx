@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ScrollView,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -176,13 +177,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
         setIsBlocked(true);
       }
 
-      setSuccessMessage({
+        setSuccessMessage({
         title: isBlocked ? 'User Unblocked' : 'User Blocked',
         message: isBlocked 
           ? 'You can now see this user\'s content again.' 
           : 'You will no longer see this user\'s content.',
-      });
-      setSuccessModalVisible(true);
+        });
+        setSuccessModalVisible(true);
     } catch (error) {
       console.error('Block/Unblock error:', error);
       setErrorMessage({
@@ -361,7 +362,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
         <View style={styles.backButton} />
       </View>
 
-      <ScrollView
+      <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -376,42 +377,49 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
         {/* Profile Info Card */}
         {user && (
           <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
-            <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-              <Text style={styles.avatarText}>
-                {user.handle?.[0]?.toUpperCase() || 'U'}
-              </Text>
-            </View>
+            {user.avatar_url ? (
+              <Image
+                source={{ uri: user.avatar_url }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+                <Text style={styles.avatarText}>
+                  {user.handle?.[0]?.toUpperCase() || 'U'}
+                </Text>
+              </View>
+            )}
             
             <View style={styles.profileTextContainer}>
-              <View style={styles.handleRow}>
+            <View style={styles.handleRow}>
                 <Text style={[styles.handle, { color: theme.text }]}>
-                  @{user.handle || 'unknown'}
-                </Text>
-                
-                {!isOwnProfile && viewingUserId && (
-                  <FollowButton
-                    userId={viewingUserId}
-                    size="small"
+                @{user.handle || 'unknown'}
+              </Text>
+              
+              {!isOwnProfile && viewingUserId && (
+                <FollowButton
+                  userId={viewingUserId}
+                  size="small"
                     style={styles.followButton}
-                    onFollowChange={(isFollowing, stats) => {
+                  onFollowChange={(isFollowing, stats) => {
                       console.log('Follow status changed:', isFollowing, stats);
-                    }}
-                  />
-                )}
-              </View>
-              
-              {user.school && (
-                <Text style={[styles.school, { color: theme.textSecondary }]}>
-                  {user.school} {user.department && `· ${user.department}`}
-                </Text>
-              )}
-              
-              {user.bio && (
-                <Text style={[styles.bio, { color: theme.text }]}>
-                  {user.bio}
-                </Text>
+                  }}
+                />
               )}
             </View>
+            
+            {user.school && (
+                <Text style={[styles.school, { color: theme.textSecondary }]}>
+                {user.school} {user.department && `· ${user.department}`}
+              </Text>
+            )}
+            
+            {user.bio && (
+                <Text style={[styles.bio, { color: theme.text }]}>
+                {user.bio}
+              </Text>
+            )}
+          </View>
           </View>
         )}
 
@@ -434,7 +442,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
           <View style={styles.section}>
             <TouchableOpacity
               style={[styles.signOutButton, { backgroundColor: theme.card }]}
-              onPress={handleSignOut}
+                onPress={handleSignOut}
               activeOpacity={0.7}
             >
               <View style={styles.menuLeft}>

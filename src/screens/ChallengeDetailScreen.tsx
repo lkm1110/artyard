@@ -67,6 +67,7 @@ export const ChallengeDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [voting, setVoting] = useState(false);
+  const [currentTime, setCurrentTime] = useState(Date.now());
   
   // Modal state
   const [successModalVisible, setSuccessModalVisible] = useState(false);
@@ -79,6 +80,15 @@ export const ChallengeDetailScreen = () => {
   useEffect(() => {
     loadChallengeData();
   }, [id]);
+  
+  // 1초마다 현재 시간 업데이트 (타이머용)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   const loadChallengeData = async (isRefreshing = false) => {
     try {
@@ -274,20 +284,34 @@ export const ChallengeDetailScreen = () => {
     }
   };
   
-  const getDaysRemaining = () => {
+  const getTimeRemaining = () => {
     if (!challenge) return '';
     
-    const now = new Date();
+    const now = currentTime;
     const targetDate = challenge.status === 'voting' 
-      ? new Date(challenge.voting_end_date)
-      : new Date(challenge.end_date);
+      ? new Date(challenge.voting_end_date).getTime()
+      : new Date(challenge.end_date).getTime();
     
-    const diffMs = targetDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const distance = targetDate - now;
     
-    if (diffDays < 0) return 'Ended';
-    if (diffDays === 0) return 'Ends today';
-    return `${diffDays} days left`;
+    if (distance < 0) {
+      return 'Ended';
+    }
+    
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
   };
   
   if (loading) {
@@ -365,7 +389,7 @@ export const ChallengeDetailScreen = () => {
             </View>
             <View style={styles.stat}>
               <Text style={[styles.statValue, { color: getStatusColor(challenge?.status || 'upcoming') }]}>
-                {getDaysRemaining()}
+                {getTimeRemaining()}
               </Text>
               <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
                 Time Left

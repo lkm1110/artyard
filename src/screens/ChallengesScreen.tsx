@@ -92,15 +92,29 @@ export const ChallengesScreen = () => {
     }
   };
   
-  const getDaysRemaining = (endDate: string): string => {
-    const now = new Date();
-    const end = new Date(endDate);
-    const diffMs = end.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const getChallengeTimeRemaining = (endDate: string): string => {
+    const now = currentTime;
+    const end = new Date(endDate).getTime();
+    const distance = end - now;
     
-    if (diffDays < 0) return 'Ended';
-    if (diffDays === 0) return 'Ends today';
-    return `${diffDays} days left`;
+    if (distance < 0) {
+      return 'Ended';
+    }
+    
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
   };
   
   const getStatusColor = (status: string) => {
@@ -215,8 +229,9 @@ export const ChallengesScreen = () => {
   };
 
   const renderChallenge = ({ item }: { item: Challenge }) => {
-    const daysRemaining = getDaysRemaining(item.end_date);
+    const timeRemaining = getChallengeTimeRemaining(item.end_date);
     const isActive = item.status === 'active';
+    const isEnded = timeRemaining === 'Ended';
     
     return (
       <TouchableOpacity
@@ -243,6 +258,26 @@ export const ChallengesScreen = () => {
           {item.description}
         </Text>
         
+        {/* Countdown Timer for Active Challenges */}
+        {isActive && (
+          <View style={[
+            styles.timerBadge,
+            { backgroundColor: isEnded ? `${colors.error}15` : `${colors.success}15` }
+          ]}>
+            <Ionicons 
+              name={isEnded ? 'close-circle' : 'time-outline'} 
+              size={16} 
+              color={isEnded ? colors.error : colors.success} 
+            />
+            <Text style={[
+              styles.timerText,
+              { color: isEnded ? colors.error : colors.success }
+            ]}>
+              {isEnded ? 'Ended' : `Ends in: ${timeRemaining}`}
+            </Text>
+          </View>
+        )}
+        
         <View style={styles.challengeStats}>
           <View style={styles.stat}>
             <Text style={styles.statLabel}>Participants</Text>
@@ -252,15 +287,17 @@ export const ChallengesScreen = () => {
             <Text style={styles.statLabel}>Entries</Text>
             <Text style={styles.statValue}>{item.entries_count}</Text>
           </View>
-          <View style={styles.stat}>
-            <Text style={styles.statLabel}>Duration</Text>
-            <Text style={[
-              styles.statValue,
-              !isActive && styles.statValueEnded,
-            ]}>
-              {daysRemaining}
-            </Text>
-          </View>
+          {!isActive && (
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>Status</Text>
+              <Text style={[
+                styles.statValue,
+                styles.statValueEnded,
+              ]}>
+                {timeRemaining}
+              </Text>
+            </View>
+          )}
         </View>
         
         {item.status === 'ended' && item.entries_count > 0 && (

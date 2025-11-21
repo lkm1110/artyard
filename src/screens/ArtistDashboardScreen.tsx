@@ -100,15 +100,17 @@ export const ArtistDashboardScreen = () => {
       .eq('id', user.id)
       .single();
 
-    // 2. 작품 수 및 총 좋아요/조회수
+    // 2. 작품 수 및 총 좋아요
     const { data: artworks } = await supabase
       .from('artworks')
-      .select('id, price, likes_count, views_count')
+      .select('id, price, likes_count')
       .eq('author_id', user.id);
 
     const total_artworks = artworks?.length || 0;
     const total_likes = artworks?.reduce((sum, art) => sum + (art.likes_count || 0), 0) || 0;
-    const total_views = artworks?.reduce((sum, art) => sum + (art.views_count || 0), 0) || 0;
+    
+    // views_count는 추후 구현 예정
+    const total_views = 0;
 
     // 3. 판매 통계 (주문 테이블에서)
     const { data: orders } = await supabase
