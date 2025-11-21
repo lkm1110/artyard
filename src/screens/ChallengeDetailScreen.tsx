@@ -25,6 +25,7 @@ import { useAuthStore } from '../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
 import { SuccessModal } from '../components/SuccessModal';
 import { ErrorModal } from '../components/ErrorModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -70,8 +71,10 @@ export const ChallengeDetailScreen = () => {
   // Modal state
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [pendingVoteEntryId, setPendingVoteEntryId] = useState<string | null>(null);
   
   useEffect(() => {
     loadChallengeData();
@@ -155,6 +158,24 @@ export const ChallengeDetailScreen = () => {
       return;
     }
     
+    // 같은 작품 클릭 → 투표 취소
+    if (myVote === entryId) {
+      await executeVote(entryId);
+      return;
+    }
+    
+    // 이미 다른 작품에 투표한 경우 → 확인 모달 표시
+    if (myVote && myVote !== entryId) {
+      setPendingVoteEntryId(entryId);
+      setConfirmModalVisible(true);
+      return;
+    }
+    
+    // 처음 투표하는 경우 → 바로 투표
+    await executeVote(entryId);
+  };
+  
+  const executeVote = async (entryId: string) => {
     try {
       setVoting(true);
       
@@ -196,6 +217,14 @@ export const ChallengeDetailScreen = () => {
       setErrorModalVisible(true);
     } finally {
       setVoting(false);
+    }
+  };
+  
+  const handleConfirmVote = async () => {
+    setConfirmModalVisible(false);
+    if (pendingVoteEntryId) {
+      await executeVote(pendingVoteEntryId);
+      setPendingVoteEntryId(null);
     }
   };
   
@@ -632,6 +661,21 @@ export const ChallengeDetailScreen = () => {
         title="Error"
         message={errorMessage}
         onClose={() => setErrorModalVisible(false)}
+      />
+      
+      {/* Confirm Vote Change Modal */}
+      <ConfirmModal
+        visible={confirmModalVisible}
+        title="Change Vote?"
+        message="You have already voted for another artwork. Do you want to cancel your previous vote and vote for this artwork instead?"
+        confirmText="Change Vote"
+        cancelText="Cancel"
+        onConfirm={handleConfirmVote}
+        onCancel={() => {
+          setConfirmModalVisible(false);
+          setPendingVoteEntryId(null);
+        }}
+        type="warning"
       />
     </SafeAreaView>
   );
