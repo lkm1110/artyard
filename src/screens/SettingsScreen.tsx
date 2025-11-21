@@ -3,7 +3,7 @@
  * 앱 설정 및 정책 링크
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
 import { useAuthStore } from '../store/authStore';
+import { supabase } from '../services/supabase';
+import { ConfirmModal } from '../components/ConfirmModal';
 import Constants from 'expo-constants';
 
 interface SettingItem {
@@ -40,9 +42,80 @@ interface SettingSection {
 export const SettingsScreen = () => {
   const navigation = useNavigation<any>();
   const isDark = useColorScheme() === 'dark';
-  const { user } = useAuthStore();
+  const { user, signOut } = useAuthStore();
+
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
+
+  const handleDeleteAccount = () => {
+    setDeleteConfirmVisible(true);
+  };
+
+  const executeDeleteAccount = async () => {
+    try {
+      console.log('🗑️ [Delete Account] Starting...');
+      setIsDeleting(true);
+      
+      if (!user?.id) {
+        Alert.alert('Error', 'User not found.');
+        return;
+      }
+
+      // Direct fetch to RPC (bypass SDK)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      console.log('📡 [Delete Account] Calling RPC...');
+      const response = await fetch(
+        'https://bkvycanciimgyftdtqpx.supabase.co/rest/v1/rpc/delete_user_account',
+        {
+          method: 'POST',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY',
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ user_id: user.id })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [Delete Account] RPC failed:', response.status, errorText);
+        throw new Error(`Delete failed: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ [Delete Account] RPC success:', result);
+
+      setDeleteConfirmVisible(false);
+      Alert.alert(
+        'Account Deleted',
+        'Your account has been successfully deleted.',
+        [
+          {
+            text: 'OK',
+            onPress: async () => {
+              await signOut();
+            }
+          }
+        ]
+      );
+    } catch (error: any) {
+      console.error('❌ [Delete Account] Error:', error);
+      setDeleteConfirmVisible(false);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to delete account. Please contact support.'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const openURL = async (url: string) => {
     try {
@@ -88,23 +161,7 @@ export const SettingsScreen = () => {
           title: 'Delete Account',
           icon: 'trash-outline',
           iconColor: colors.error,
-          onPress: () => {
-            Alert.alert(
-              'Delete Account',
-              'Are you sure you want to delete your account? This action cannot be undone.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: () => {
-                    // TODO: Implement account deletion
-                    Alert.alert('Info', 'Account deletion will be implemented soon.');
-                  },
-                },
-              ]
-            );
-          },
+          onPress: handleDeleteAccount,
           showArrow: false,
         },
       ],
@@ -251,6 +308,19 @@ export const SettingsScreen = () => {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Delete Account Confirm Modal */}
+      <ConfirmModal
+        visible={deleteConfirmVisible}
+        title="⚠️ Delete Account"
+        message="Are you sure you want to delete your account?&#10;&#10;This action cannot be undone.&#10;All your artworks, comments, and data will be permanently deleted."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={executeDeleteAccount}
+        onCancel={() => setDeleteConfirmVisible(false)}
+        isDestructive={true}
+        isLoading={isDeleting}
+      />
     </SafeAreaView>
   );
 };
