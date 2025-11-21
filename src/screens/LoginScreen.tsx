@@ -82,8 +82,15 @@ export const LoginScreen: React.FC = () => {
         
         // 사용자가 취소한 경우 (dismiss/cancel)
         if (error && error.message === 'OAUTH_CANCELLED') {
-          console.log('✅ [CANCEL] 사용자가 로그인을 취소했습니다 - 에러 팝업 표시 안 함');
-          return; // 에러 팝업 없이 조용히 종료
+          console.log('✅ [CANCEL] 사용자가 로그인을 취소했습니다');
+          
+          // MFA 관련 문제일 가능성 안내
+          Alert.alert(
+            'Login Cancelled',
+            'If you use Google 2-Step Verification (MFA), the number matching feature may not work properly in the app.\n\nPlease try:\n1. Use a Google account without MFA\n2. Or disable number matching in Google Account Security settings',
+            [{ text: 'OK' }]
+          );
+          return;
         }
         
         throw error;

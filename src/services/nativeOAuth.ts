@@ -123,6 +123,12 @@ export const signInWithGoogleNative = async () => {
       options: {
         redirectTo: redirectUri,
         skipBrowserRedirect: true,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+          // MFA Number Matching 우회 시도
+          auth_type: 'reauthenticate',
+        },
       },
     });
     
