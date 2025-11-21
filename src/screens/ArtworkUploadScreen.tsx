@@ -909,6 +909,9 @@ export const ArtworkUploadScreen: React.FC = () => {
                 keyboardType="numeric"
                 returnKeyType="done"
               />
+              <Text style={[styles.helperText, { color: isDark ? colors.darkTextMuted : colors.textMuted, marginTop: spacing.xs }]}>
+                💡 Please include international shipping costs in your price
+              </Text>
               {errors.price && (
                 <Text style={[styles.errorText, { color: colors.danger }]}>
                   {errors.price as string}
