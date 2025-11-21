@@ -60,6 +60,15 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
   console.log('🚀 uploadImagesToStorage 함수 시작!');
   console.log('📋 Input imageUris:', imageUris);
   
+  // iOS 안전장치: 모든 URI를 문자열로 변환
+  const safeImageUris = imageUris.map((uri, index) => {
+    const strUri = String(uri);
+    console.log(`URI ${index + 1} type check:`, typeof uri, '→', typeof strUri);
+    return strUri;
+  });
+  
+  console.log('✅ Safe imageUris:', safeImageUris);
+  
   try {
     console.log('🔐 사용자 인증 확인 중...');
     
@@ -132,11 +141,11 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
 
     const uploadedUrls: string[] = [];
 
-    console.log('📸 Starting image upload...', imageUris.length, 'images');
+    console.log('📸 Starting image upload...', safeImageUris.length, 'images');
 
-    for (let i = 0; i < imageUris.length; i++) {
-      const imageUri = imageUris[i];
-      console.log(`⬆️ Uploading image ${i + 1}/${imageUris.length}:`, imageUri.substring(0, 50) + '...');
+    for (let i = 0; i < safeImageUris.length; i++) {
+      const imageUri = safeImageUris[i];
+      console.log(`⬆️ Uploading image ${i + 1}/${safeImageUris.length}:`, imageUri.substring(0, 50) + '...');
 
       try {
         // 파일명 생성 (중복 방지)
@@ -296,7 +305,7 @@ export const uploadImagesToStorage = async (imageUris: string[]): Promise<string
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
       errorType: typeof error,
       errorStack: error instanceof Error ? error.stack : null,
-      inputImageCount: imageUris.length,
+      inputImageCount: safeImageUris ? safeImageUris.length : imageUris.length,
       function: 'uploadImagesToStorage'
     });
     throw error;

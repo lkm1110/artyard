@@ -150,12 +150,12 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 44,
   },
   buttonSingle: {
     flex: 1,

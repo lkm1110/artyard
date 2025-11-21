@@ -3,7 +3,7 @@
  * 이미지 선택, 메타데이터 입력, 업로드
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { colors, spacing, typography, borderRadius, shadows } from '../constants/theme';
@@ -28,6 +29,7 @@ import { Button } from '../components/Button';
 import { useAuthStore } from '../store/authStore';
 import { useUploadArtwork } from '../hooks/useArtworks';
 import { uploadImagesToStorage } from '../services/imageUploadService';
+import { supabase } from '../services/supabase';
 import { CustomAlert } from '../components/CustomAlert';
 import { getCurrentLocation, askForLocationConsent, formatLocationText, LocationInfo } from '../services/locationService';
 import { Material } from '../types';
@@ -48,6 +50,7 @@ interface FormData {
   price: string;
   images: string[];
   location?: LocationInfo;
+  challengeId?: string; // 챌린지 참가
 }
 
 const MATERIAL_OPTIONS: Material[] = [
@@ -75,8 +78,27 @@ const CATEGORY_OPTIONS = [
 
 export const ArtworkUploadScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
+  
+  // Challenge ID (챌린지에서 Submit Artwork 클릭 시 전달됨)
+  const challengeId = (route.params as any)?.challengeId;
+  const [challengeTitle, setChallengeTitle] = useState<string>('');
+
+  // 챌린지 정보 로드
+  useEffect(() => {
+    if (challengeId) {
+      supabase
+        .from('challenges')
+        .select('title')
+        .eq('id', challengeId)
+        .single()
+        .then(({ data }) => {
+          if (data) setChallengeTitle(data.title);
+        });
+    }
+  }, [challengeId]);
 
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -126,7 +148,9 @@ export const ArtworkUploadScreen: React.FC = () => {
       });
 
       if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
+        // iOS에서 uri가 객체일 수 있으므로 명시적으로 문자열 변환
+        const imageUri = String(result.assets[0].uri);
+        console.log('Camera image URI:', imageUri, typeof imageUri);
         setFormData(prev => ({
           ...prev,
           images: [...prev.images, imageUri].slice(0, 5), // 최대 5장
@@ -161,7 +185,9 @@ export const ArtworkUploadScreen: React.FC = () => {
       });
 
       if (!result.canceled && result.assets.length > 0) {
-        const newImages = result.assets.map(asset => asset.uri);
+        // iOS에서 uri가 객체일 수 있으므로 명시적으로 문자열 변환
+        const newImages = result.assets.map(asset => String(asset.uri));
+        console.log('Gallery image URIs:', newImages, newImages.map(uri => typeof uri));
         setFormData(prev => ({
           ...prev,
           images: [...prev.images, ...newImages].slice(0, 5),
@@ -377,16 +403,54 @@ export const ArtworkUploadScreen: React.FC = () => {
       };
 
       const newArtwork = await uploadArtworkMutation.mutateAsync(artworkData);
-      console.log('🎉 Artwork saved to database:', newArtwork.id);
+      console.log('Artwork saved to database:', newArtwork.id);
 
-      console.log('🚀 Upload completed successfully!');
+      // 챌린지 참가 처리
+      if (challengeId) {
+        console.log('Adding artwork to challenge:', challengeId);
+        try {
+          const entryData: any = {
+            challenge_id: challengeId,
+            artwork_id: newArtwork.id,
+            author_id: user.id,
+          };
+          
+          // 경매 최소 금액 (price 필드 = auction_reserve_price)
+          if (formData.price) {
+            const priceValue = parseFloat(formData.price.replace(/[^0-9.]/g, ''));
+            if (priceValue > 0) {
+              entryData.auction_reserve_price = priceValue;
+            }
+          }
+          
+          const { error: challengeError } = await supabase
+            .from('challenge_entries')
+            .insert(entryData);
+          
+          if (challengeError) {
+            console.error('Failed to add to challenge:', challengeError);
+            // 챌린지 참가 실패는 무시 (작품 업로드는 성공)
+          } else {
+            console.log('Successfully added to challenge!');
+          }
+        } catch (error) {
+          console.error('Challenge entry error:', error);
+        }
+      }
+
+      console.log('Upload completed successfully!');
+      
+      // 성공 메시지 (챌린지 참가 여부에 따라 다름)
+      const successMessage = challengeId 
+        ? 'Your artwork has been uploaded and submitted to the challenge!'
+        : 'Your artwork has been uploaded successfully!';
       
       // 성공 메시지 표시 (웹에서는 콘솔, 모바일에서는 Alert)
       if (Platform.OS === 'web') {
-        console.log('🎉 성공! 작품이 성공적으로 업로드되었습니다! 메인 페이지로 이동합니다...');
+        console.log('Success! Navigating to main feed...');
         // 웹에서는 바로 이동 (2초 후)
         setTimeout(() => {
-          console.log('👈 Navigating to main feed...');
+          console.log('Navigating to main feed...');
           navigation.reset({
             index: 0,
             routes: [{ name: 'MainApp' as never }],
@@ -395,12 +459,12 @@ export const ArtworkUploadScreen: React.FC = () => {
       } else {
         // 모바일에서는 CustomAlert 사용
         setAlertTitle('Success!');
-        setAlertMessage('Your artwork has been uploaded successfully!');
+        setAlertMessage(successMessage);
         setAlertButtons([{ 
           text: 'OK',
           style: 'default',
           onPress: () => {
-            console.log('👈 Navigating to main feed...');
+            console.log('Navigating to main feed...');
             navigation.reset({
               index: 0,
               routes: [{ name: 'MainApp' as never }],
@@ -467,7 +531,24 @@ export const ArtworkUploadScreen: React.FC = () => {
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView 
+        {/* Challenge Badge */}
+        {challengeId && challengeTitle && (
+          <>
+            <View style={[styles.challengeBadge, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+              <Ionicons name="trophy" size={20} color={colors.primary} />
+              <View style={styles.challengeBadgeText}>
+                <Text style={[styles.challengeBadgeLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                  Submitting to Challenge
+                </Text>
+                <Text style={[styles.challengeBadgeTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                  {challengeTitle}
+                </Text>
+            </View>
+          </View>
+          </>
+        )}
+
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -804,8 +885,13 @@ export const ArtworkUploadScreen: React.FC = () => {
             {/* Price */}
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
-                Price (USD) *
+                {challengeId ? 'Auction Reserve Price (USD) *' : 'Price (USD) *'}
               </Text>
+              {challengeId && (
+                <Text style={[styles.helperText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                  Minimum price for quarterly auction if you win 1st place
+                </Text>
+              )}
               <TextInput
                 style={[
                   styles.input,
@@ -816,7 +902,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                     textAlign: 'center',
                   }
                 ]}
-                placeholder="Enter price (e.g., 50, 100-200, 100)"
+                placeholder={challengeId ? "e.g., 100 (auction starting price)" : "Enter price (e.g., 50, 100-200, 100)"}
                 placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
                 value={formData.price}
                 onChangeText={(text) => updateField('price', text.replace(/[^0-9\-$.,]/g, ''))}
@@ -1023,6 +1109,35 @@ const styles = StyleSheet.create({
     ...typography.heading,
     fontSize: 18,
   },
+  headerSpacer: {
+    width: 70,
+  },
+  challengeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    ...shadows.sm,
+  },
+  challengeBadgeText: {
+    flex: 1,
+  },
+  challengeBadgeLabel: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  challengeBadgeTitle: {
+    ...typography.body,
+    fontWeight: '600',
+  },
   scrollView: {
     flex: 1,
   },
@@ -1150,6 +1265,13 @@ const styles = StyleSheet.create({
   errorText: {
     ...typography.caption,
     marginTop: spacing.xs,
+  },
+  helperText: {
+    ...typography.caption,
+    fontSize: 12,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+    lineHeight: 16,
   },
   characterCount: {
     ...typography.small,

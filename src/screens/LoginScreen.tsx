@@ -59,7 +59,7 @@ export const LoginScreen: React.FC = () => {
     // ⚠️ AppState 리스너 임시 비활성화
     // nativeOAuth.ts와 authStore가 로그인을 자동으로 처리하므로 불필요
     // 이 리스너가 간섭할 수 있어서 비활성화
-    console.log('📱 LoginScreen AppState 리스너는 비활성화됨 (authStore가 자동 처리)');
+    console.log('[LoginScreen] AppState listener is disabled (authStore handles automatically)');
     
     return () => {
       // 정리 작업 없음

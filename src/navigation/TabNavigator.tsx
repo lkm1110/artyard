@@ -61,7 +61,7 @@ export const TabNavigator: React.FC = () => {
           tabBarIcon: ({ color, size }) => (
             <Ionicons 
               name="add-circle" 
-              size={size + 8} 
+              size={size + 4} 
               color={color} 
             />
           ),

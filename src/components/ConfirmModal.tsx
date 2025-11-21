@@ -23,6 +23,7 @@ interface ConfirmModalProps {
   isProcessing?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  children?: React.ReactNode; // 커스텀 컨텐츠 (예: 입력 필드)
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -37,6 +38,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isProcessing = false,
   onConfirm,
   onCancel,
+  children,
 }) => {
   const isDark = useColorScheme() === 'dark';
 
@@ -51,7 +53,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <View style={[styles.modalContainer, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
           <View style={styles.header}>
             <View style={[styles.iconCircle, { backgroundColor: `${iconColor}15` }]}>
-              <Ionicons name={iconName} size={64} color={iconColor} />
+              <Ionicons name={iconName} size={48} color={iconColor} />
             </View>
             <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>
               {title}
@@ -60,6 +62,9 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               {message}
             </Text>
           </View>
+
+          {/* 커스텀 컨텐츠 (입력 필드 등) */}
+          {children}
 
           <View style={styles.footer}>
             <TouchableOpacity
@@ -120,9 +125,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
@@ -146,11 +151,11 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 44,
   },
   cancelButton: {
     borderWidth: 1,

@@ -444,14 +444,14 @@ export function getTransactionStatusColor(status: TransactionStatus): string {
 }
 
 /**
- * Challenge 상태 레이블
+ * Challenge status label
  */
 export function getChallengeStatusLabel(status: ChallengeStatus): string {
   const labels: Record<ChallengeStatus, string> = {
-    upcoming: '시작 예정',
-    active: '진행 중',
-    ended: '종료',
-    archived: '보관됨',
+    upcoming: 'Upcoming',
+    active: 'Ongoing',
+    ended: 'Ended',
+    archived: 'Archived',
   };
   return labels[status];
 }

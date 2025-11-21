@@ -434,6 +434,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
                 style={styles.button}
               />
               
+              <Button
+                title="Settings"
+                onPress={() => navigation.navigate('Settings' as never)}
+                variant="outline"
+                style={styles.button}
+              />
+              
               {/* Admin Dashboard (admins only) */}
               {user?.is_admin && (
                 <Button

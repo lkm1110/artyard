@@ -161,8 +161,16 @@ export const ProfileEditScreen: React.FC = () => {
       // 닉네임 변경 여부 확인
       const nicknameChanged = formData.handle !== originalData?.handle;
 
-      // 로컬 상태 업데이트
-      setUser(updatedProfile);
+      // 로컬 상태 업데이트 - 기존 user 객체와 병합
+      setUser({
+        ...user,
+        ...updatedProfile,
+        // null 값을 undefined로 변환하여 Native 모듈 타입 충돌 방지
+        avatar_url: updatedProfile.avatar_url || user.avatar_url,
+        bio: updatedProfile.bio || user.bio || '',
+        school: updatedProfile.school || user.school || '',
+        department: updatedProfile.department || user.department || '',
+      });
       setOriginalData({ ...formData });
 
       // React Query 캐시 무효화 - 항상 실행 (프로필 정보가 여러 곳에서 사용되므로)

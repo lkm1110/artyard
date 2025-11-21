@@ -14,7 +14,9 @@
     "build:android:preview": "eas build --platform android --profile preview",
     "build:ios": "eas build --platform ios --profile production",
     "build:list": "eas build:list --platform android --limit 5",
-    "build:download": "eas build:download"
+    "build:download": "eas build:download",
+    "icons:generate": "node scripts/generate-ios-icons.js",
+    "icons:install": "npm install --save-dev sharp && npm run icons:generate"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -57,6 +59,7 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "patch-package": "^8.0.1",
+    "sharp": "^0.34.5",
     "typescript": "~5.9.2"
   },
   "private": true

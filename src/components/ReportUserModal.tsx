@@ -95,7 +95,7 @@ export const ReportUserModal: React.FC<ReportUserModalProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Ionicons name="warning" size={32} color="#EF4444" />
+              <Ionicons name="warning" size={28} color="#EF4444" />
             </View>
             <Text
               style={[
@@ -158,7 +158,7 @@ export const ReportUserModal: React.FC<ReportUserModalProps> = ({
                       { backgroundColor: `${reason.color}20` },
                     ]}
                   >
-                    <Ionicons name={reason.icon} size={24} color={reason.color} />
+                    <Ionicons name={reason.icon} size={20} color={reason.color} />
                   </View>
                   <Text
                     style={[
@@ -178,7 +178,7 @@ export const ReportUserModal: React.FC<ReportUserModalProps> = ({
                   {selectedReason === reason.id && (
                     <Ionicons
                       name="checkmark-circle"
-                      size={24}
+                      size={20}
                       color={reason.color}
                       style={styles.checkIcon}
                     />
@@ -296,9 +296,9 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0, 0, 0, 0.05)',
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
@@ -328,18 +328,18 @@ const styles = StyleSheet.create({
   reasonButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    padding: spacing.sm + 2,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
-    minHeight: 72,
+    minHeight: 60,
   },
   reasonIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.sm + 2,
   },
   reasonText: {
     flex: 1,
@@ -373,11 +373,11 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm + 2,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 44,
   },
   cancelButton: {
     backgroundColor: 'transparent',

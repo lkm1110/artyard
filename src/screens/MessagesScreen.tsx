@@ -356,7 +356,7 @@ export const MessagesScreen: React.FC = () => {
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
-            onRefresh={() => refreshChats.mutate()}
+            onRefresh={refreshChats}
             colors={[colors.primary]}
             tintColor={colors.primary}
           />

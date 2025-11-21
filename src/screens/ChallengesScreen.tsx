@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   useColorScheme,
   StatusBar,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,34 +21,74 @@ import { useNavigation } from '@react-navigation/native';
 import { getActiveChallenges, getChallenges } from '../services/challengeService';
 import { Challenge, getChallengeStatusLabel } from '../types/complete-system';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
+import { supabase } from '../services/supabase';
+
+interface Auction {
+  id: string;
+  title: string;
+  description: string;
+  quarter: string;
+  start_date: string;
+  end_date: string;
+  status: 'upcoming' | 'active' | 'ended' | 'completed';
+  artworks_count: number;
+}
 
 export const ChallengesScreen = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'active' | 'ended' | 'all'>('active');
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'active' | 'ended' | 'auctions'>('active');
+  const [currentTime, setCurrentTime] = useState(Date.now());
   
   useEffect(() => {
     loadChallenges();
   }, [filter]);
   
-  const loadChallenges = async () => {
+  // 1초마다 현재 시간 업데이트 (타이머용)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  const loadChallenges = async (isRefreshing = false) => {
     try {
-      setLoading(true);
-      let data;
-      if (filter === 'active') {
-        data = await getActiveChallenges();
-      } else if (filter === 'ended') {
-        data = await getChallenges('ended');
+      if (isRefreshing) {
+        setRefreshing(true);
       } else {
-        data = await getChallenges();
+        setLoading(true);
       }
-      setChallenges(data);
+      
+      if (filter === 'auctions') {
+        // Load auctions
+        const { data, error } = await supabase
+          .from('challenge_auctions')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        setAuctions(data || []);
+      } else {
+        // Load challenges
+        let data;
+        if (filter === 'active') {
+          data = await getActiveChallenges();
+        } else if (filter === 'ended') {
+          data = await getChallenges('ended');
+        }
+        setChallenges(data);
+      }
     } catch (error) {
       console.error(error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
   
@@ -62,6 +103,117 @@ export const ChallengesScreen = () => {
     return `${diffDays} days left`;
   };
   
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return colors.success;
+      case 'ended': return colors.warning;
+      case 'completed': return colors.textMuted;
+      default: return colors.primary;
+    }
+  };
+  
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Live Auction';
+      case 'ended': return 'Ended';
+      case 'completed': return 'Completed';
+      default: return 'Coming Soon';
+    }
+  };
+  
+  const getTimeRemaining = (endDate: string) => {
+    const now = currentTime;
+    const end = new Date(endDate).getTime();
+    const distance = end - now;
+    
+    if (distance < 0) {
+      return 'Auction Ended';
+    }
+    
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  };
+
+  const renderAuction = ({ item }: { item: Auction }) => {
+    const timeRemaining = getTimeRemaining(item.end_date);
+    const isEnded = timeRemaining === 'Auction Ended';
+    
+    return (
+      <TouchableOpacity
+        style={styles.challengeCard}
+        onPress={() => navigation.navigate('AuctionDetail' as never, { auctionId: item.id } as never)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.challengeHeader}>
+          <Text style={styles.challengeTopic}>{item.quarter}</Text>
+          <View style={[
+            styles.statusBadge,
+            { backgroundColor: `${getStatusColor(item.status)}20` },
+          ]}>
+            <Text style={[
+              styles.statusText,
+              { color: getStatusColor(item.status) },
+            ]}>
+              {getStatusLabel(item.status)}
+            </Text>
+          </View>
+        </View>
+        
+        <Text style={styles.challengeTitle}>{item.title}</Text>
+        <Text style={styles.challengeDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
+        
+        {/* Countdown Timer */}
+        {item.status === 'active' && (
+          <View style={[
+            styles.timerBadge,
+            { backgroundColor: isEnded ? `${colors.error}15` : `${colors.primary}15` }
+          ]}>
+            <Ionicons 
+              name={isEnded ? 'close-circle' : 'time-outline'} 
+              size={16} 
+              color={isEnded ? colors.error : colors.primary} 
+            />
+            <Text style={[
+              styles.timerText,
+              { color: isEnded ? colors.error : colors.primary }
+            ]}>
+              {isEnded ? '경매 종료' : `종료까지: ${timeRemaining}`}
+            </Text>
+          </View>
+        )}
+        
+        <View style={styles.challengeStats}>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Artworks</Text>
+            <Text style={styles.statValue}>{item.artworks_count || 0}</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>Period</Text>
+            <Text style={styles.statValue}>
+              {new Date(item.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(item.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </Text>
+          </View>
+        </View>
+        
+        {item.status === 'active' && !isEnded && (
+          <View style={[styles.winnerBanner, { backgroundColor: `${colors.success}15` }]}>
+            <Ionicons name="hammer" size={20} color={colors.success} />
+            <Text style={[styles.winnerBannerText, { color: colors.success }]}>
+              Live bidding now!
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.success} />
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
   const renderChallenge = ({ item }: { item: Challenge }) => {
     const daysRemaining = getDaysRemaining(item.end_date);
     const isActive = item.status === 'active';
@@ -69,7 +221,7 @@ export const ChallengesScreen = () => {
     return (
       <TouchableOpacity
         style={styles.challengeCard}
-        onPress={() => navigation.navigate('ChallengeDetail', { id: item.id })}
+        onPress={() => navigation.navigate('ChallengeDetail' as never, { id: item.id } as never)}
       >
         <View style={styles.challengeHeader}>
           <Text style={styles.challengeTopic}>#{item.topic}</Text>
@@ -110,6 +262,16 @@ export const ChallengesScreen = () => {
             </Text>
           </View>
         </View>
+        
+        {item.status === 'ended' && item.entries_count > 0 && (
+          <View style={styles.winnerBanner}>
+            <Ionicons name="trophy" size={20} color={colors.warning} />
+            <Text style={styles.winnerBannerText}>
+              Winner announced! Tap to view results
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.warning} />
+          </View>
+        )}
         
         {item.prize_description && (
           <View style={styles.prizeBox}>
@@ -182,34 +344,43 @@ export const ChallengesScreen = () => {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterButton, filter === 'all' && styles.filterButtonActive]}
-          onPress={() => setFilter('all')}
+          style={[styles.filterButton, filter === 'auctions' && styles.filterButtonActive]}
+          onPress={() => setFilter('auctions')}
         >
-          <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
-            All
+          <Text style={[styles.filterText, filter === 'auctions' && styles.filterTextActive]}>
+            Auctions
           </Text>
         </TouchableOpacity>
       </View>
       
-      {/* Challenge 목록 */}
+      {/* Challenge 또는 Auction 목록 */}
       <FlatList
-        data={challenges}
-        renderItem={renderChallenge}
+        data={filter === 'auctions' ? auctions : challenges}
+        renderItem={filter === 'auctions' ? renderAuction : renderChallenge}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadChallenges(true)}
+            tintColor={colors.primary}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons 
-              name="trophy-outline" 
+              name={filter === 'auctions' ? 'hammer-outline' : 'trophy-outline'}
               size={80} 
               color={isDark ? colors.darkTextMuted : colors.textMuted} 
               style={styles.emptyIcon}
             />
             <Text style={[styles.emptyTitle, { color: isDark ? colors.darkText : colors.text }]}>
-              No Challenges Available
+              {filter === 'auctions' ? 'No Auctions Available' : 'No Challenges Available'}
             </Text>
             <Text style={[styles.emptySubtitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-              New challenges will be starting soon!
+              {filter === 'auctions' 
+                ? 'New auctions will be announced soon!' 
+                : 'New challenges will be starting soon!'}
             </Text>
           </View>
         }
@@ -362,6 +533,23 @@ const styles = StyleSheet.create({
   },
   statValueEnded: {
     color: '#999',
+  },
+  winnerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.warning,
+    gap: 8,
+  },
+  winnerBannerText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.warning,
+    fontWeight: '600',
   },
   prizeBox: {
     marginTop: 12,

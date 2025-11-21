@@ -1,8 +1,9 @@
 /**
- * Challenge 상세 화면
+ * Challenge Detail Screen
+ * 챌린지 상세 정보, 참가 작품, 투표
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,156 +12,237 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  FlatList,
-  Modal,
-  Alert,
   useColorScheme,
+  RefreshControl,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import {
-  getChallengeDetail,
-  getChallengeEntries,
-  joinChallenge,
-  voteChallengeEntry,
-} from '../services/challengeService';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { supabase } from '../services/supabase';
-import { Challenge, ChallengeEntry } from '../types/complete-system';
-import { colors, spacing, typography, borderRadius } from '../constants/theme';
 import { useAuthStore } from '../store/authStore';
+import { colors, spacing, typography, borderRadius } from '../constants/theme';
+import { SuccessModal } from '../components/SuccessModal';
+import { ErrorModal } from '../components/ErrorModal';
 
-type RouteParams = {
-  ChallengeDetail: {
-    id: string;
-  };
-};
+const { width: screenWidth } = Dimensions.get('window');
+
+interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  topic: string;
+  start_date: string;
+  end_date: string;
+  voting_end_date: string;
+  status: 'upcoming' | 'active' | 'voting' | 'ended';
+  prize_description?: string;
+  entries_count: number;
+  participants_count: number;
+}
+
+interface Entry {
+  id: string;
+  artwork: any;
+  author: any;
+  votes_count: number;
+  is_top_10: boolean;
+  final_rank?: number;
+  is_winner: boolean;
+}
 
 export const ChallengeDetailScreen = () => {
-  const route = useRoute<RouteProp<RouteParams, 'ChallengeDetail'>>();
+  const route = useRoute();
   const navigation = useNavigation();
-  const isDark = useColorScheme() === 'dark';
+  const { id } = route.params as { id: string };
   const { user } = useAuthStore();
+  const isDark = useColorScheme() === 'dark';
   
   const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [entries, setEntries] = useState<ChallengeEntry[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [myVote, setMyVote] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'popular' | 'recent'>('popular');
+  const [refreshing, setRefreshing] = useState(false);
+  const [voting, setVoting] = useState(false);
   
-  // 작품 선택 모달
-  const [selectModalVisible, setSelectModalVisible] = useState(false);
-  const [myArtworks, setMyArtworks] = useState<any[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  // Modal state
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   
   useEffect(() => {
     loadChallengeData();
-  }, [route.params.id, sortBy]);
+  }, [id]);
   
-  const loadChallengeData = async () => {
+  const loadChallengeData = async (isRefreshing = false) => {
     try {
-      setLoading(true);
-      const [challengeData, entriesData] = await Promise.all([
-        getChallengeDetail(route.params.id),
-        getChallengeEntries(route.params.id, sortBy),
-      ]);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       
+      // 1. 챌린지 정보
+      const { data: challengeData, error: challengeError } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (challengeError) throw challengeError;
       setChallenge(challengeData);
-      setEntries(entriesData);
+      
+      // 2. 참가 작품 (Top 10 우선, 나머지는 투표수 순)
+      const { data: entriesData, error: entriesError } = await supabase
+        .from('challenge_entries')
+        .select(`
+          *,
+          artwork:artworks(*),
+          author:profiles(*)
+        `)
+        .eq('challenge_id', id)
+        .order('is_top_10', { ascending: false })
+        .order('votes_count', { ascending: false });
+      
+      if (entriesError) throw entriesError;
+      setEntries(entriesData || []);
+      
+      // 3. 내 투표 확인
+      if (user) {
+        const { data: voteData } = await supabase
+          .from('challenge_votes')
+          .select('entry_id')
+          .eq('challenge_id', id)
+          .eq('voter_id', user.id)
+          .single();
+        
+        if (voteData) setMyVote(voteData.entry_id);
+        
+        // 4. 내 참가 확인
+        const { data: myEntry } = await supabase
+          .from('challenge_entries')
+          .select('id')
+          .eq('challenge_id', id)
+          .eq('author_id', user.id)
+          .single();
+        
+        setHasSubmitted(!!myEntry);
+      }
     } catch (error: any) {
-      console.error('챌린지 로드 실패:', error);
-      Alert.alert('Error', 'Failed to load challenge details');
+      console.error('Failed to load challenge:', error);
+      setErrorMessage(error.message || 'Failed to load challenge');
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
   
-  // 내 작품 목록 로드
-  const loadMyArtworks = async () => {
-    try {
-      if (!user) return;
-      
-      const { data, error } = await supabase
-        .from('artworks')
-        .select('*')
-        .eq('author_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // 이미 참여한 작품 필터링
-      const enteredArtworkIds = entries
-        .filter(e => e.author_id === user.id)
-        .map(e => e.artwork_id);
-      
-      const availableArtworks = data?.filter(
-        a => !enteredArtworkIds.includes(a.id)
-      ) || [];
-      
-      setMyArtworks(availableArtworks);
-    } catch (error: any) {
-      console.error('내 작품 로드 실패:', error);
-    }
-  };
-  
-  // 작품 등록 모달 열기
-  const handleOpenSelectModal = async () => {
+  const handleVote = async (entryId: string) => {
     if (!user) {
-      Alert.alert('Notice', 'Please log in to participate');
+      setErrorMessage('Please login to vote');
+      setErrorModalVisible(true);
       return;
     }
     
-    if (!challenge) return;
-    
-    // 종료된 챌린지 확인
-    const now = new Date();
-    const endDate = new Date(challenge.end_date);
-    
-    if (now > endDate || challenge.status !== 'active') {
-      Alert.alert('Notice', 'This challenge has ended');
+    // 'active' 또는 'voting' 상태에서만 투표 가능
+    if (challenge?.status !== 'voting' && challenge?.status !== 'active') {
+      setErrorMessage('Voting is not open yet');
+      setErrorModalVisible(true);
       return;
     }
     
-    // 내 작품 로드
-    await loadMyArtworks();
-    setSelectModalVisible(true);
-  };
-  
-  // 작품 참여시키기
-  const handleSubmitArtwork = async (artworkId: string) => {
     try {
-      setSubmitting(true);
+      setVoting(true);
       
-      await joinChallenge({
-        challenge_id: route.params.id,
-        artwork_id: artworkId,
-        description: '', // 선택사항
-      });
+      // 이전 투표 취소 (1계정 1작품만 투표 가능)
+      if (myVote) {
+        await supabase
+          .from('challenge_votes')
+          .delete()
+          .eq('challenge_id', id)
+          .eq('voter_id', user.id);
+      }
       
-      Alert.alert('Success', 'Your artwork has been submitted to the challenge!');
-      setSelectModalVisible(false);
-      loadChallengeData(); // 목록 새로고침
+      // 새 투표 (같은 작품이면 투표 취소)
+      if (myVote !== entryId) {
+        const { error } = await supabase
+          .from('challenge_votes')
+          .insert({
+            challenge_id: id,
+            entry_id: entryId,
+            voter_id: user.id,
+          });
+        
+        if (error) {
+          console.error('Vote insert error:', error);
+          throw error;
+        }
+        setMyVote(entryId);
+        setSuccessMessage('Vote submitted successfully!');
+      } else {
+        setMyVote(null);
+        setSuccessMessage('Vote cancelled');
+      }
+      
+      setSuccessModalVisible(true);
+      await loadChallengeData(true);
     } catch (error: any) {
-      console.error('작품 등록 실패:', error);
-      Alert.alert('Error', error.message || 'Failed to submit artwork');
+      console.error('Vote failed:', error);
+      setErrorMessage(error.message || 'Failed to vote. Please try again.');
+      setErrorModalVisible(true);
     } finally {
-      setSubmitting(false);
+      setVoting(false);
     }
   };
   
-  // 투표
-  const handleVote = async (artworkId: string) => {
-    try {
-      await voteChallengeEntry(artworkId);
-      loadChallengeData();
-    } catch (error: any) {
-      console.error('투표 실패:', error);
-      Alert.alert('Error', 'Failed to vote');
+  const handleSubmitArtwork = () => {
+    if (!user) {
+      setErrorMessage('Please login to submit artwork');
+      setErrorModalVisible(true);
+      return;
+    }
+    
+    if (hasSubmitted) {
+      setErrorMessage('You have already submitted an artwork to this challenge');
+      setErrorModalVisible(true);
+      return;
+    }
+    
+    // Navigate to upload screen with challenge ID
+    navigation.navigate('ArtworkUpload' as never, { challengeId: id } as never);
+  };
+  
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return colors.success;
+      case 'voting': return colors.warning;
+      case 'ended': return colors.textMuted;
+      default: return colors.primary;
     }
   };
   
-  // 남은 시간 계산
-  const getDaysRemaining = (endDate: string): string => {
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Ongoing - Submit Your Work!';
+      case 'voting': return 'Voting in Progress';
+      case 'ended': return 'Ended';
+      default: return 'Upcoming';
+    }
+  };
+  
+  const getDaysRemaining = () => {
+    if (!challenge) return '';
+    
     const now = new Date();
-    const end = new Date(endDate);
-    const diffMs = end.getTime() - now.getTime();
+    const targetDate = challenge.status === 'voting' 
+      ? new Date(challenge.voting_end_date)
+      : new Date(challenge.end_date);
+    
+    const diffMs = targetDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) return 'Ended';
@@ -168,118 +250,66 @@ export const ChallengeDetailScreen = () => {
     return `${diffDays} days left`;
   };
   
-  const renderEntry = ({ item }: { item: ChallengeEntry }) => {
-    const artwork = item.artwork;
-    const isWinner = item.is_winner;
-    
-    return (
-      <TouchableOpacity
-        style={[
-          styles.entryCard,
-          { backgroundColor: isDark ? colors.darkCard : colors.card },
-          isWinner && styles.winnerCard,
-        ]}
-        onPress={() => navigation.navigate('ArtworkDetail' as never, { artwork } as never)}
-      >
-        {isWinner && (
-          <View style={styles.winnerBadge}>
-            <Text style={styles.winnerBadgeText}>🏆 Winner</Text>
-          </View>
-        )}
-        
-        <Image
-          source={{ uri: artwork.image_urls[0] }}
-          style={styles.entryImage}
-          resizeMode="cover"
-        />
-        
-        <View style={styles.entryInfo}>
-          <Text
-            style={[styles.entryTitle, { color: isDark ? colors.darkText : colors.text }]}
-            numberOfLines={1}
-          >
-            {artwork.title}
-          </Text>
-          <Text
-            style={[styles.entryAuthor, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}
-          >
-            by {item.author?.handle || 'Unknown'}
-          </Text>
-          
-          <View style={styles.entryStats}>
-            <TouchableOpacity
-              style={styles.voteButton}
-              onPress={() => handleVote(artwork.id)}
-            >
-              <Text style={styles.voteText}>❤️ {item.votes_count || 0}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-  
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <SafeAreaView style={[styles.container, styles.centered, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     );
   }
-  
-  if (!challenge) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Challenge not found</Text>
-      </View>
-    );
-  }
-  
-  const daysRemaining = getDaysRemaining(challenge.end_date);
-  const isActive = challenge.status === 'active' && daysRemaining !== 'Ended';
   
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-      <ScrollView>
-        {/* 헤더 */}
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      
+      {/* Header with Back Button */}
+      <View style={[styles.topHeader, { backgroundColor: isDark ? colors.darkBackground : colors.background, borderBottomColor: isDark ? colors.darkBorder : colors.border }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color={isDark ? colors.darkText : colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+          Challenge
+        </Text>
+        <View style={styles.headerRight} />
+      </View>
+      
+      <ScrollView
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadChallengeData(true)}
+            tintColor={colors.primary}
+          />
+        }
+        contentContainerStyle={styles.scrollViewContent}
+      >
+        {/* Challenge Header */}
         <View style={[styles.header, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
-          </TouchableOpacity>
-          <View style={styles.headerTop}>
-            <Text style={[styles.topic, { color: colors.primary }]}>#{challenge.topic}</Text>
-            <View style={[
-              styles.statusBadge,
-              isActive && styles.statusBadgeActive,
-            ]}>
-              <Text style={[
-                styles.statusText,
-                isActive && styles.statusTextActive,
-              ]}>
-                {daysRemaining}
-              </Text>
-            </View>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(challenge?.status || 'upcoming') }]}>
+            <Text style={styles.statusText}>{getStatusLabel(challenge?.status || 'upcoming')}</Text>
           </View>
           
-          <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>
-            {challenge.title}
+          <Text style={[styles.topic, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+            {challenge?.topic}
           </Text>
+          
+          <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>
+            {challenge?.title}
+          </Text>
+          
           <Text style={[styles.description, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-            {challenge.description}
+            {challenge?.description}
           </Text>
           
           <View style={styles.stats}>
             <View style={styles.stat}>
               <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
-                {challenge.participants_count || 0}
-              </Text>
-              <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Participants
-              </Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
-                {challenge.entries_count || 0}
+                {challenge?.entries_count || 0}
               </Text>
               <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
                 Entries
@@ -287,144 +317,323 @@ export const ChallengeDetailScreen = () => {
             </View>
             <View style={styles.stat}>
               <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
-                ${challenge.prize_pool || 0}
+                {challenge?.participants_count || 0}
               </Text>
               <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                Prize
+                Participants
+              </Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={[styles.statValue, { color: getStatusColor(challenge?.status || 'upcoming') }]}>
+                {getDaysRemaining()}
+              </Text>
+              <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                Time Left
               </Text>
             </View>
           </View>
           
-          {isActive && (
+          {/* Submit Button */}
+          {challenge?.status === 'active' && (
             <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: colors.primary }]}
-              onPress={handleOpenSelectModal}
+              style={[
+                styles.submitButton,
+                { backgroundColor: hasSubmitted ? colors.textMuted : colors.primary }
+              ]}
+              onPress={handleSubmitArtwork}
+              disabled={hasSubmitted}
+              activeOpacity={0.7}
             >
-              <Text style={styles.submitButtonText}>Submit Artwork</Text>
+              <Ionicons name={hasSubmitted ? "checkmark-circle" : "add-circle"} size={20} color={colors.white} />
+              <Text style={styles.submitButtonText}>
+                {hasSubmitted ? 'Already Submitted' : 'Submit Artwork'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
         
-        {/* 정렬 */}
-        <View style={styles.sortContainer}>
-          <TouchableOpacity
-            style={[
-              styles.sortButton,
-              sortBy === 'popular' && styles.sortButtonActive,
-            ]}
-            onPress={() => setSortBy('popular')}
-          >
-            <Text
-              style={[
-                styles.sortButtonText,
-                sortBy === 'popular' && styles.sortButtonTextActive,
-              ]}
-            >
-              Most Popular
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.sortButton,
-              sortBy === 'recent' && styles.sortButtonActive,
-            ]}
-            onPress={() => setSortBy('recent')}
-          >
-            <Text
-              style={[
-                styles.sortButtonText,
-                sortBy === 'recent' && styles.sortButtonTextActive,
-              ]}
-            >
-              Most Recent
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* 참여 작품 목록 */}
-        <View style={styles.entriesContainer}>
-          {entries.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                No entries yet. Be the first to participate!
+        {/* Winner Section (챌린지 종료 후) */}
+        {challenge?.status === 'ended' && entries.find(e => e.is_winner && e.final_rank === 1) && (
+          <View style={styles.section}>
+            <View style={styles.winnerHeader}>
+              <Ionicons name="trophy" size={32} color={colors.warning} />
+              <Text style={[styles.winnerHeaderTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                🎉 Challenge Winner
               </Text>
             </View>
-          ) : (
-            <FlatList
-              data={entries}
-              renderItem={renderEntry}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              columnWrapperStyle={styles.row}
-              scrollEnabled={false}
-            />
+            {entries
+              .filter(e => e.is_winner && e.final_rank === 1)
+              .map((entry) => (
+                <View key={entry.id} style={[styles.winnerCard, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+                  {/* Winner Crown */}
+                  <View style={styles.winnerCrown}>
+                    <Ionicons name="trophy" size={48} color={colors.warning} />
+                  </View>
+                  
+                  {entry.artwork?.images?.[0] && (
+                    <View style={styles.winnerImageContainer}>
+                      <Image
+                        source={{ uri: entry.artwork.images[0] }}
+                        style={styles.winnerImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.winnerOverlay}>
+                        <Text style={styles.winnerOverlayText}>1ST PLACE</Text>
+                      </View>
+                    </View>
+                  )}
+                  
+                  <View style={styles.winnerInfo}>
+                    <Text style={[styles.winnerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                      {entry.artwork?.title}
+                    </Text>
+                    {entry.artwork?.description && (
+                      <Text style={[styles.winnerDescription, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                        {entry.artwork.description}
+                      </Text>
+                    )}
+                    <View style={styles.winnerMeta}>
+                      <Ionicons name="person-circle" size={20} color={colors.primary} />
+                      <Text style={[styles.winnerArtist, { color: isDark ? colors.darkText : colors.text }]}>
+                        @{entry.author?.handle}
+                      </Text>
+                      {entry.artwork?.size && (
+                        <>
+                          <Text style={[styles.metaDivider, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>•</Text>
+                          <Text style={[styles.winnerSize, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                            {entry.artwork.size}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                    <View style={styles.winnerStats}>
+                      <View style={styles.winnerStatItem}>
+                        <Ionicons name="heart" size={24} color={colors.error} />
+                        <Text style={[styles.winnerStatValue, { color: isDark ? colors.darkText : colors.text }]}>
+                          {entry.votes_count}
+                        </Text>
+                        <Text style={[styles.winnerStatLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                          votes
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {/* Auction Notice */}
+                    <View style={[styles.auctionNotice, { backgroundColor: `${colors.warning}15` }]}>
+                      <Ionicons name="hammer" size={20} color={colors.warning} />
+                      <Text style={[styles.auctionNoticeText, { color: colors.warning }]}>
+                        This artwork will be featured in the quarterly auction
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+          </View>
+        )}
+        
+        {/* Top 10 Section */}
+        {entries.some(e => e.is_top_10) && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
+              {challenge?.status === 'ended' ? 'Top 10 Finalists' : 'Top 10'}
+            </Text>
+            {entries
+              .filter(e => e.is_top_10 && !(e.is_winner && e.final_rank === 1))
+              .map((entry) => (
+                <View key={entry.id} style={[styles.entryCard, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+                  <View style={[styles.rankBadge, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.rankText}>#{entry.final_rank}</Text>
+                  </View>
+                  
+                  {entry.artwork?.images?.[0] && (
+                    <View>
+                      <Image
+                        source={{ uri: entry.artwork.images[0] }}
+                        style={styles.artworkImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  )}
+                  
+                  <View style={styles.entryInfo}>
+                    <Text style={[styles.artworkTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                      {entry.artwork?.title}
+                    </Text>
+                    {entry.artwork?.description && (
+                      <Text 
+                        style={[styles.artworkDescription, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}
+                        numberOfLines={2}
+                      >
+                        {entry.artwork.description}
+                      </Text>
+                    )}
+                    <View style={styles.artworkMeta}>
+                      <Text style={[styles.artistName, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                        by {(entry.final_rank && entry.final_rank <= 3) || challenge?.status === 'ended' 
+                          ? `@${entry.author?.handle}` 
+                          : 'Anonymous'}
+                      </Text>
+                      {entry.artwork?.size && (
+                        <>
+                          <Text style={[styles.metaDivider, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>•</Text>
+                          <Text style={[styles.artworkSize, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                            {entry.artwork.size}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                    
+                    <View style={styles.entryFooter}>
+                      <View style={styles.voteInfo}>
+                        <Ionicons name="heart" size={16} color={colors.error} />
+                        <Text style={[styles.voteCount, { color: isDark ? colors.darkText : colors.text }]}>
+                          {entry.votes_count} votes
+                        </Text>
+                      </View>
+                      
+                      {(challenge?.status === 'voting' || challenge?.status === 'active') && (
+                        <TouchableOpacity
+                          style={[
+                            styles.voteButton,
+                            myVote === entry.id && styles.voteButtonActive,
+                            { 
+                              backgroundColor: myVote === entry.id ? colors.primary : 'transparent',
+                              borderColor: colors.primary
+                            }
+                          ]}
+                          onPress={() => handleVote(entry.id)}
+                          disabled={voting}
+                        >
+                          <Text style={[
+                            styles.voteButtonText,
+                            { color: myVote === entry.id ? colors.white : colors.primary }
+                          ]}>
+                            {myVote === entry.id ? 'Voted' : 'Vote'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      
+                      {entry.is_winner && (
+                        <View style={[styles.winnerBadge, { backgroundColor: colors.warning }]}>
+                          <Ionicons name="trophy" size={16} color={colors.white} />
+                          <Text style={styles.winnerText}>Winner</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              ))}
+          </View>
+        )}
+        
+        {/* All Entries */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
+            {entries.some(e => e.is_top_10) ? 'All Entries' : 'Entries'}
+          </Text>
+          {entries
+            .filter(e => !e.is_top_10)
+            .map((entry) => (
+              <View key={entry.id} style={[styles.entryCard, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>
+                {entry.artwork?.images?.[0] && (
+                  <View>
+                    <Image
+                      source={{ uri: entry.artwork.images[0] }}
+                      style={styles.artworkImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                )}
+                
+                <View style={styles.entryInfo}>
+                  <Text style={[styles.artworkTitle, { color: isDark ? colors.darkText : colors.text }]}>
+                    {entry.artwork?.title}
+                  </Text>
+                  {entry.artwork?.description && (
+                    <Text 
+                      style={[styles.artworkDescription, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}
+                      numberOfLines={2}
+                    >
+                      {entry.artwork.description}
+                    </Text>
+                  )}
+                  <View style={styles.artworkMeta}>
+                    <Text style={[styles.artistName, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                      by {challenge?.status === 'ended' ? `@${entry.author?.handle}` : 'Anonymous'}
+                    </Text>
+                    {entry.artwork?.size && (
+                      <>
+                        <Text style={[styles.metaDivider, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>•</Text>
+                        <Text style={[styles.artworkSize, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                          {entry.artwork.size}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                  
+                  <View style={styles.entryFooter}>
+                    <View style={styles.voteInfo}>
+                      <Ionicons name="heart" size={16} color={colors.error} />
+                      <Text style={[styles.voteCount, { color: isDark ? colors.darkText : colors.text }]}>
+                        {entry.votes_count} votes
+                      </Text>
+                    </View>
+                    
+                    {(challenge?.status === 'voting' || challenge?.status === 'active') && (
+                      <TouchableOpacity
+                        style={[
+                          styles.voteButton,
+                          myVote === entry.id && styles.voteButtonActive,
+                          { 
+                            backgroundColor: myVote === entry.id ? colors.primary : 'transparent',
+                            borderColor: colors.primary
+                          }
+                        ]}
+                        onPress={() => handleVote(entry.id)}
+                        disabled={voting}
+                      >
+                        <Text style={[
+                          styles.voteButtonText,
+                          { color: myVote === entry.id ? colors.white : colors.primary }
+                        ]}>
+                          {myVote === entry.id ? 'Voted' : 'Vote'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))}
+          
+          {entries.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="images-outline" size={64} color={isDark ? colors.darkTextMuted : colors.textMuted} />
+              <Text style={[styles.emptyText, { color: isDark ? colors.darkText : colors.text }]}>
+                No entries yet
+              </Text>
+              <Text style={[styles.emptySubtext, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                Be the first to submit your artwork!
+              </Text>
+            </View>
           )}
         </View>
       </ScrollView>
       
-      {/* 작품 선택 모달 */}
-      <Modal
-        visible={selectModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setSelectModalVisible(false)}
-      >
-        <View style={[styles.modalContainer, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
-              Select Artwork to Submit
-            </Text>
-            <TouchableOpacity onPress={() => setSelectModalVisible(false)}>
-              <Text style={[styles.modalClose, { color: colors.textMuted }]}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {myArtworks.length === 0 ? (
-            <View style={styles.emptyModal}>
-              <Text style={[styles.emptyModalText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                No available artworks.{'\n'}Upload a new artwork first!
-              </Text>
-              <TouchableOpacity
-                style={[styles.uploadButton, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  setSelectModalVisible(false);
-                  navigation.navigate('Upload' as never);
-                }}
-              >
-                <Text style={styles.uploadButtonText}>Upload Artwork</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <FlatList
-              data={myArtworks}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.artworkCard, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
-                  onPress={() => handleSubmitArtwork(item.id)}
-                  disabled={submitting}
-                >
-                  <Image
-                    source={{ uri: item.image_urls[0] }}
-                    style={styles.artworkImage}
-                  />
-                  <View style={styles.artworkInfo}>
-                    <Text style={[styles.artworkTitle, { color: isDark ? colors.darkText : colors.text }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.artworkPrice, { color: colors.primary }]}>
-                      ${item.price}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              columnWrapperStyle={styles.row}
-            />
-          )}
-        </View>
-      </Modal>
-    </View>
+      {/* Modals */}
+      <SuccessModal
+        visible={successModalVisible}
+        title="Success"
+        message={successMessage}
+        onClose={() => setSuccessModalVisible(false)}
+      />
+      
+      <ErrorModal
+        visible={errorModalVisible}
+        title="Error"
+        message={errorMessage}
+        onClose={() => setErrorModalVisible(false)}
+      />
+    </SafeAreaView>
   );
 };
 
@@ -432,233 +641,346 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
+  centered: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: spacing.xs,
+    marginLeft: -spacing.xs,
+  },
+  headerTitle: {
+    ...typography.h3,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: spacing.md,
+  },
+  headerRight: {
+    width: 40, // 뒤로가기 버튼과 균형 맞추기
+  },
+  scrollViewContent: {
+    paddingBottom: spacing.xl * 2,
   },
   header: {
     padding: spacing.lg,
     marginBottom: spacing.md,
   },
-  backButton: {
-    marginBottom: spacing.sm,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  topic: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
   statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.textMuted,
-  },
-  statusBadgeActive: {
-    backgroundColor: colors.primary,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 999,
+    marginBottom: spacing.md,
   },
   statusText: {
-    fontSize: 12,
+    ...typography.caption,
+    color: colors.white,
     fontWeight: '600',
-    color: colors.white,
   },
-  statusTextActive: {
-    color: colors.white,
+  topic: {
+    ...typography.body,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 24,
+    ...typography.h2,
     fontWeight: 'bold',
     marginBottom: spacing.sm,
   },
   description: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: spacing.lg,
+    ...typography.body,
+    lineHeight: 22,
+    marginBottom: spacing.md,
   },
   stats: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: spacing.lg,
+    gap: spacing.xl,
+    marginBottom: spacing.md,
   },
   stat: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 20,
+    ...typography.h3,
     fontWeight: 'bold',
-    marginBottom: spacing.xs,
   },
   statLabel: {
-    fontSize: 12,
+    ...typography.caption,
   },
   submitButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
+    gap: spacing.xs,
   },
   submitButtonText: {
+    ...typography.button,
     color: colors.white,
-    fontSize: 16,
     fontWeight: '600',
   },
-  sortContainer: {
-    flexDirection: 'row',
+  section: {
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  sortButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    backgroundColor: colors.border,
-  },
-  sortButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  sortButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  sortButtonTextActive: {
-    color: colors.white,
-  },
-  entriesContainer: {
-    paddingHorizontal: spacing.lg,
-  },
-  row: {
-    gap: spacing.md,
+  sectionTitle: {
+    ...typography.h3,
+    fontWeight: 'bold',
     marginBottom: spacing.md,
   },
   entryCard: {
-    flex: 1,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.md,
     overflow: 'hidden',
-    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  winnerCard: {
-    borderWidth: 2,
-    borderColor: '#FFD700',
-  },
-  winnerBadge: {
+  rankBadge: {
     position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    backgroundColor: '#FFD700',
+    top: spacing.md,
+    left: spacing.md,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
+    borderRadius: 999,
     zIndex: 1,
   },
-  winnerBadgeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: colors.text,
-  },
-  entryImage: {
-    width: '100%',
-    aspectRatio: 1,
-  },
-  entryInfo: {
-    padding: spacing.sm,
-  },
-  entryTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  entryAuthor: {
-    fontSize: 12,
-    marginBottom: spacing.sm,
-  },
-  entryStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  voteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  voteText: {
-    fontSize: 14,
-  },
-  emptyState: {
-    paddingVertical: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  modalClose: {
-    fontSize: 24,
-  },
-  emptyModal: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyModalText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  uploadButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-  },
-  uploadButtonText: {
+  rankText: {
+    ...typography.caption,
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  artworkCard: {
-    flex: 1,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
+    fontWeight: 'bold',
   },
   artworkImage: {
     width: '100%',
-    aspectRatio: 1,
+    height: screenWidth - (spacing.lg * 2),
+    backgroundColor: colors.border,
   },
-  artworkInfo: {
-    padding: spacing.sm,
+  entryInfo: {
+    padding: spacing.md,
   },
   artworkTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...typography.h4,
+    fontWeight: 'bold',
     marginBottom: spacing.xs,
   },
-  artworkPrice: {
+  artworkDescription: {
+    ...typography.body,
     fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  artworkMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    flexWrap: 'wrap',
+  },
+  artistName: {
+    ...typography.body,
+    fontSize: 14,
+  },
+  metaDivider: {
+    ...typography.body,
+    fontSize: 14,
+    marginHorizontal: spacing.xs,
+  },
+  artworkSize: {
+    ...typography.body,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  entryFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  voteInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  voteCount: {
+    ...typography.body,
     fontWeight: '600',
   },
+  voteButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+  },
+  voteButtonActive: {
+    borderWidth: 0,
+  },
+  voteButtonText: {
+    ...typography.button,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  winnerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 999,
+    gap: spacing.xs,
+  },
+  winnerText: {
+    ...typography.caption,
+    color: colors.white,
+    fontWeight: 'bold',
+  },
+  // Winner Section Styles
+  winnerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  winnerHeaderTitle: {
+    ...typography.h2,
+    fontWeight: 'bold',
+  },
+  winnerCard: {
+    borderRadius: borderRadius.xl,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: colors.warning,
+    shadowColor: colors.warning,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  winnerCrown: {
+    position: 'absolute',
+    top: spacing.lg,
+    right: spacing.lg,
+    zIndex: 10,
+    backgroundColor: colors.white,
+    borderRadius: 999,
+    padding: spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  winnerImageContainer: {
+    position: 'relative',
+  },
+  winnerImage: {
+    width: '100%',
+    height: screenWidth - (spacing.lg * 2),
+    backgroundColor: colors.border,
+  },
+  winnerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255, 193, 7, 0.95)',
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  winnerOverlayText: {
+    ...typography.h3,
+    color: colors.white,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  winnerInfo: {
+    padding: spacing.lg,
+  },
+  winnerTitle: {
+    ...typography.h2,
+    fontWeight: 'bold',
+    marginBottom: spacing.sm,
+  },
+  winnerDescription: {
+    ...typography.body,
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: spacing.md,
+  },
+  winnerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
+  },
+  winnerArtist: {
+    ...typography.h4,
+    fontWeight: '600',
+  },
+  winnerSize: {
+    ...typography.body,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  winnerStats: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  winnerStatItem: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  winnerStatValue: {
+    ...typography.h1,
+    fontWeight: 'bold',
+  },
+  winnerStatLabel: {
+    ...typography.caption,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  auctionNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+  },
+  auctionNoticeText: {
+    ...typography.body,
+    flex: 1,
+    fontWeight: '600',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl * 2,
+  },
+  emptyText: {
+    ...typography.h3,
+    fontWeight: 'bold',
+    marginTop: spacing.md,
+  },
+  emptySubtext: {
+    ...typography.body,
+    marginTop: spacing.xs,
+  },
 });
-

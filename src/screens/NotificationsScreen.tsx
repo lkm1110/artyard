@@ -111,6 +111,22 @@ export const NotificationsScreen: React.FC = () => {
           });
         }
         break;
+      case 'auction_outbid':
+      case 'auction_won':
+        if (notification.data?.auction_id) {
+          navigation.navigate('AuctionDetail' as never, {
+            auctionId: notification.data.auction_id,
+          } as never);
+        }
+        break;
+      case 'purchase':
+        // 판매 내역으로 이동
+        navigation.navigate('Sales' as never);
+        break;
+      case 'payout':
+        // 정산 내역으로 이동
+        navigation.navigate('MySettlements' as never);
+        break;
       default:
         break;
     }
@@ -125,7 +141,7 @@ export const NotificationsScreen: React.FC = () => {
     }
   };
 
-  const getNotificationIcon = (type: Notification['type']) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'new_artwork':
         return '🎨';
@@ -137,6 +153,18 @@ export const NotificationsScreen: React.FC = () => {
         return '💬';
       case 'purchase':
         return '💰';
+      case 'payout':
+        return '💸';
+      case 'auction_outbid':
+        return '🔨';
+      case 'auction_won':
+        return '🏆';
+      case 'challenge_win':
+        return '🎖️';
+      case 'shipping_started':
+        return '📦';
+      case 'shipping_delivered':
+        return '✅';
       default:
         return '🔔';
     }

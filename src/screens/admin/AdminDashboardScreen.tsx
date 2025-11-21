@@ -515,6 +515,14 @@ export const AdminDashboardScreen = () => {
         />
 
         <MenuButton
+          title="Auction Management"
+          description="Create auctions & add challenge winners"
+          icon="🔨"
+          color="#8B5CF6"
+          onPress={() => navigation.navigate('AuctionManagement' as never)}
+        />
+
+        <MenuButton
           title="Admin Management"
           description="Add or remove administrators"
           icon="🛡️"

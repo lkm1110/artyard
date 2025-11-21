@@ -34,6 +34,9 @@ import { ChallengeDetailScreen } from '../screens/ChallengeDetailScreen';
 import { AuctionsScreen } from '../screens/AuctionsScreen';
 import { AuctionDetailScreen } from '../screens/AuctionDetailScreen';
 import { ArtistDashboardScreen } from '../screens/ArtistDashboardScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { NotificationSettingsScreen } from '../screens/NotificationSettingsScreen';
+import { PrivacyPolicyScreen } from '../screens/PrivacyPolicyScreen';
 // OAuth 콜백은 nativeOAuth.ts의 AuthSession이 처리하므로 AuthCallbackHandler 비활성화
 // import { AuthCallbackHandlerSimple as AuthCallbackHandler } from '../components/AuthCallbackHandler.simple';
 
@@ -384,6 +387,27 @@ export const RootNavigator: React.FC = () => {
             <Stack.Screen 
               name="ArtistDashboard" 
               component={ArtistDashboardScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="Settings" 
+              component={SettingsScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="NotificationSettings" 
+              component={NotificationSettingsScreen}
+              options={{ 
+                animation: 'slide_from_right'
+              }} 
+            />
+            <Stack.Screen 
+              name="PrivacyPolicy" 
+              component={PrivacyPolicyScreen}
               options={{ 
                 animation: 'slide_from_right'
               }} 
