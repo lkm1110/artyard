@@ -53,9 +53,9 @@ BEGIN
     
     -- 매겨진 작품 수 확인
     SELECT COUNT(*) INTO ranked_count
-    FROM challenge_entries
-    WHERE challenge_id = challenge_record.id
-      AND final_rank IS NOT NULL;
+    FROM challenge_entries ce
+    WHERE ce.challenge_id = challenge_record.id
+      AND ce.final_rank IS NOT NULL;
     
     -- 결과 반환
     challenge_id := challenge_record.id;
