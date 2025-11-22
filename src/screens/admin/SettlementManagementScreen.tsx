@@ -411,6 +411,7 @@ const styles = StyleSheet.create({
   filters: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },

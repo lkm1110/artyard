@@ -530,6 +530,7 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     gap: spacing.sm,
     marginBottom: spacing.md,
   },

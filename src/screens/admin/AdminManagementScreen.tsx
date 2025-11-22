@@ -485,6 +485,7 @@ const styles = StyleSheet.create({
   },
   addAdminButton: {
     marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
     marginBottom: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,

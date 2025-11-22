@@ -339,6 +339,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     marginBottom: spacing.md,
   },
   searchInput: {
