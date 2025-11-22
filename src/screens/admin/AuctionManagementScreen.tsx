@@ -125,13 +125,13 @@ export const AuctionManagementScreen = () => {
   const loadWinners = async () => {
     try {
       // 경매에 추가되지 않은 Top 3 작품 조회 (1, 2, 3등)
-      // 종료된 챌린지만 포함 (end_date가 과거인 것)
+      // 종료된 챌린지만 포함 (end_date가 과거인 것 또는 status='ended')
       const { data, error } = await supabase
         .from('challenge_entries')
         .select(`
           id,
           challenge_id,
-          challenges:challenge_id (title, end_date),
+          challenges:challenge_id (title, end_date, status),
           artwork_id,
           artworks:artwork_id (title),
           author_id,
@@ -147,13 +147,25 @@ export const AuctionManagementScreen = () => {
 
       if (error) throw error;
 
-      // 종료된 챌린지만 필터링 (end_date < now)
+      console.log('📊 [loadWinners] Total entries with rank 1-3:', data?.length || 0);
+
+      // 종료된 챌린지만 필터링 (status='ended' 또는 end_date < now)
       const now = new Date();
       const endedChallenges = data?.filter(entry => {
-        const endDate = (entry.challenges as any)?.end_date;
-        if (!endDate) return false;
-        return new Date(endDate) < now;
+        const challenge = entry.challenges as any;
+        const endDate = challenge?.end_date;
+        const status = challenge?.status;
+        
+        const isEnded = status === 'ended' || (endDate && new Date(endDate) < now);
+        
+        if (isEnded) {
+          console.log(`✅ Ended challenge: ${challenge?.title}, status=${status}, end_date=${endDate}`);
+        }
+        
+        return isEnded;
       }) || [];
+
+      console.log('🏆 [loadWinners] Ended challenges with winners:', endedChallenges.length);
 
       // 이미 경매에 추가된 작품 확인
       const { data: auctionItems } = await supabase

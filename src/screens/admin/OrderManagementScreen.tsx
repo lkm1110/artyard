@@ -69,13 +69,36 @@ export const OrderManagementScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.back, { color: colors.primary }]}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>Order Management</Text>
-      </View>
+    <SafeAreaView 
+      style={[styles.safeArea, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={isDark ? colors.darkBackground : colors.background}
+      />
+      <View style={{ flex: 1 }}>
+        <View style={[
+          styles.header,
+          { 
+            backgroundColor: isDark ? colors.darkCard : colors.card,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          }
+        ]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+              ←
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+            Order Management
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} />
@@ -103,15 +126,43 @@ export const OrderManagementScreen = () => {
         message={errorMessage.message}
         onClose={() => setErrorModalVisible(false)}
       />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: { flex: 1 },
-  header: { padding: spacing.lg, paddingTop: spacing.xl },
-  back: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md },
-  title: { fontSize: 24, fontWeight: 'bold' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    fontSize: 28,
+    fontWeight: '300',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
+  },
   list: { padding: spacing.lg },
   card: { padding: spacing.md, borderRadius: borderRadius.md, marginBottom: spacing.md },
   amount: { fontSize: 20, fontWeight: 'bold', marginBottom: spacing.xs },

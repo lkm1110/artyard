@@ -260,19 +260,37 @@ export const ReportsManagementScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          Reports Management
-        </Text>
-        <Text style={[styles.headerSubtitle, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-          {reports.length} total reports
-        </Text>
-      </View>
+    <SafeAreaView 
+      style={[styles.safeArea, { backgroundColor: isDark ? colors.darkBackground : colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={isDark ? colors.darkBackground : colors.background}
+      />
+      <View style={{ flex: 1 }}>
+        {/* 헤더 */}
+        <View style={[
+          styles.header,
+          { 
+            backgroundColor: isDark ? colors.darkCard : colors.card,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          }
+        ]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+              ←
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
+            Reports Management
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
       {/* 필터 */}
       <View style={styles.filterContainer}>
@@ -470,32 +488,44 @@ export const ReportsManagementScreen = () => {
           )}
         </View>
       </Modal>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
   header: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
   },
   backButton: {
-    marginBottom: spacing.md,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  backIcon: {
+    fontSize: 28,
+    fontWeight: '300',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: spacing.xs,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold as any,
+    flex: 1,
+    textAlign: 'center',
   },
-  headerSubtitle: {
-    fontSize: 14,
+  headerSpacer: {
+    width: 40,
   },
   filterContainer: {
     flexDirection: 'row',
