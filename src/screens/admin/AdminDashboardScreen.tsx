@@ -521,7 +521,7 @@ export const AdminDashboardScreen = () => {
           description="Detailed statistics and insights"
           icon="📊"
           color="#8B5CF6"
-          onPress={() => Alert.alert('Coming Soon', 'Advanced analytics will be available soon')}
+          onPress={() => navigation.navigate('PlatformAnalytics' as never)}
         />
       </View>
 
