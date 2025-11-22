@@ -542,8 +542,20 @@ export const ChallengeDetailScreen = () => {
             </Text>
             {entries
               .filter(e => e.is_top_10 && !(e.is_winner && e.final_rank === 1))
+              .sort((a, b) => {
+                // 종료된 챌린지는 순위 순으로 정렬
+                if (challenge?.status === 'ended') {
+                  if (a.final_rank && b.final_rank) {
+                    return a.final_rank - b.final_rank;
+                  }
+                  if (a.final_rank) return -1;
+                  if (b.final_rank) return 1;
+                }
+                // 진행 중인 챌린지는 투표 순으로 정렬
+                return (b.votes_count || 0) - (a.votes_count || 0);
+              })
               .map((entry) => {
-                const rankBorderColor = getRankBorderColor(entry.final_rank);
+                const rankBorderColor = challenge?.status === 'ended' ? getRankBorderColor(entry.final_rank) : undefined;
                 return (
                   <View 
                     key={entry.id} 
@@ -652,6 +664,18 @@ export const ChallengeDetailScreen = () => {
           </Text>
           {entries
             .filter(e => !e.is_top_10)
+            .sort((a, b) => {
+              // 종료된 챌린지는 순위 순으로 정렬
+              if (challenge?.status === 'ended') {
+                if (a.final_rank && b.final_rank) {
+                  return a.final_rank - b.final_rank;
+                }
+                if (a.final_rank) return -1;
+                if (b.final_rank) return 1;
+              }
+              // 진행 중인 챌린지는 투표 순으로 정렬
+              return (b.votes_count || 0) - (a.votes_count || 0);
+            })
             .map((entry) => {
               // 종료된 챌린지는 모든 작품에 순위 테두리 표시
               const rankBorderColor = challenge?.status === 'ended' ? getRankBorderColor(entry.final_rank) : undefined;
