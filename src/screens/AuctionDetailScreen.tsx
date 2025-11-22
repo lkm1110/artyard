@@ -69,6 +69,8 @@ export const AuctionDetailScreen = () => {
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [bidConfirmVisible, setBidConfirmVisible] = useState(false);
+  const [descriptionModalVisible, setDescriptionModalVisible] = useState(false);
+  const [selectedDescription, setSelectedDescription] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   
@@ -376,6 +378,36 @@ export const AuctionDetailScreen = () => {
                   by @{item.artist?.handle}
                 </Text>
                 
+                {/* Artwork Size */}
+                {item.artwork?.size && (
+                  <View style={styles.artworkMetaRow}>
+                    <Ionicons name="resize-outline" size={14} color={isDark ? colors.darkTextMuted : colors.textMuted} />
+                    <Text style={[styles.artworkMetaText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                      {item.artwork.size}
+                    </Text>
+                  </View>
+                )}
+                
+                {/* Artwork Description */}
+                {item.artwork?.description && (
+                  <TouchableOpacity
+                    style={styles.descriptionContainer}
+                    onPress={() => {
+                      setSelectedDescription(item.artwork.description);
+                      setDescriptionModalVisible(true);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text 
+                      style={[styles.artworkDescription, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {item.artwork.description}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
                 <View style={styles.priceSection}>
                   <View style={styles.priceRow}>
                     <Text style={[styles.priceLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
@@ -465,6 +497,17 @@ export const AuctionDetailScreen = () => {
         title="Error"
         message={errorMessage}
         onClose={() => setErrorModalVisible(false)}
+      />
+      
+      {/* Description Modal */}
+      <ConfirmModal
+        visible={descriptionModalVisible}
+        title="Artwork Description"
+        message={selectedDescription}
+        onConfirm={() => setDescriptionModalVisible(false)}
+        confirmText="Close"
+        iconName="document-text-outline"
+        iconColor={colors.primary}
       />
       
       <ConfirmModal
@@ -619,7 +662,24 @@ const styles = StyleSheet.create({
   },
   artistName: {
     ...typography.body,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  artworkMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  artworkMetaText: {
+    fontSize: typography.sizes.sm,
+  },
+  descriptionContainer: {
+    marginBottom: spacing.sm,
+  },
+  artworkDescription: {
+    fontSize: typography.sizes.sm,
+    fontStyle: 'italic',
+    lineHeight: 18,
   },
   priceSection: {
     marginBottom: spacing.md,
@@ -666,7 +726,7 @@ const styles = StyleSheet.create({
   },
   bidButton: {
     width: '100%',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md, // lg에서 md로 축소
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',

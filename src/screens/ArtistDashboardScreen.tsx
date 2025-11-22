@@ -387,7 +387,7 @@ export const ArtistDashboardScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionCard, { backgroundColor: theme.card }]}
-              onPress={() => navigation.navigate('MyOrders' as never)}
+              onPress={() => navigation.navigate('Orders' as never)}
               activeOpacity={0.7}
             >
               <Ionicons name="receipt" size={32} color="#10b981" />
