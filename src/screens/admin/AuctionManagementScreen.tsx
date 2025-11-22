@@ -419,19 +419,34 @@ export const AuctionManagementScreen = () => {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: isDark ? colors.darkBorder : colors.border }]}>
+      <View style={[
+        styles.header, 
+        { 
+          backgroundColor: isDark ? colors.darkCard : colors.card,
+          borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+        }
+      ]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+            ←
+          </Text>
+        </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: isDark ? colors.darkText : colors.text }]}>
           Auction Management
         </Text>
         <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: colors.primary }]}
+          style={styles.createButton}
           onPress={() => {
             setShowCreateForm(!showCreateForm);
             setQuarter(generateQuarterSuggestion());
           }}
           activeOpacity={0.8}
         >
-          <Ionicons name={showCreateForm ? "close" : "add"} size={24} color="white" />
+          <Ionicons name={showCreateForm ? "close" : "add"} size={24} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -748,14 +763,25 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIcon: {
+    fontSize: 28,
+    fontWeight: '300',
+  },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold as any,
+    flex: 1,
+    textAlign: 'center',
   },
   createButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
