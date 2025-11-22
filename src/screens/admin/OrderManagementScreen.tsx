@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, useColorScheme, RefreshControl, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { colors, spacing, borderRadius } from '../../constants/theme';
@@ -20,6 +20,7 @@ export const OrderManagementScreen = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState<Transaction[]>([]);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
@@ -28,8 +29,13 @@ export const OrderManagementScreen = () => {
     loadOrders();
   }, []);
 
-  const loadOrders = async () => {
+  const loadOrders = async (isRefreshing = false) => {
     try {
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -46,6 +52,7 @@ export const OrderManagementScreen = () => {
       setErrorModalVisible(true);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -78,6 +85,14 @@ export const OrderManagementScreen = () => {
           renderItem={renderOrder}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadOrders(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
 

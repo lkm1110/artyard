@@ -13,7 +13,11 @@ import {
   useColorScheme,
   TextInput,
   Modal,
+  RefreshControl,
+  Alert,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/authStore';
@@ -33,6 +37,7 @@ export const AdminManagementScreen = () => {
   const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchEmail, setSearchEmail] = useState('');
@@ -43,9 +48,13 @@ export const AdminManagementScreen = () => {
     loadAdmins();
   }, []);
 
-  const loadAdmins = async () => {
+  const loadAdmins = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       // RPC 함수로 실제 이메일 포함해서 가져오기
       const { data, error } = await supabase.rpc('get_admin_users');
@@ -75,6 +84,7 @@ export const AdminManagementScreen = () => {
       alert('Error: Failed to load admin list');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -336,6 +346,14 @@ export const AdminManagementScreen = () => {
           renderItem={renderAdmin}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadAdmins(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
 

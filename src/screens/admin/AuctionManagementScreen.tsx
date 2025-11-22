@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,6 +58,7 @@ export const AuctionManagementScreen = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [winners, setWinners] = useState<ChallengeWinner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
   
   // Form state
@@ -79,14 +81,20 @@ export const AuctionManagementScreen = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       await Promise.all([loadAuctions(), loadWinners()]);
     } catch (error) {
       console.error('Failed to load data:', error);
+      Alert.alert('Error', 'Failed to load data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -415,7 +423,18 @@ export const AuctionManagementScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadData(true)}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+      >
         {/* Create Form */}
         {showCreateForm && (
           <View style={[styles.createForm, { backgroundColor: isDark ? colors.darkCard : colors.card }]}>

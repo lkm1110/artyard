@@ -16,6 +16,8 @@ import {
   useColorScheme,
   TextInput,
   Image,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
@@ -42,6 +44,7 @@ export const ArtworkManagementScreen = () => {
   const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -50,9 +53,13 @@ export const ArtworkManagementScreen = () => {
     loadArtworks();
   }, []);
 
-  const loadArtworks = async () => {
+  const loadArtworks = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       // 직접 fetch 사용 (SDK 우회)
       const { data: { session } } = await supabase.auth.getSession();
@@ -82,6 +89,7 @@ export const ArtworkManagementScreen = () => {
       alert('Error: Failed to load artworks');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -260,6 +268,14 @@ export const ArtworkManagementScreen = () => {
           numColumns={2}
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadArtworks(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
     </View>

@@ -17,7 +17,10 @@ import {
   Alert,
   Modal,
   TextInput,
+  RefreshControl,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/authStore';
@@ -46,6 +49,7 @@ export const ReportsManagementScreen = () => {
   const { user } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [filter, setFilter] = useState<'pending' | 'all'>('pending');
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
@@ -57,9 +61,13 @@ export const ReportsManagementScreen = () => {
     loadReports();
   }, [filter]);
 
-  const loadReports = async () => {
+  const loadReports = async (isRefreshing = false) => {
     try {
-      setLoading(true);
+      if (isRefreshing) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       // 1. 먼저 reports 가져오기
       let query = supabase
@@ -106,6 +114,7 @@ export const ReportsManagementScreen = () => {
       Alert.alert('Error', 'Failed to load reports');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -321,6 +330,14 @@ export const ReportsManagementScreen = () => {
           renderItem={renderReport}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadReports(true)}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
 
