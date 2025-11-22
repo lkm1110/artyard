@@ -1063,10 +1063,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.xl,
-    overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: colors.warning,
-    shadowColor: colors.warning,
+    // overflow: 'hidden', // 테두리가 잘리지 않도록 제거
+    // borderWidth와 borderColor는 인라인으로 설정
+    shadowColor: '#FFD700', // 금색 그림자
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -1093,6 +1092,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: screenWidth - (spacing.lg * 2),
     backgroundColor: colors.border,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
   },
   winnerOverlay: {
     position: 'absolute',
