@@ -117,7 +117,19 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "lang": "en",
+      "name": "ArtYard - Global Art Marketplace",
+      "shortName": "ArtYard",
+      "description": "Global art marketplace for emerging artists. Share, discover, and sell original artworks.",
+      "themeColor": "#EC4899",
+      "backgroundColor": "#FFFFFF",
+      "display": "standalone",
+      "orientation": "portrait",
+      "scope": "/",
+      "startUrl": "/"
     },
     "extra": {
       "supabaseUrl": "https://bkvycanciimgyftdtqpx.supabase.co",
