@@ -369,17 +369,15 @@ export const AdminDashboardScreen = () => {
           value={stats.totalUsers}
           icon="👥"
           color="#3B82F6"
-          onPress={() => navigation.navigate('UserManagement' as never)}
         />
         <StatCard
           title="Total Artworks"
           value={stats.totalArtworks}
           icon="🎨"
           color="#10B981"
-          onPress={() => navigation.navigate('ArtworkManagement' as never)}
         />
         <StatCard
-          title="Transactions"
+          title="Order Management"
           value={stats.totalTransactions}
           icon="💰"
           color="#F59E0B"
@@ -393,7 +391,7 @@ export const AdminDashboardScreen = () => {
           onPress={() => navigation.navigate('RevenueDetail' as never)}
         />
         <StatCard
-          title="Pending Reports"
+          title="Reports Management"
           value={stats.pendingReports}
           icon="🚨"
           color="#EF4444"
@@ -404,6 +402,7 @@ export const AdminDashboardScreen = () => {
           value={stats.activeUsers}
           icon="⚡"
           color="#06B6D4"
+          onPress={() => navigation.navigate('UserManagement' as never, { tab: 'active' })}
         />
         <StatCard
           title="Auction Management"
@@ -421,54 +420,6 @@ export const AdminDashboardScreen = () => {
         />
       </View>
 
-      {/* Quick Actions */}
-      <View style={styles.quickActionsSection}>
-        <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
-          ⚡ Quick Actions
-        </Text>
-        <View style={styles.quickActionsGrid}>
-          <TouchableOpacity
-            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
-            onPress={() => navigation.navigate('AdminManagement' as never)}
-          >
-            <Text style={styles.quickActionIcon}>🛡️</Text>
-            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
-              Promote to Admin
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
-            onPress={() => navigation.navigate('UserManagement' as never)}
-          >
-            <Text style={styles.quickActionIcon}>🚫</Text>
-            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
-              Ban User
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
-            onPress={() => navigation.navigate('ArtworkManagement' as never)}
-          >
-            <Text style={styles.quickActionIcon}>🗑️</Text>
-            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
-              Delete Artwork
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionButton, { backgroundColor: isDark ? colors.darkCard : colors.card }]}
-            onPress={() => navigation.navigate('SettlementManagement' as never)}
-          >
-            <Text style={styles.quickActionIcon}>💰</Text>
-            <Text style={[styles.quickActionText, { color: isDark ? colors.darkText : colors.text }]}>
-              Approve Settlement
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* 관리 메뉴 */}
       <View style={styles.menuSection}>
         <Text style={[styles.sectionTitle, { color: isDark ? colors.darkText : colors.text }]}>
@@ -476,12 +427,11 @@ export const AdminDashboardScreen = () => {
         </Text>
 
         <MenuButton
-          title="Reports Management"
-          description="Review and resolve user reports"
-          icon="🚨"
-          color="#EF4444"
-          badge={stats.pendingReports}
-          onPress={() => navigation.navigate('ReportsManagement' as never)}
+          title="User Management"
+          description="Ban, unban, or manage users"
+          icon="👥"
+          color="#3B82F6"
+          onPress={() => navigation.navigate('UserManagement' as never)}
         />
 
         <MenuButton
@@ -493,19 +443,11 @@ export const AdminDashboardScreen = () => {
         />
 
         <MenuButton
-          title="User Management"
-          description="Ban, unban, or manage users"
-          icon="👥"
-          color="#3B82F6"
-          onPress={() => navigation.navigate('UserManagement' as never)}
-        />
-
-        <MenuButton
-          title="Order Management"
-          description="View and manage transactions"
-          icon="💰"
-          color="#F59E0B"
-          onPress={() => navigation.navigate('OrderManagement' as never)}
+          title="Platform Analytics"
+          description="Detailed statistics and insights"
+          icon="📊"
+          color="#8B5CF6"
+          onPress={() => navigation.navigate('PlatformAnalytics' as never)}
         />
 
         <MenuButton
@@ -517,11 +459,11 @@ export const AdminDashboardScreen = () => {
         />
 
         <MenuButton
-          title="Platform Analytics"
-          description="Detailed statistics and insights"
-          icon="📊"
-          color="#8B5CF6"
-          onPress={() => navigation.navigate('PlatformAnalytics' as never)}
+          title="Promote to Admin"
+          description="Grant or revoke admin privileges"
+          icon="🛡️"
+          color="#EC4899"
+          onPress={() => navigation.navigate('AdminManagement' as never)}
         />
       </View>
 
@@ -603,37 +545,6 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 12,
-    textAlign: 'center',
-  },
-  quickActionsSection: {
-    padding: spacing.lg,
-    paddingTop: spacing.lg,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  quickActionButton: {
-    width: '47%',
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  quickActionIcon: {
-    fontSize: 32,
-    marginBottom: spacing.sm,
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '600',
     textAlign: 'center',
   },
   menuSection: {
