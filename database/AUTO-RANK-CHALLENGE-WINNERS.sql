@@ -40,11 +40,12 @@ DECLARE
   ranked_count INTEGER;
 BEGIN
   -- 종료되었지만 순위가 매겨지지 않은 챌린지 찾기
+  -- status = 'ended' OR end_date < NOW() 둘 다 확인
   FOR challenge_record IN
     SELECT DISTINCT c.id, c.title
     FROM challenges c
     JOIN challenge_entries ce ON c.id = ce.challenge_id
-    WHERE c.end_date < NOW()
+    WHERE (c.status = 'ended' OR c.end_date < NOW())
       AND ce.final_rank IS NULL
   LOOP
     -- 순위 매기기

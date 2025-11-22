@@ -181,10 +181,14 @@ export const ChallengeManagementScreen = () => {
     if (!actionChallenge) return;
     
     try {
-      // 챌린지 종료 (투표는 별도 관리)
+      // 챌린지 종료 (status + end_date 모두 업데이트)
+      const now = new Date().toISOString();
       const { error: updateError } = await supabase
         .from('challenges')
-        .update({ status: 'ended' })
+        .update({ 
+          status: 'ended',
+          end_date: now  // 관리자가 강제 종료 시 현재 시간으로 설정
+        })
         .eq('id', actionChallenge.id);
       
       if (updateError) throw updateError;
