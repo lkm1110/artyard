@@ -613,40 +613,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    paddingBottom: spacing.xl * 3, // 하단 여백 추가 (버튼 겹침 방지)
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-  },
-  headerTitleRow: {
-    flex: 1,
-  },
-  title: {
-    ...typography.h2,
-    fontWeight: 'bold',
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.md,
-    gap: spacing.xs,
-  },
-  createButtonText: {
-    ...typography.button,
-    color: colors.white,
-    fontWeight: '600',
-  },
   formCard: {
     margin: spacing.lg,
     marginTop: 0,
