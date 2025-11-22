@@ -298,13 +298,26 @@ export const SettlementManagementScreen = () => {
     <Screen>
       <View style={[styles.container, { backgroundColor: isDark ? colors.darkBg : colors.bg }]}>
         {/* Header */}
-        <View style={styles.topHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.primary }]}>← Back</Text>
+        <View style={[
+          styles.topHeader,
+          {
+            backgroundColor: isDark ? colors.darkCard : colors.card,
+            borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          }
+        ]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.backIcon, { color: isDark ? colors.darkText : colors.text }]}>
+              ←
+            </Text>
           </TouchableOpacity>
           <Text style={[styles.title, { color: isDark ? colors.darkText : colors.text }]}>
-            💰 Settlement Management
+            Settlement Management
           </Text>
+          <View style={styles.headerSpacer} />
         </View>
 
         {/* Filters */}
@@ -369,19 +382,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topHeader: {
-    padding: spacing.lg,
-    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
   },
   backButton: {
-    marginBottom: spacing.sm,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+  backIcon: {
+    fontSize: 28,
+    fontWeight: '300',
   },
   title: {
-    ...typography.h2,
-    fontWeight: '700',
+    fontSize: typography.sizes?.xl || 20,
+    fontWeight: typography.weights?.bold as any || '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 40,
   },
   filters: {
     flexDirection: 'row',
