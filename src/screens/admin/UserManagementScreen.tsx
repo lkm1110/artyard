@@ -359,7 +359,7 @@ export const UserManagementScreen = () => {
         message={errorMessage.message}
         onClose={() => setErrorModalVisible(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
