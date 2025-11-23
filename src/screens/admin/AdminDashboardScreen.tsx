@@ -487,15 +487,15 @@ export const AdminDashboardScreen = () => {
       <View style={styles.bottomSpacer} />
       </ScrollView>
       </View>
+      
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
     </SafeAreaView>
-    
-    {/* Error Modal */}
-    <ErrorModal
-      visible={errorModalVisible}
-      title={errorMessage.title}
-      message={errorMessage.message}
-      onClose={() => setErrorModalVisible(false)}
-    />
   );
 };
 
