@@ -197,7 +197,7 @@ export const ChallengesScreen = () => {
               styles.timerText,
               { color: isEnded ? colors.error : colors.primary }
             ]}>
-              {isEnded ? '경매 종료' : `종료까지: ${timeRemaining}`}
+              {isEnded ? 'Ended' : `Ends in: ${timeRemaining}`}
             </Text>
           </View>
         )}

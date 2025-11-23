@@ -276,6 +276,42 @@ $$ LANGUAGE plpgsql;
 
 
 -- ============================================================
+-- 7. user_bans 만료 자동 처리
+-- ============================================================
+
+-- 활성 ban만 보여주는 뷰
+CREATE OR REPLACE VIEW active_user_bans AS
+SELECT 
+  *,
+  CASE 
+    WHEN expires_at IS NOT NULL AND expires_at < NOW() THEN false
+    ELSE is_active
+  END as currently_active
+FROM user_bans
+WHERE is_active = true
+  AND (expires_at IS NULL OR expires_at > NOW());
+
+-- 정기적으로 만료된 ban 비활성화 (일 1회 실행 권장)
+CREATE OR REPLACE FUNCTION cleanup_expired_bans()
+RETURNS integer AS $$
+DECLARE
+  affected_rows integer;
+BEGIN
+  UPDATE user_bans
+  SET is_active = false
+  WHERE is_active = true
+    AND expires_at IS NOT NULL
+    AND expires_at < NOW();
+  
+  GET DIAGNOSTICS affected_rows = ROW_COUNT;
+  
+  RAISE NOTICE '✅ % expired bans deactivated', affected_rows;
+  RETURN affected_rows;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ============================================================
 -- 완료 메시지
 -- ============================================================
 

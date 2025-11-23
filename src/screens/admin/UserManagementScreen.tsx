@@ -209,6 +209,7 @@ export const UserManagementScreen = ({ route }: any) => {
             reason: banReason || 'Manual ban by admin',
             ban_type: banType,
             expires_at: expiresAt,
+            is_active: true,
           })
         }
       );

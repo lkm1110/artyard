@@ -95,11 +95,29 @@ EXCEPTION
   WHEN undefined_object THEN NULL;
 END $$;
 
+-- is_active 컬럼 추가 (없으면)
+ALTER TABLE user_bans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
 -- active ban만 unique하도록 변경
 DROP INDEX IF EXISTS idx_user_bans_active_user;
 CREATE UNIQUE INDEX idx_user_bans_active_user 
 ON user_bans(user_id) 
-WHERE (expires_at IS NULL OR expires_at > NOW());
+WHERE is_active = true;
+
+-- 만료된 ban을 자동으로 비활성화하는 함수
+CREATE OR REPLACE FUNCTION deactivate_expired_bans()
+RETURNS void AS $$
+BEGIN
+  UPDATE user_bans
+  SET is_active = false
+  WHERE is_active = true
+    AND expires_at IS NOT NULL
+    AND expires_at < NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- 만료된 ban 즉시 비활성화
+SELECT deactivate_expired_bans();
 
 
 -- ============================================================
