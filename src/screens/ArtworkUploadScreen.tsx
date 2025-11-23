@@ -387,18 +387,6 @@ export const ArtworkUploadScreen: React.FC = () => {
         price: formData.price,
         sale_status: 'available', // 판매 가능 상태로 설정
         images: uploadedImageUrls,
-        // 위치 정보 추가 (있는 경우에만)
-        ...(locationInfo && {
-          location_latitude: locationInfo.latitude,
-          location_longitude: locationInfo.longitude,
-          location_country: locationInfo.country,
-          location_state: locationInfo.state,
-          location_city: locationInfo.city,
-          location_district: locationInfo.district,
-          location_street: locationInfo.street,
-          location_name: locationInfo.name,
-          location_full: formatLocationText(locationInfo),
-        }),
       };
 
       const newArtwork = await uploadArtworkMutation.mutateAsync(artworkData);
