@@ -29,15 +29,23 @@ interface SimpleFilter {
   categories?: string[];
 }
 
-// Material filter options
-const MATERIAL_FILTERS = [
+// Type filter options (통합: Material + Category)
+const TYPE_FILTERS = [
   { key: 'all', label: 'All' },
+  { key: 'Painting', label: 'Painting' },
+  { key: 'Drawing', label: 'Drawing' },
   { key: 'Illustration', label: 'Illustration' },
   { key: 'Photography', label: 'Photography' },
+  { key: 'Digital Art', label: 'Digital Art' },
   { key: 'Printmaking', label: 'Printmaking' },
+  { key: 'Sculpture', label: 'Sculpture' },
+  { key: 'Ceramics', label: 'Ceramics' },
+  { key: 'Textile Art', label: 'Textile Art' },
+  { key: 'Collage', label: 'Collage' },
+  { key: 'Mixed Media', label: 'Mixed Media' },
+  { key: 'Street Art', label: 'Street Art' },
   { key: 'Craft', label: 'Craft' },
-  { key: 'Design Poster', label: 'Poster' },
-  { key: 'Drawing', label: 'Drawing' },
+  { key: 'Installation', label: 'Installation' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -205,7 +213,7 @@ export const HomeScreen: React.FC = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.filterContainer}
           >
-            {MATERIAL_FILTERS.map((filter) => (
+            {TYPE_FILTERS.map((filter) => (
               <TouchableOpacity
                 key={filter.key}
                 style={[

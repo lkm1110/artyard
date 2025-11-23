@@ -40,15 +40,22 @@ export const SimpleFilterModal: React.FC<Props> = ({
 }) => {
   const isDark = useColorScheme() === 'dark';
   
-  // 카테고리 목록
-  const CATEGORIES = [
+  // Type 목록 (Material + Category 통합)
+  const TYPE_OPTIONS = [
     'Painting',
-    'Sculpture',
+    'Drawing',
+    'Illustration',
     'Photography',
     'Digital Art',
-    'Drawing',
-    'Print',
+    'Printmaking',
+    'Sculpture',
+    'Ceramics',
+    'Textile Art',
+    'Collage',
     'Mixed Media',
+    'Street Art',
+    'Craft',
+    'Installation',
     'Other',
   ];
   
@@ -291,13 +298,13 @@ export const SimpleFilterModal: React.FC<Props> = ({
             </View>
           </View>
 
-          {/* 카테고리 필터 */}
+          {/* Type 필터 */}
           <View style={styles.section}>
             <Text style={[
               styles.sectionTitle,
               { color: isDark ? colors.darkText : colors.text }
             ]}>
-              🎨 Categories
+              🎨 Artwork Type
             </Text>
             
             <View style={[
@@ -305,7 +312,7 @@ export const SimpleFilterModal: React.FC<Props> = ({
               { backgroundColor: isDark ? colors.darkCard : colors.card }
             ]}>
               <View style={styles.categoriesGrid}>
-                {CATEGORIES.map((category) => (
+                {TYPE_OPTIONS.map((category) => (
                   <TouchableOpacity
                     key={category}
                     style={[
