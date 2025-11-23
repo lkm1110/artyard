@@ -387,6 +387,12 @@ export const ArtworkUploadScreen: React.FC = () => {
         price: formData.price,
         sale_status: 'available', // 판매 가능 상태로 설정
         images: uploadedImageUrls,
+        // Location 정보 (있는 경우에만)
+        ...(locationInfo && {
+          location_country: locationInfo.country,
+          location_city: locationInfo.city,
+          location_full: formatLocationText(locationInfo),
+        }),
       };
 
       const newArtwork = await uploadArtworkMutation.mutateAsync(artworkData);
@@ -733,8 +739,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                       borderColor: errors.sizeWidth ? colors.danger : 'transparent',
                     }
                   ]}
-                  placeholder="Width"
-                  placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                  placeholder=""
                   value={formData.sizeWidth}
                   onChangeText={(text) => updateField('sizeWidth', text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
                   keyboardType="decimal-pad"
@@ -750,8 +755,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                       borderColor: errors.sizeHeight ? colors.danger : 'transparent',
                     }
                   ]}
-                  placeholder="Height"
-                  placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                  placeholder=""
                   value={formData.sizeHeight}
                   onChangeText={(text) => updateField('sizeHeight', text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
                   keyboardType="decimal-pad"
@@ -767,8 +771,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                       borderColor: 'transparent',
                     }
                   ]}
-                  placeholder="Depth (optional)"
-                  placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                  placeholder=""
                   value={formData.sizeDepth}
                   onChangeText={(text) => updateField('sizeDepth', text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
                   keyboardType="decimal-pad"
@@ -776,6 +779,9 @@ export const ArtworkUploadScreen: React.FC = () => {
                 />
                 <Text style={[styles.sizeUnit, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>cm</Text>
               </View>
+              <Text style={[styles.helperText, { color: isDark ? colors.darkTextMuted : colors.textMuted, fontSize: 12, marginTop: spacing.xs }]}>
+                For 3D artworks (Sculpture, Ceramics, Installation), please enter depth in the third field
+              </Text>
               {(errors.sizeWidth || errors.sizeHeight) && (
                 <Text style={[styles.errorText, { color: colors.danger }]}>
                   {errors.sizeWidth || errors.sizeHeight}
@@ -799,8 +805,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                       textAlign: 'center',
                     }
                   ]}
-                  placeholder="e.g., 1882"
-                  placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                  placeholder=""
                   value={formData.year === 0 ? '' : formData.year.toString()}
                   onChangeText={(text) => {
                     const year = parseInt(text);
@@ -884,8 +889,7 @@ export const ArtworkUploadScreen: React.FC = () => {
                     textAlign: 'center',
                   }
                 ]}
-                placeholder={challengeId ? "e.g., 100 (auction starting price)" : "Enter price (e.g., 50, 100-200, 100)"}
-                placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                placeholder=""
                 value={formData.price}
                 onChangeText={(text) => updateField('price', text.replace(/[^0-9\-$.,]/g, ''))}
                 keyboardType="numeric"
