@@ -108,7 +108,7 @@ export const ArtworkUploadScreen: React.FC = () => {
     category: 'Painting',
     sizeWidth: '',
     sizeHeight: '',
-    year: new Date().getFullYear(),
+    year: 0,
     edition: 'Original',
     editionNumber: '',
     price: '',
@@ -310,8 +310,8 @@ export const ArtworkUploadScreen: React.FC = () => {
       newErrors.images = 'At least one image is required' as any;
     }
 
-    if (formData.year < 1900 || formData.year > new Date().getFullYear()) {
-      newErrors.year = 'Please enter a valid year' as any;
+    if (!formData.year || formData.year < 1000 || formData.year > new Date().getFullYear()) {
+      newErrors.year = 'Please enter a valid year (1000 - ' + new Date().getFullYear() + ')' as any;
     }
 
     setErrors(newErrors);
@@ -820,10 +820,13 @@ export const ArtworkUploadScreen: React.FC = () => {
                       textAlign: 'center',
                     }
                   ]}
-                  placeholder="2024"
+                  placeholder="e.g., 1882"
                   placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
-                  value={formData.year.toString()}
-                  onChangeText={(text) => updateField('year', parseInt(text) || new Date().getFullYear())}
+                  value={formData.year === 0 ? '' : formData.year.toString()}
+                  onChangeText={(text) => {
+                    const year = parseInt(text);
+                    updateField('year', isNaN(year) ? 0 : year);
+                  }}
                   keyboardType="numeric"
                   maxLength={4}
                 />
