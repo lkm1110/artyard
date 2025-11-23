@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { colors, spacing, typography, borderRadius } from '../../constants/theme';
+import { ErrorModal } from '../../components/ErrorModal';
 
 type PeriodType = 'today' | 'weekly' | 'monthly' | 'total';
 
@@ -43,6 +44,10 @@ export const RevenueDetailScreen = () => {
     transactions: 0,
     avgTransaction: 0,
   });
+  
+  // Modal states
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
 
   useEffect(() => {
     loadRevenue();
@@ -104,7 +109,11 @@ export const RevenueDetailScreen = () => {
       });
     } catch (error: any) {
       console.error('Failed to load revenue:', error);
-      Alert.alert('Error', 'Failed to load revenue data');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to load revenue data',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -250,6 +259,14 @@ export const RevenueDetailScreen = () => {
           )}
         </ScrollView>
       </View>
+      
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

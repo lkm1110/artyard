@@ -22,6 +22,7 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../../constants/theme';
+import { ErrorModal } from '../../components/ErrorModal';
 
 interface DashboardStats {
   totalUsers: number;
@@ -51,6 +52,10 @@ export const AdminDashboardScreen = () => {
     todayRevenue: 0,
     activeChallenges: 0,
   });
+  
+  // Modal states
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
 
   useEffect(() => {
     checkAdminPermission();
@@ -66,8 +71,12 @@ export const AdminDashboardScreen = () => {
         .single();
 
       if (!profile?.is_admin) {
-        Alert.alert('Access Denied', 'You do not have admin permissions');
-        navigation.goBack();
+        setErrorMessage({
+          title: 'Access Denied',
+          message: 'You do not have admin permissions',
+        });
+        setErrorModalVisible(true);
+        setTimeout(() => navigation.goBack(), 2000);
         return;
       }
 
@@ -75,8 +84,12 @@ export const AdminDashboardScreen = () => {
       await loadStats();
     } catch (error: any) {
       console.error('권한 확인 실패:', error);
-      Alert.alert('Error', 'Failed to verify admin permissions');
-      navigation.goBack();
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to verify admin permissions',
+      });
+      setErrorModalVisible(true);
+      setTimeout(() => navigation.goBack(), 2000);
     }
   };
 
@@ -220,7 +233,11 @@ export const AdminDashboardScreen = () => {
       });
     } catch (error: any) {
       console.error('통계 로드 실패:', error);
-      Alert.alert('Error', 'Failed to load statistics');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to load statistics',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -471,6 +488,14 @@ export const AdminDashboardScreen = () => {
       </ScrollView>
       </View>
     </SafeAreaView>
+    
+    {/* Error Modal */}
+    <ErrorModal
+      visible={errorModalVisible}
+      title={errorMessage.title}
+      message={errorMessage.message}
+      onClose={() => setErrorModalVisible(false)}
+    />
   );
 };
 

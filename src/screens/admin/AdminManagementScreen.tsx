@@ -22,6 +22,9 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../../constants/theme';
+import { SuccessModal } from '../../components/SuccessModal';
+import { ErrorModal } from '../../components/ErrorModal';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 interface Admin {
   id: string;
@@ -43,6 +46,16 @@ export const AdminManagementScreen = () => {
   const [searchEmail, setSearchEmail] = useState('');
   const [searchResults, setSearchResults] = useState<Admin[]>([]);
   const [searching, setSearching] = useState(false);
+  
+  // Modal states
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   useEffect(() => {
     loadAdmins();
@@ -153,105 +166,102 @@ export const AdminManagementScreen = () => {
   const handleAddAdmin = async (userId: string, handle: string) => {
     console.log('🎯 Add Admin 클릭:', { userId, handle });
     
-    // React Native Alert 사용
-    Alert.alert(
-      'Add Administrator',
-      `Add "${handle}" as an administrator?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => console.log('❌ 취소됨'),
-        },
-        {
-          text: 'Add',
-          onPress: async () => {
-            try {
-              console.log('✅ 관리자 추가 시작...');
-              console.log('📝 대상 userId:', userId);
-              console.log('📝 현재 admin userId:', user?.id);
-              
-              const { data, error } = await supabase
-                .from('profiles')
-                .update({ is_admin: true })
-                .eq('id', userId)
-                .select();
+    // ConfirmModal 사용
+    setConfirmTitle('Add Administrator');
+    setConfirmMessage(`Add "${handle}" as an administrator?`);
+    setConfirmAction(() => async () => {
+      try {
+        console.log('✅ 관리자 추가 시작...');
+        console.log('📝 대상 userId:', userId);
+        console.log('📝 현재 admin userId:', user?.id);
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ is_admin: true })
+          .eq('id', userId)
+          .select();
 
-              console.log('📊 업데이트 결과 (data):', data);
-              console.log('📊 업데이트 결과 (data length):', data?.length);
-              console.log('❌ 에러:', error);
+        console.log('📊 업데이트 결과 (data):', data);
+        console.log('📊 업데이트 결과 (data length):', data?.length);
+        console.log('❌ 에러:', error);
 
-              if (error) throw error;
-              
-              if (!data || data.length === 0) {
-                throw new Error('Update succeeded but no rows were affected. This might be an RLS policy issue.');
-              }
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+          throw new Error('Update succeeded but no rows were affected. This might be an RLS policy issue.');
+        }
 
-              console.log('✅ 관리자 추가 성공! 실제 업데이트된 데이터:', data[0]);
+        console.log('✅ 관리자 추가 성공! 실제 업데이트된 데이터:', data[0]);
 
-              Alert.alert('Success', `"${handle}" has been added as an administrator`);
-              setModalVisible(false);
-              setSearchEmail('');
-              setSearchResults([]);
-              loadAdmins();
-            } catch (error: any) {
-              console.error('💥 관리자 추가 실패:', error);
-              Alert.alert('Error', error.message || 'Failed to add administrator');
-            }
-          },
-        },
-      ]
-    );
+        setSuccessMessage({
+          title: 'Success',
+          message: `"${handle}" has been added as an administrator`,
+        });
+        setSuccessModalVisible(true);
+        setModalVisible(false);
+        setSearchEmail('');
+        setSearchResults([]);
+        loadAdmins();
+      } catch (error: any) {
+        console.error('💥 관리자 추가 실패:', error);
+        setErrorMessage({
+          title: 'Error',
+          message: error.message || 'Failed to add administrator',
+        });
+        setErrorModalVisible(true);
+      }
+    });
+    setConfirmModalVisible(true);
   };
 
   const handleRemoveAdmin = async (userId: string, handle: string) => {
     if (userId === user?.id) {
-      Alert.alert('Notice', 'You cannot remove yourself as admin');
+      setErrorMessage({
+        title: 'Notice',
+        message: 'You cannot remove yourself as admin',
+      });
+      setErrorModalVisible(true);
       return;
     }
 
     console.log('🗑️ Remove Admin 클릭:', { userId, handle });
 
-    // React Native Alert 사용
-    Alert.alert(
-      'Remove Administrator',
-      `Remove "${handle}" from administrators?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => console.log('❌ 취소됨'),
-        },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('🗑️ 관리자 제거 시작...');
-              
-              const { data, error } = await supabase
-                .from('profiles')
-                .update({ is_admin: false })
-                .eq('id', userId)
-                .select();
+    // ConfirmModal 사용
+    setConfirmTitle('Remove Administrator');
+    setConfirmMessage(`Remove "${handle}" from administrators?`);
+    setConfirmAction(() => async () => {
+      try {
+        console.log('🗑️ 관리자 제거 시작...');
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ is_admin: false })
+          .eq('id', userId)
+          .select();
 
-              console.log('📊 업데이트 결과:', data);
-              console.log('❌ 에러:', error);
+        console.log('📊 업데이트 결과:', data);
+        console.log('❌ 에러:', error);
 
-              if (error) throw error;
+        if (error) throw error;
 
-              console.log('✅ 관리자 제거 성공!');
+        console.log('✅ 관리자 제거 성공!');
 
-              Alert.alert('Success', `"${handle}" has been removed from administrators`);
-              loadAdmins();
-            } catch (error: any) {
-              console.error('💥 관리자 제거 실패:', error);
-              Alert.alert('Error', error.message || 'Failed to remove administrator');
-            }
-          },
-        },
-      ]
-    );
+        setSuccessMessage({
+          title: 'Success',
+          message: `"${handle}" has been removed from administrators`,
+        });
+        setSuccessModalVisible(true);
+        loadAdmins();
+      } catch (error: any) {
+        console.error('💥 관리자 제거 실패:', error);
+        setErrorMessage({
+          title: 'Error',
+          message: error.message || 'Failed to remove administrator',
+        });
+        setErrorModalVisible(true);
+      }
+    });
+    setConfirmModalVisible(true);
   };
 
   const renderAdmin = ({ item }: { item: Admin }) => (
@@ -444,6 +454,36 @@ export const AdminManagementScreen = () => {
           </View>
         </View>
       </Modal>
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        title={successMessage.title}
+        message={successMessage.message}
+        onClose={() => setSuccessModalVisible(false)}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        visible={confirmModalVisible}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText="Confirm"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setConfirmModalVisible(false);
+          confirmAction();
+        }}
+        onCancel={() => setConfirmModalVisible(false)}
+      />
       </View>
     </SafeAreaView>
   );

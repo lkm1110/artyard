@@ -25,6 +25,9 @@ import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../../constants/theme';
+import { SuccessModal } from '../../components/SuccessModal';
+import { ErrorModal } from '../../components/ErrorModal';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 interface Report {
   id: string;
@@ -56,6 +59,16 @@ export const ReportsManagementScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
   const [processing, setProcessing] = useState(false);
+  
+  // Modal states
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   useEffect(() => {
     loadReports();
@@ -111,7 +124,11 @@ export const ReportsManagementScreen = () => {
       setReports(reportsWithArtworks);
     } catch (error: any) {
       console.error('신고 목록 로드 실패:', error);
-      Alert.alert('Error', 'Failed to load reports');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to load reports',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -145,7 +162,11 @@ export const ReportsManagementScreen = () => {
 
         if (deleteError) {
           console.error('작품 삭제 실패:', deleteError);
-          Alert.alert('Warning', 'Report resolved but failed to delete artwork');
+          setErrorMessage({
+            title: 'Warning',
+            message: 'Report resolved but failed to delete artwork',
+          });
+          setErrorModalVisible(true);
         }
 
         // 관리자 액션 로그 기록
@@ -159,12 +180,13 @@ export const ReportsManagementScreen = () => {
         });
       }
 
-      Alert.alert(
-        'Success',
-        action === 'resolved' 
+      setSuccessMessage({
+        title: 'Success',
+        message: action === 'resolved' 
           ? 'Report approved and content deleted' 
-          : 'Report dismissed'
-      );
+          : 'Report dismissed',
+      });
+      setSuccessModalVisible(true);
 
       setModalVisible(false);
       setSelectedReport(null);
@@ -172,7 +194,11 @@ export const ReportsManagementScreen = () => {
       loadReports();
     } catch (error: any) {
       console.error('신고 처리 실패:', error);
-      Alert.alert('Error', error.message || 'Failed to process report');
+      setErrorMessage({
+        title: 'Error',
+        message: error.message || 'Failed to process report',
+      });
+      setErrorModalVisible(true);
     } finally {
       setProcessing(false);
     }
@@ -461,18 +487,10 @@ export const ReportsManagementScreen = () => {
                   <TouchableOpacity
                     style={[styles.actionButton, styles.approveButton, { backgroundColor: colors.primary }]}
                     onPress={() => {
-                      Alert.alert(
-                        'Confirm Approval',
-                        'This will delete the reported content. Are you sure?',
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Approve',
-                            style: 'destructive',
-                            onPress: () => handleReportAction(selectedReport.id, 'resolved'),
-                          },
-                        ]
-                      );
+                      setConfirmTitle('Confirm Approval');
+                      setConfirmMessage('This will delete the reported content. Are you sure?');
+                      setConfirmAction(() => () => handleReportAction(selectedReport.id, 'resolved'));
+                      setConfirmModalVisible(true);
                     }}
                     disabled={processing}
                   >
@@ -489,6 +507,36 @@ export const ReportsManagementScreen = () => {
         </View>
       </Modal>
       </View>
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        title={successMessage.title}
+        message={successMessage.message}
+        onClose={() => setSuccessModalVisible(false)}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        visible={confirmModalVisible}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText="Approve"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setConfirmModalVisible(false);
+          confirmAction();
+        }}
+        onCancel={() => setConfirmModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };

@@ -111,7 +111,11 @@ export const ChallengeManagementScreen = () => {
       setChallenges(challengesWithCounts);
     } catch (error: any) {
       console.error('Failed to load challenges:', error);
-      Alert.alert('Error', error.message || 'Failed to load challenges');
+      setErrorMessage({
+        title: 'Error',
+        message: error.message || 'Failed to load challenges',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
       setRefreshing(false);

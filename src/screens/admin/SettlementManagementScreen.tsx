@@ -20,6 +20,9 @@ import { Screen } from '../../components/Screen';
 import { LoadingSpinner } from '../../components/LoadingSpinner';
 import { EmptyState } from '../../components/EmptyState';
 import { supabase } from '../../services/supabase';
+import { SuccessModal } from '../../components/SuccessModal';
+import { ErrorModal } from '../../components/ErrorModal';
+import { ConfirmModal } from '../../components/ConfirmModal';
 
 interface Settlement {
   id: string;
@@ -49,6 +52,16 @@ export const SettlementManagementScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  
+  // Modal states
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   useEffect(() => {
     loadSettlements();
@@ -76,7 +89,11 @@ export const SettlementManagementScreen = () => {
       setSettlements(data || []);
     } catch (error: any) {
       console.error('Load settlements error:', error);
-      Alert.alert('Error', error.message || 'Failed to load settlements');
+      setErrorMessage({
+        title: 'Error',
+        message: error.message || 'Failed to load settlements',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
     }
@@ -89,37 +106,37 @@ export const SettlementManagementScreen = () => {
   };
 
   const handleApprove = async (settlementId: string) => {
-    Alert.alert(
-      'Approve Settlement',
-      'Are you sure you want to approve this settlement? The artist will receive the payment.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Approve',
-          style: 'default',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('settlements')
-                .update({
-                  status: 'approved',
-                  approved_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', settlementId);
+    setConfirmTitle('Approve Settlement');
+    setConfirmMessage('Are you sure you want to approve this settlement? The artist will receive the payment.');
+    setConfirmAction(() => async () => {
+      try {
+        const { error } = await supabase
+          .from('settlements')
+          .update({
+            status: 'approved',
+            approved_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', settlementId);
 
-              if (error) throw error;
+        if (error) throw error;
 
-              Alert.alert('Success', 'Settlement approved successfully!');
-              loadSettlements();
-            } catch (error: any) {
-              console.error('Approve error:', error);
-              Alert.alert('Error', error.message || 'Failed to approve settlement');
-            }
-          },
-        },
-      ]
-    );
+        setSuccessMessage({
+          title: 'Success',
+          message: 'Settlement approved successfully!',
+        });
+        setSuccessModalVisible(true);
+        loadSettlements();
+      } catch (error: any) {
+        console.error('Approve error:', error);
+        setErrorMessage({
+          title: 'Error',
+          message: error.message || 'Failed to approve settlement',
+        });
+        setErrorModalVisible(true);
+      }
+    });
+    setConfirmModalVisible(true);
   };
 
   const handleReject = async (settlementId: string) => {
@@ -144,11 +161,19 @@ export const SettlementManagementScreen = () => {
 
               if (error) throw error;
 
-              Alert.alert('Success', 'Settlement rejected');
+              setSuccessMessage({
+                title: 'Success',
+                message: 'Settlement rejected',
+              });
+              setSuccessModalVisible(true);
               loadSettlements();
             } catch (error: any) {
               console.error('Reject error:', error);
-              Alert.alert('Error', error.message || 'Failed to reject settlement');
+              setErrorMessage({
+                title: 'Error',
+                message: error.message || 'Failed to reject settlement',
+              });
+              setErrorModalVisible(true);
             }
           },
         },
@@ -373,6 +398,36 @@ export const SettlementManagementScreen = () => {
           }
         />
       </View>
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        title={successMessage.title}
+        message={successMessage.message}
+        onClose={() => setSuccessModalVisible(false)}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        visible={confirmModalVisible}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText="Confirm"
+        cancelText="Cancel"
+        onConfirm={() => {
+          setConfirmModalVisible(false);
+          confirmAction();
+        }}
+        onCancel={() => setConfirmModalVisible(false)}
+      />
     </Screen>
   );
 };

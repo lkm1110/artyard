@@ -91,7 +91,11 @@ export const AuctionManagementScreen = () => {
       await Promise.all([loadAuctions(), loadWinners()]);
     } catch (error) {
       console.error('Failed to load data:', error);
-      Alert.alert('Error', 'Failed to load data');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to load data',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
       setRefreshing(false);

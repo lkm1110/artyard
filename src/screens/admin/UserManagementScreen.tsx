@@ -92,7 +92,11 @@ export const UserManagementScreen = ({ route }: any) => {
       setUsers(data || []);
     } catch (error: any) {
       console.error('사용자 목록 로드 실패:', error);
-      Alert.alert('Error', 'Failed to load users');
+      setErrorMessage({
+        title: 'Error',
+        message: 'Failed to load users',
+      });
+      setErrorModalVisible(true);
     } finally {
       setLoading(false);
       setRefreshing(false);

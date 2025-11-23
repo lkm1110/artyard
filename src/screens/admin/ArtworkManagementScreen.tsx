@@ -52,6 +52,12 @@ export const ArtworkManagementScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
+  
+  // Modal states
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
+  const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
 
   useEffect(() => {
     loadArtworks();
@@ -167,11 +173,19 @@ export const ArtworkManagementScreen = () => {
         }
       }
 
-      Alert.alert('Success', 'Artwork deleted and artist notified');
+      setSuccessMessage({
+        title: 'Success',
+        message: 'Artwork deleted and artist notified',
+      });
+      setSuccessModalVisible(true);
       loadArtworks();
     } catch (error: any) {
       console.error('💥 작품 삭제 실패:', error);
-      Alert.alert('Error', error.message || 'Failed to delete artwork');
+      setErrorMessage({
+        title: 'Error',
+        message: error.message || 'Failed to delete artwork',
+      });
+      setErrorModalVisible(true);
     } finally {
       setDeleting(null);
     }
@@ -306,6 +320,22 @@ export const ArtworkManagementScreen = () => {
         />
       )}
       </View>
+      
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModalVisible}
+        title={successMessage.title}
+        message={successMessage.message}
+        onClose={() => setSuccessModalVisible(false)}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        visible={errorModalVisible}
+        title={errorMessage.title}
+        message={errorMessage.message}
+        onClose={() => setErrorModalVisible(false)}
+      />
     </SafeAreaView>
   );
 };
