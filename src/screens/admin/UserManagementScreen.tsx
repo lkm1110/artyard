@@ -34,7 +34,7 @@ interface User {
 
 type TabType = 'active' | 'pending';
 
-export const UserManagementScreen = () => {
+export const UserManagementScreen = ({ route }: any) => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthStore();
@@ -43,7 +43,7 @@ export const UserManagementScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<TabType>('active');
+  const [activeTab, setActiveTab] = useState<TabType>(route?.params?.tab || 'active');
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [banConfirmVisible, setBanConfirmVisible] = useState(false);
@@ -52,6 +52,8 @@ export const UserManagementScreen = () => {
   const [banningUserId, setBanningUserId] = useState<string>('');
   const [banningUserHandle, setBanningUserHandle] = useState<string>('');
   const [isBanning, setIsBanning] = useState(false);
+  const [banDuration, setBanDuration] = useState<'24h' | '7d' | '30d' | 'permanent'>('permanent');
+  const [banReason, setBanReason] = useState('');
 
   useEffect(() => {
     loadUsers();
@@ -101,13 +103,89 @@ export const UserManagementScreen = () => {
     console.log('🔍 [Ban] 버튼 클릭됨:', { userId, handle });
     setBanningUserId(userId);
     setBanningUserHandle(handle);
-    setBanConfirmVisible(true);
+    
+    // 정지 기간 선택
+    Alert.alert(
+      'Select Ban Duration',
+      `How long do you want to ban "${handle}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: '24 Hours', 
+          onPress: () => {
+            setBanDuration('24h');
+            askBanReason(userId, handle);
+          }
+        },
+        { 
+          text: '7 Days', 
+          onPress: () => {
+            setBanDuration('7d');
+            askBanReason(userId, handle);
+          }
+        },
+        { 
+          text: '30 Days', 
+          onPress: () => {
+            setBanDuration('30d');
+            askBanReason(userId, handle);
+          }
+        },
+        { 
+          text: 'Permanent', 
+          onPress: () => {
+            setBanDuration('permanent');
+            askBanReason(userId, handle);
+          },
+          style: 'destructive'
+        },
+      ]
+    );
+  };
+  
+  const askBanReason = (userId: string, handle: string) => {
+    Alert.prompt(
+      'Ban Reason',
+      'Please provide a reason for banning this user:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Ban',
+          onPress: (reason) => {
+            setBanReason(reason || 'No reason provided');
+            setBanConfirmVisible(true);
+          },
+        },
+      ],
+      'plain-text',
+      '',
+      'default'
+    );
+  };
+
+  const calculateExpiryDate = (duration: string): string | null => {
+    if (duration === 'permanent') return null;
+    
+    const now = new Date();
+    switch (duration) {
+      case '24h':
+        return new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+      case '7d':
+        return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      case '30d':
+        return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      default:
+        return null;
+    }
   };
 
   const executeBan = async () => {
     setIsBanning(true);
     try {
-      console.log('🚫 Banning user:', banningUserId);
+      console.log('🚫 Banning user:', banningUserId, 'Duration:', banDuration);
+      
+      const expiresAt = calculateExpiryDate(banDuration);
+      const banType = banDuration === 'permanent' ? 'permanent' : 'temporary';
       
       // 직접 fetch 사용 (SDK 우회)
       const { data: { session } } = await supabase.auth.getSession();
@@ -128,8 +206,9 @@ export const UserManagementScreen = () => {
           body: JSON.stringify({
             user_id: banningUserId,
             banned_by: user?.id,
-            reason: 'Manual ban by admin',
-            ban_type: 'permanent',
+            reason: banReason || 'Manual ban by admin',
+            ban_type: banType,
+            expires_at: expiresAt,
           })
         }
       );
@@ -140,10 +219,22 @@ export const UserManagementScreen = () => {
       }
 
       console.log('✅ User banned successfully');
+      
+      // 사용자에게 알림 전송
+      await supabase.from('notifications').insert({
+        user_id: banningUserId,
+        type: 'system',
+        title: 'Account Suspended',
+        message: `Your account has been suspended${banType === 'temporary' ? ` for ${banDuration === '24h' ? '24 hours' : banDuration === '7d' ? '7 days' : '30 days'}` : ' permanently'}. Reason: ${banReason || 'Violation of terms of service'}`,
+        link: '/profile',
+      });
+      
       setBanConfirmVisible(false);
+      setBanReason('');
+      setBanDuration('permanent');
       setSuccessMessage({
         title: 'Success',
-        message: 'User banned',
+        message: `User banned ${banType === 'temporary' ? 'for ' + banDuration : 'permanently'}`,
       });
       setSuccessModalVisible(true);
       loadUsers();

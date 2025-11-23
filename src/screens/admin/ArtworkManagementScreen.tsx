@@ -35,6 +35,7 @@ interface Artwork {
   price: number;
   image_urls: string[];
   created_at: string;
+  author_id?: string;
   author: {
     handle: string;
   } | null;
@@ -50,6 +51,7 @@ export const ArtworkManagementScreen = () => {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
 
   useEffect(() => {
     loadArtworks();
@@ -95,43 +97,34 @@ export const ArtworkManagementScreen = () => {
     }
   };
 
-  const handleDeleteArtwork = async (artworkId: string, artworkTitle: string) => {
-    console.log('🔍 [Delete] 버튼 클릭됨:', { artworkId, artworkTitle });
+  const handleDeleteArtwork = async (artworkId: string, artworkTitle: string, authorId?: string) => {
+    console.log('🔍 [Delete] 버튼 클릭됨:', { artworkId, artworkTitle, authorId });
     
-    // 크로스 플랫폼 confirm
-    if (Platform.OS === 'web') {
-      if (!window.confirm(
-        `Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`
-      )) {
-        console.log('❌ Deletion cancelled');
-        return;
-      }
-    } else {
-      // React Native (모바일)
-      Alert.alert(
-        'Delete Artwork',
-        `Are you sure you want to delete "${artworkTitle}"?\n\nThis action cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => console.log('❌ Deletion cancelled') },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              await executeDelete(artworkId, artworkTitle);
-            }
+    // 삭제 사유 입력
+    Alert.prompt(
+      'Delete Artwork',
+      `Why are you deleting "${artworkTitle}"?\n\nThis reason will be sent to the artist.`,
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => console.log('❌ Deletion cancelled') },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async (reason) => {
+            setDeleteReason(reason || 'Violation of platform guidelines');
+            await executeDelete(artworkId, artworkTitle, authorId, reason || 'Violation of platform guidelines');
           }
-        ]
-      );
-      return;
-    }
-    
-    await executeDelete(artworkId, artworkTitle);
+        }
+      ],
+      'plain-text',
+      '',
+      'default'
+    );
   };
 
-  const executeDelete = async (artworkId: string, artworkTitle: string) => {
+  const executeDelete = async (artworkId: string, artworkTitle: string, authorId?: string, reason?: string) => {
     try {
       setDeleting(artworkId);
-      console.log('🗑️ Deleting artwork:', artworkId);
+      console.log('🗑️ Deleting artwork:', artworkId, 'Reason:', reason);
 
       // 직접 fetch 사용 (SDK 우회)
       const { data: { session } } = await supabase.auth.getSession();
@@ -158,9 +151,23 @@ export const ArtworkManagementScreen = () => {
 
       console.log('✅ Artwork deleted successfully');
       
-      // admin_actions 로그 기능 제거 (CHECK constraint 문제로 비활성화)
+      // 작가에게 알림 전송
+      if (authorId) {
+        try {
+          await supabase.from('notifications').insert({
+            user_id: authorId,
+            type: 'system',
+            title: 'Artwork Removed',
+            message: `Your artwork "${artworkTitle}" has been removed from Artyard. Reason: ${reason || 'Violation of platform guidelines'}`,
+            link: '/profile',
+          });
+          console.log('✅ Notification sent to artist');
+        } catch (notifError) {
+          console.error('⚠️ Failed to send notification:', notifError);
+        }
+      }
 
-      Alert.alert('Success', 'Artwork deleted successfully');
+      Alert.alert('Success', 'Artwork deleted and artist notified');
       loadArtworks();
     } catch (error: any) {
       console.error('💥 작품 삭제 실패:', error);
@@ -206,7 +213,7 @@ export const ArtworkManagementScreen = () => {
 
         <TouchableOpacity
           style={[styles.deleteButton, { backgroundColor: '#EF4444' }]}
-          onPress={() => handleDeleteArtwork(item.id, item.title)}
+          onPress={() => handleDeleteArtwork(item.id, item.title, item.author_id)}
           disabled={deleting === item.id}
         >
           {deleting === item.id ? (
