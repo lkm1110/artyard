@@ -52,9 +52,11 @@ END $$;
 -- ============================================================
 
 -- CASCADE 옵션으로 관련된 모든 제약/트리거도 함께 제거
-DROP TABLE IF EXISTS seller_payouts CASCADE;
-
-RAISE NOTICE '✅ seller_payouts 테이블이 성공적으로 제거되었습니다!';
+DO $$
+BEGIN
+  DROP TABLE IF EXISTS seller_payouts CASCADE;
+  RAISE NOTICE '✅ seller_payouts 테이블이 성공적으로 제거되었습니다!';
+END $$;
 
 
 -- ============================================================
