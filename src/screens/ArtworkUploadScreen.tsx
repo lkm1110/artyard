@@ -40,10 +40,10 @@ interface FormData {
   title: string;
   artistName: string;
   description: string;
-  material: Material;
-  category: string;
+  type: string; // Material과 Category 통합
   sizeWidth: string;
   sizeHeight: string;
+  sizeDepth: string; // 깊이 (선택 사항) - 조각, 도자기, 설치미술 등
   year: number;
   edition: 'Original' | 'Limited' | 'Copy';
   editionNumber: string; // e.g., "1/300"
@@ -53,25 +53,22 @@ interface FormData {
   challengeId?: string; // 챌린지 참가
 }
 
-const MATERIAL_OPTIONS: Material[] = [
-  'Illustration',
-  'Photography', 
-  'Printmaking',
-  'Craft',
-  'Design Poster',
-  'Drawing',
-  'Other'
-];
-
-const CATEGORY_OPTIONS = [
-  'Painting',
-  'Sculpture',
-  'Photography',
-  'Digital Art',
-  'Drawing',
-  'Print',
-  'Mixed Media',
-  'Other',
+const TYPE_OPTIONS = [
+  'Painting',          // 회화
+  'Drawing',           // 드로잉
+  'Illustration',      // 일러스트레이션
+  'Photography',       // 사진
+  'Digital Art',       // 디지털 아트
+  'Printmaking',       // 판화
+  'Sculpture',         // 조각
+  'Ceramics',          // 도자기
+  'Textile Art',       // 섬유 예술
+  'Collage',           // 콜라주
+  'Mixed Media',       // 혼합 매체
+  'Street Art',        // 거리 예술
+  'Craft',             // 공예
+  'Installation',      // 설치 미술
+  'Other',             // 기타
 ];
 
 // PRICE_BAND_OPTIONS 제거됨 - 직접 입력으로 변경
@@ -104,10 +101,10 @@ export const ArtworkUploadScreen: React.FC = () => {
     title: '',
     artistName: user?.handle || '',
     description: '',
-    material: 'Illustration',
-    category: 'Painting',
+    type: 'Painting',
     sizeWidth: '',
     sizeHeight: '',
+    sizeDepth: '',
     year: 0,
     edition: 'Original',
     editionNumber: '',
@@ -117,8 +114,7 @@ export const ArtworkUploadScreen: React.FC = () => {
 
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isUploading, setIsUploading] = useState(false);
-  const [showMaterialPicker, setShowMaterialPicker] = useState(false);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
   
   // CustomAlert state
   const [alertVisible, setAlertVisible] = useState(false);
@@ -374,13 +370,18 @@ export const ArtworkUploadScreen: React.FC = () => {
         ? `Limited Edition ${formData.editionNumber}`
         : formData.edition;
       
+      // Size 계산 (깊이가 있으면 3D, 없으면 2D)
+      const sizeString = formData.sizeDepth && formData.sizeDepth.trim()
+        ? `${formData.sizeWidth}×${formData.sizeHeight}×${formData.sizeDepth}cm`
+        : `${formData.sizeWidth}×${formData.sizeHeight}cm`;
+      
       const artworkData = {
         title: formData.title.trim(),
         artist_name: formData.artistName.trim(),
         description: formData.description.trim(),
-        material: formData.material,
-        category: formData.category,
-        size: `${formData.sizeWidth}×${formData.sizeHeight}cm`,
+        material: formData.type, // Type으로 통합 (DB 컬럼명은 material 유지)
+        category: formData.type, // Category도 같은 값 사용
+        size: sizeString,
         year: formData.year,
         edition: editionString,
         price: formData.price,
@@ -397,8 +398,6 @@ export const ArtworkUploadScreen: React.FC = () => {
           location_street: locationInfo.street,
           location_name: locationInfo.name,
           location_full: formatLocationText(locationInfo),
-          location_accuracy: locationInfo.accuracy,
-          location_timestamp: locationInfo.timestamp,
         }),
       };
 
@@ -706,10 +705,10 @@ export const ArtworkUploadScreen: React.FC = () => {
               </Text>
             </View>
 
-            {/* Material */}
+            {/* Type (통합: Material + Category) */}
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
-                Medium *
+                Type *
               </Text>
               <TouchableOpacity
                 style={[
@@ -719,11 +718,11 @@ export const ArtworkUploadScreen: React.FC = () => {
                     borderColor: 'transparent',
                   }
                 ]}
-                onPress={() => setShowMaterialPicker(true)}
+                onPress={() => setShowTypePicker(true)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.pickerText, { color: isDark ? colors.darkText : colors.text }]}>
-                  {formData.material}
+                  {formData.type}
                 </Text>
                 <Text style={[styles.pickerArrow, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
                   ▼
@@ -731,32 +730,7 @@ export const ArtworkUploadScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Category */}
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
-                Category *
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.picker,
-                  {
-                    backgroundColor: isDark ? colors.darkCard : colors.card,
-                    borderColor: 'transparent',
-                  }
-                ]}
-                onPress={() => setShowCategoryPicker(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.pickerText, { color: isDark ? colors.darkText : colors.text }]}>
-                  {formData.category}
-                </Text>
-                <Text style={[styles.pickerArrow, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                  ▼
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Size (Width × Height) */}
+            {/* Size (Width × Height × Depth) */}
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
                 Size (cm) *
@@ -792,6 +766,23 @@ export const ArtworkUploadScreen: React.FC = () => {
                   placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
                   value={formData.sizeHeight}
                   onChangeText={(text) => updateField('sizeHeight', text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
+                  keyboardType="decimal-pad"
+                  maxLength={6}
+                />
+                <Text style={[styles.sizeMultiply, { color: isDark ? colors.darkText : colors.text }]}>×</Text>
+                <TextInput
+                  style={[
+                    styles.sizeInput,
+                    {
+                      backgroundColor: isDark ? colors.darkCard : colors.card,
+                      color: isDark ? colors.darkText : colors.text,
+                      borderColor: 'transparent',
+                    }
+                  ]}
+                  placeholder="Depth (optional)"
+                  placeholderTextColor={isDark ? colors.darkTextMuted : colors.textMuted}
+                  value={formData.sizeDepth}
+                  onChangeText={(text) => updateField('sizeDepth', text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'))}
                   keyboardType="decimal-pad"
                   maxLength={6}
                 />
@@ -975,90 +966,43 @@ export const ArtworkUploadScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Material Picker Modal */}
-        {showMaterialPicker && (
+        {/* Type Picker Modal (Material + Category 통합) */}
+        {showTypePicker && (
           <View style={styles.modalOverlay}>
             <View style={[styles.pickerModal, { backgroundColor: isDark ? colors.darkCard : colors.bg }]}>
               <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
-                Select Medium
+                Select Artwork Type
               </Text>
               <ScrollView 
                 style={styles.pickerScrollView}
                 showsVerticalScrollIndicator={true}
                 bounces={false}
               >
-                {MATERIAL_OPTIONS.map((material) => (
+                {TYPE_OPTIONS.map((type) => (
                   <TouchableOpacity
-                    key={material}
+                    key={type}
                     style={styles.pickerOption}
                     onPress={() => {
-                      updateField('material', material);
-                      setShowMaterialPicker(false);
+                      updateField('type', type);
+                      setShowTypePicker(false);
                     }}
                     activeOpacity={0.8}
                   >
                     <Text style={[
                       styles.pickerOptionText,
                       { 
-                        color: formData.material === material ? colors.primary : (isDark ? colors.darkText : colors.text),
-                        fontWeight: formData.material === material ? '600' : '400',
+                        color: formData.type === type ? colors.primary : (isDark ? colors.darkText : colors.text),
+                        fontWeight: formData.type === type ? '600' : '400',
                       }
                     ]}>
-                      {material}
+                      {type}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
               <TouchableOpacity
                 style={styles.modalCloseButton}
-                onPress={() => setShowMaterialPicker(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modalCloseText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Category Picker Modal */}
-        {showCategoryPicker && (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.pickerModal, { backgroundColor: isDark ? colors.darkCard : colors.bg }]}>
-              <Text style={[styles.modalTitle, { color: isDark ? colors.darkText : colors.text }]}>
-                Select Category
-              </Text>
-              <ScrollView 
-                style={styles.pickerScrollView}
-                showsVerticalScrollIndicator={true}
-                bounces={false}
-              >
-                {CATEGORY_OPTIONS.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    style={styles.pickerOption}
-                    onPress={() => {
-                      updateField('category', category);
-                      setShowCategoryPicker(false);
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[
-                      styles.pickerOptionText,
-                      { 
-                        color: formData.category === category ? colors.primary : (isDark ? colors.darkText : colors.text),
-                        fontWeight: formData.category === category ? '600' : '400',
-                      }
-                    ]}>
-                      {category}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowCategoryPicker(false)}
+                onPress={() => setShowTypePicker(false)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.modalCloseText, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
