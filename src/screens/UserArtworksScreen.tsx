@@ -69,6 +69,8 @@ export const UserArtworksScreen: React.FC = () => {
   const [errorModalVisible, setErrorModalVisible] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
   const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   useEffect(() => {
     loadUserData();
@@ -82,14 +84,33 @@ export const UserArtworksScreen: React.FC = () => {
         setIsLoading(true);
       }
 
-      // 사용자 프로필과 작품 목록을 병렬로 로드
-      const [profileResult, artworksResult] = await Promise.all([
+      // 사용자 프로필, 작품 목록, 팔로워/팔로잉 수를 병렬로 로드
+      const promises: Promise<any>[] = [
         pageNum === 1 ? getUserProfile(userId) : Promise.resolve(userProfile),
-        getUserArtworks(userId, pageNum, 12, selectedFilter !== 'all' ? selectedFilter as SaleStatus : undefined)
-      ]);
+        getUserArtworks(userId, pageNum, 12, selectedFilter !== 'all' ? selectedFilter as SaleStatus : undefined),
+      ];
+      
+      // 팔로워/팔로잉 수 조회 (첫 페이지만)
+      if (pageNum === 1) {
+        promises.push(
+          supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', userId),
+          supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', userId)
+        );
+      }
+      
+      const results = await Promise.all(promises);
+      const [profileResult, artworksResult, followersResult, followingResult] = results;
 
       if (pageNum === 1 && profileResult) {
         setUserProfile(profileResult);
+        
+        // 팔로워/팔로잉 수 업데이트
+        if (followersResult) {
+          setFollowersCount(followersResult.count || 0);
+        }
+        if (followingResult) {
+          setFollowingCount(followingResult.count || 0);
+        }
       }
 
       if (pageNum === 1) {
@@ -364,6 +385,37 @@ export const UserArtworksScreen: React.FC = () => {
               {userProfile.bio}
             </Text>
           )}
+          
+          {/* Follower/Following Stats */}
+          <View style={styles.statsRow}>
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() => navigation.navigate('FollowersList', { userId, type: 'followers' })}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
+                {followersCount}
+              </Text>
+              <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                Followers
+              </Text>
+            </TouchableOpacity>
+            
+            <View style={[styles.statDivider, { backgroundColor: isDark ? colors.darkBorder : colors.border }]} />
+            
+            <TouchableOpacity
+              style={styles.statItem}
+              onPress={() => navigation.navigate('FollowersList', { userId, type: 'following' })}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.statValue, { color: isDark ? colors.darkText : colors.text }]}>
+                {followingCount}
+              </Text>
+              <Text style={[styles.statLabel, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}>
+                Following
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -660,6 +712,29 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: typography.caption.fontSize,
     fontWeight: '600',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+  },
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  statLabel: {
+    fontSize: 13,
+    marginTop: spacing.xs,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
   },
   artworkCount: {
     fontSize: typography.caption.fontSize,

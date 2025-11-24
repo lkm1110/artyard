@@ -31,8 +31,6 @@ interface DashboardStats {
   total_revenue: number;
   avg_price: number;
   total_likes: number;
-  total_views: number;
-  total_followers: number;
   tier: string;
   rating: number;
 }
@@ -59,8 +57,6 @@ export const ArtistDashboardScreen = () => {
     total_revenue: 0,
     avg_price: 0,
     total_likes: 0,
-    total_views: 0,
-    total_followers: 0,
     tier: 'New',
     rating: 0,
   });
@@ -93,10 +89,10 @@ export const ArtistDashboardScreen = () => {
   const loadStats = async (): Promise<DashboardStats> => {
     if (!user) throw new Error('No user');
 
-    // 1. 프로필 정보 (티어, 팔로워)
+    // 1. 프로필 정보 (티어)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tier, rating, followers_count')
+      .select('tier, rating')
       .eq('id', user.id)
       .single();
 
@@ -109,9 +105,6 @@ export const ArtistDashboardScreen = () => {
     const total_artworks = artworks?.length || 0;
     const total_likes = artworks?.reduce((sum, art) => sum + (art.likes_count || 0), 0) || 0;
     
-    // views_count는 추후 구현 예정
-    const total_views = 0;
-
     // 3. 판매 통계 (주문 테이블에서)
     const { data: orders } = await supabase
       .from('orders')
@@ -129,8 +122,6 @@ export const ArtistDashboardScreen = () => {
       total_revenue,
       avg_price,
       total_likes,
-      total_views,
-      total_followers: profile?.followers_count || 0,
       tier: profile?.tier || 'New',
       rating: profile?.rating || 0,
     };
@@ -296,22 +287,6 @@ export const ArtistDashboardScreen = () => {
               <Text style={[styles.statValue, { color: theme.text }]}>{stats.total_likes}</Text>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Likes</Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: theme.card }]}>
-              <Ionicons name="eye-outline" size={28} color="#3b82f6" />
-              <Text style={[styles.statValue, { color: theme.text }]}>
-                {stats.total_views > 999 ? `${(stats.total_views / 1000).toFixed(1)}k` : stats.total_views}
-              </Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Views</Text>
-            </View>
-            <TouchableOpacity 
-              style={[styles.statCard, { backgroundColor: theme.card }]}
-              onPress={() => navigation.navigate('FollowersList' as never, { userId: user?.id } as never)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="people-outline" size={28} color="#10b981" />
-              <Text style={[styles.statValue, { color: theme.text }]}>{stats.total_followers}</Text>
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Followers</Text>
-            </TouchableOpacity>
           </View>
         </View>
 

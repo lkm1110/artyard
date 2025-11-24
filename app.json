@@ -24,7 +24,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.artyard.app",
-      "buildNumber": "18",
+      "buildNumber": "19",
       "deploymentTarget": "13.4",
       "infoPlist": {
         "CFBundleURLTypes": [

@@ -15,6 +15,7 @@ import {
   Platform,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useColorScheme } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
@@ -361,7 +362,7 @@ export const ChatScreen: React.FC = () => {
       setEditingText('');
       
       // 채팅 메시지 목록 강제 새로고침
-      queryClient.invalidateQueries({ queryKey: ['chatMessages', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId, 'messages'] });
       queryClient.invalidateQueries({ queryKey: ['chats'] });
       console.log('✅ Message edited, cache invalidated');
     } catch (error: any) {
@@ -377,7 +378,7 @@ export const ChatScreen: React.FC = () => {
       await deleteMessage(messageId, 'Deleted by user');
       
       // 채팅 메시지 목록 강제 새로고침
-      await queryClient.refetchQueries({ queryKey: ['chatMessages', chatId] });
+      await queryClient.refetchQueries({ queryKey: ['chat', chatId, 'messages'] });
       await queryClient.refetchQueries({ queryKey: ['chats'] });
       console.log('✅ Message deleted, UI refreshed');
     } catch (error: any) {
@@ -954,7 +955,7 @@ export const ChatScreen: React.FC = () => {
               activeOpacity={0.8}
             >
               {sendMessageMutation.isPending ? (
-                <LoadingSpinner size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text style={styles.sendIcon}>
                   {editingMessageId ? '✓' : '→'}

@@ -374,17 +374,7 @@ export const toggleArtworkLike = async (artworkId: string): Promise<boolean> => 
       }
       console.log('✅ Like deleted successfully');
 
-      // 좋아요 수 감소
-      console.log('📉 Decrementing likes count...');
-      const { error: updateError } = await supabase.rpc('decrement_likes_count', {
-        artwork_id: artworkId
-      });
-
-      if (updateError) {
-        console.error('⚠️ 좋아요 수 업데이트 오류:', updateError);
-      } else {
-        console.log('✅ Likes count decremented');
-      }
+      console.log('📉 Like removed from DB, NOT updating likes_count (DB trigger will handle it)');
 
       // AI 시스템에 사용자 행동 알림
       try {
@@ -416,17 +406,7 @@ export const toggleArtworkLike = async (artworkId: string): Promise<boolean> => 
       }
       console.log('✅ Like inserted successfully');
 
-      // 좋아요 수 증가
-      console.log('📈 Incrementing likes count...');
-      const { error: updateError } = await supabase.rpc('increment_likes_count', {
-        artwork_id: artworkId
-      });
-
-      if (updateError) {
-        console.error('⚠️ 좋아요 수 업데이트 오류:', updateError);
-      } else {
-        console.log('✅ Likes count incremented');
-      }
+      console.log('📈 Like added to DB, NOT updating likes_count (DB trigger will handle it)');
 
       // AI 시스템에 사용자 행동 알림
       try {

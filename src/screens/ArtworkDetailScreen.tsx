@@ -255,6 +255,12 @@ export const ArtworkDetailScreen: React.FC = () => {
     console.log('👤 Current user:', user?.id);
     console.log('🖼️ Current artwork:', artwork?.id);
     
+    // 중복 클릭 방지
+    if (toggleLike.isPending) {
+      console.log('⏳ Already processing like request, ignoring...');
+      return;
+    }
+    
     if (!artwork || !user) {
       console.error('❌ Detail screen: Missing artwork or user');
       return;
@@ -264,9 +270,7 @@ export const ArtworkDetailScreen: React.FC = () => {
       console.log('⏳ Detail screen: Calling toggleLike API...');
       await toggleLike.mutateAsync(artwork.id);
       console.log('✅ Detail screen: Like toggle successful');
-      // ✅ 즉시 UI 갱신 - refetch로 최신 데이터 가져오기
-      await refetchArtwork();
-      console.log('✅ Detail screen: UI refreshed');
+      // Note: refetch 제거 - optimistic update로 충분
     } catch (error) {
       console.error('💥 Detail screen: Like API failed:', error);
       setErrorMessage({
@@ -416,12 +420,16 @@ export const ArtworkDetailScreen: React.FC = () => {
     try {
       console.log('📤 공유 시작:', artwork.title);
       
+      // 작품 딥링크 생성
+      const artworkUrl = `artyard://artwork/${artwork.id}`;
+      
       // 공유할 메시지 구성
-      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Join the art community: https://artyard.app`;
+      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Open in app: ${artworkUrl}`;
       
       const shareOptions = {
         message: shareMessage,
         title: `${artwork.title} - ArtYard`,
+        url: artworkUrl,
       };
 
       // 웹에서는 Web Share API 사용 (지원되는 경우)

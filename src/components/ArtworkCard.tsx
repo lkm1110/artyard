@@ -281,14 +281,6 @@ export const ArtworkCard: React.FC<ArtworkCardProps> = ({
               ]}>
                 @{artwork.author?.handle || 'unknown'}
               </Text>
-              {artwork.author?.school && (
-                <Text style={[
-                  styles.authorSchool,
-                  { color: isDark ? colors.darkTextMuted : colors.textMuted }
-                ]}>
-                  {artwork.author.school}
-                </Text>
-              )}
             </View>
           </TouchableOpacity>
 

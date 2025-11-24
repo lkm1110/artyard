@@ -215,8 +215,31 @@ export const RootNavigator: React.FC = () => {
     },
   };
 
+  // 딥링크 설정
+  const linking = {
+    prefixes: ['artyard://', 'https://artyard.app'],
+    config: {
+      screens: {
+        MainApp: {
+          screens: {
+            Home: 'home',
+            Challenges: 'challenges',
+            Auctions: 'auctions',
+            Messages: 'messages',
+            Profile: 'profile',
+          },
+        },
+        ArtworkDetail: 'artwork/:artworkId',
+        ChallengeDetail: 'challenge/:challengeId',
+        AuctionDetail: 'auction/:auctionId',
+        Chat: 'chat/:chatId',
+        UserArtworks: 'artist/:userId',
+      },
+    },
+  };
+
   return (
-    <NavigationContainer theme={theme}>
+    <NavigationContainer theme={theme} linking={linking}>
       {/* OAuth 콜백은 nativeOAuth.ts의 AuthSession이 자동으로 처리 */}
       {/* Push Notification Handler */}
       <PushNotificationHandler />

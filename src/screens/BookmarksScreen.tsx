@@ -45,7 +45,8 @@ export const BookmarksScreen: React.FC = () => {
     try {
       console.log('📤 공유 시작:', artwork.title);
       
-      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Join the art community: https://artyard.app`;
+      const artworkUrl = `artyard://artwork/${artwork.id}`;
+      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Open in app: ${artworkUrl}`;
       
       const shareOptions = {
         message: shareMessage,

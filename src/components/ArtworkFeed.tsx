@@ -58,8 +58,14 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
     console.log('🩷 Like button clicked for artwork:', artworkId);
     console.log('👤 Current user:', user?.id);
     
+    // 중복 클릭 방지
+    if (toggleLikeMutation.isPending) {
+      console.log('⏳ Already processing like request, ignoring...');
+      return;
+    }
+    
     if (!user) {
-      console.error('❌ Login required for like action');
+      console.log('❌ Login required for like action');
       return;
     }
 
@@ -104,17 +110,17 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
     try {
       console.log('📤 공유 시작:', artwork.title);
       
-      // 작품 상세 링크 생성 (앱 스킴 사용)
+      // 작품 딥링크 생성
       const artworkUrl = `artyard://artwork/${artwork.id}`;
-      const webUrl = `https://artyard.app/artwork/${artwork.id}`; // 웹 백업
+      const artistHandle = artwork.author?.handle || 'artist';
       
       // 공유할 메시지 구성
-      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artwork.author?.handle || 'artist'}\n\n${artwork.description ? artwork.description + '\n\n' : ''}Open in app: ${artworkUrl}\n\n🎨 Download ArtYard: ${webUrl}`;
+      const shareMessage = `Check out this amazing artwork on ArtYard!\n\n"${artwork.title}" by @${artistHandle}\n\n${artwork.description ? artwork.description + '\n\n' : ''}${artworkUrl}`;
       
       const shareOptions = {
         message: shareMessage,
         title: `${artwork.title} - ArtYard`,
-        url: Platform.OS === 'web' ? webUrl : artworkUrl,
+        url: artworkUrl,
       };
 
       // 웹에서는 Web Share API 사용 (지원되는 경우)

@@ -86,54 +86,17 @@ export const useToggleArtworkLike = () => {
   return useMutation({
     mutationFn: toggleArtworkLike,
     
-    // ✅ Optimistic Update: UI 즉시 업데이트
-    onMutate: async (artworkId) => {
-      // 진행 중인 쿼리 취소
-      await queryClient.cancelQueries({ queryKey: ['artworks-infinite'] });
+    onSuccess: (isLiked, artworkId) => {
+      console.log('✅ Like toggled successfully:', isLiked);
       
-      // 이전 데이터 백업
-      const previousData = queryClient.getQueryData(['artworks-infinite']);
-      
-      // 즉시 UI 업데이트
-      queryClient.setQueryData(['artworks-infinite'], (old: any) => {
-        if (!old?.pages) return old;
-        
-        return {
-          ...old,
-          pages: old.pages.map((page: any) => ({
-            ...page,
-            artworks: page.artworks.map((artwork: any) =>
-              artwork.id === artworkId
-                ? { 
-                    ...artwork, 
-                    is_liked: !artwork.is_liked,
-                    likes_count: artwork.is_liked 
-                      ? Math.max(0, artwork.likes_count - 1)
-                      : artwork.likes_count + 1
-                  }
-                : artwork
-            ),
-          })),
-        };
-      });
-      
-      return { previousData };
+      // ✅ 서버에서 최신 데이터를 가져와서 UI 업데이트
+      // invalidate만 하고 자동 refetch는 staleTime에 의해 제어됨
+      queryClient.invalidateQueries({ queryKey: ['artworks-infinite'] });
+      queryClient.invalidateQueries({ queryKey: ['artworkDetail', artworkId] });
     },
     
-    onError: (error, artworkId, context: any) => {
+    onError: (error) => {
       console.error('❌ Like toggle error:', error);
-      // 에러 시 이전 데이터로 롤백
-      if (context?.previousData) {
-        queryClient.setQueryData(['artworks-infinite'], context.previousData);
-      }
-    },
-    
-    onSettled: (isLiked, error, artworkId) => {
-      // ✅ 즉시 모든 관련 쿼리 refetch (invalidate보다 확실함)
-      queryClient.refetchQueries({ queryKey: ['artworks-infinite'] });
-      queryClient.refetchQueries({ queryKey: ['artworkDetail', artworkId] });
-      // 북마크 페이지도 갱신
-      queryClient.refetchQueries({ queryKey: ['bookmarks'] });
     },
   });
 };

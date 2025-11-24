@@ -188,6 +188,8 @@ export const AuctionDetailScreen = () => {
         throw new Error(`Bid must be higher than current price ($${selectedItem.current_price})`);
       }
       
+      console.log('🔨 Placing bid:', { itemId: selectedItem.id, amount, userId: user.id });
+      
       // 입찰
       const { error } = await supabase
         .from('auction_bids')
@@ -198,7 +200,29 @@ export const AuctionDetailScreen = () => {
           bid_type: 'normal',
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Bid insert error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Bid inserted successfully');
+      
+      // auction_items 업데이트 (current_price, highest_bidder_id)
+      const { error: updateError } = await supabase
+        .from('auction_items')
+        .update({
+          current_price: amount,
+          highest_bidder_id: user.id,
+          bids_count: selectedItem.bids_count + 1,
+        })
+        .eq('id', selectedItem.id);
+      
+      if (updateError) {
+        console.error('⚠️ Failed to update auction item:', updateError);
+        // 계속 진행 (bid는 저장되었으니)
+      } else {
+        console.log('✅ Auction item updated');
+      }
       
       setSuccessMessage(`Bid placed successfully! Your bid: $${amount}`);
       setSuccessModalVisible(true);
@@ -207,7 +231,9 @@ export const AuctionDetailScreen = () => {
       setBidAmount('');
       
       // 새로고침
-      loadAuctionData(true);
+      console.log('🔄 Refreshing auction data...');
+      await loadAuctionData(true);
+      console.log('✅ Auction data refreshed');
     } catch (error: any) {
       console.error('Bid failed:', error);
       setErrorMessage(error.message || 'Failed to place bid');

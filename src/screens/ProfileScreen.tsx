@@ -2,7 +2,7 @@
  * Profile Screen - 리디자인 버전 (Settings 스타일)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -64,9 +64,34 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
   const [errorMessage, setErrorMessage] = useState({ title: '', message: '' });
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   
   const viewingUserId = route?.params?.userId;
   const isOwnProfile = !viewingUserId || viewingUserId === user?.id;
+  
+  const loadFollowStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Followers 수 (나를 팔로우하는 사람들)
+      const { count: followersCount } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', user.id);
+      
+      // Following 수 (내가 팔로우하는 사람들)
+      const { count: followingCount } = await supabase
+        .from('follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', user.id);
+      
+      setFollowersCount(followersCount || 0);
+      setFollowingCount(followingCount || 0);
+    } catch (error) {
+      console.error('Follow stats error:', error);
+    }
+  };
   
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -83,6 +108,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
           const { setUser } = useAuthStore.getState();
           setUser({ ...user, ...data });
         }
+        
+        // Follower/Following 수 로드
+        await loadFollowStats();
       }
     } catch (error) {
       console.error('Refresh error:', error);
@@ -90,6 +118,11 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
       setTimeout(() => setRefreshing(false), 500);
     }
   };
+  
+  // 화면 로드 시 follower/following 수 로드
+  useEffect(() => {
+    loadFollowStats();
+  }, [user?.id]);
 
   const handleSignOut = async () => {
     try {
@@ -419,6 +452,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
                 {user.bio}
               </Text>
             )}
+            
+            {/* Follower/Following Stats */}
+            <View style={styles.statsRow}>
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => navigation.navigate('FollowersList', { userId: user.id, type: 'followers' })}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.statValue, { color: theme.text }]}>
+                  {followersCount}
+                </Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                  Followers
+                </Text>
+              </TouchableOpacity>
+              
+              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+              
+              <TouchableOpacity
+                style={styles.statItem}
+                onPress={() => navigation.navigate('FollowersList', { userId: user.id, type: 'following' })}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.statValue, { color: theme.text }]}>
+                  {followingCount}
+                </Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                  Following
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
           </View>
         )}
@@ -575,6 +639,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+  },
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  statValue: {
+    ...typography.h3,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  statLabel: {
+    ...typography.caption,
+    fontSize: 13,
+    marginTop: spacing.xs,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
   },
   section: {
     marginTop: spacing.lg,
