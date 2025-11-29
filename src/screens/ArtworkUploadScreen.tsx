@@ -175,22 +175,60 @@ export const ArtworkUploadScreen: React.FC = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 5],
-        quality: 0.8,
+        quality: 1.0, // 원본 품질 (압축은 검증 단계에서)
         allowsMultipleSelection: true,
         selectionLimit: 5 - formData.images.length, // 남은 슬롯만큼
       });
 
       if (!result.canceled && result.assets.length > 0) {
         // iOS에서 uri가 객체일 수 있으므로 명시적으로 문자열 변환
-        const newImages = result.assets.map(asset => String(asset.uri));
-        console.log('Gallery image URIs:', newImages, newImages.map(uri => typeof uri));
+        const imageUris = result.assets.map(asset => String(asset.uri));
+        console.log('Gallery image URIs:', imageUris);
+        
+        // 이미지 검증 및 압축
+        const { validateAndCompressImages } = await import('../utils/imageValidator');
+        
+        setIsUploading(true);
+        
+        const validation = await validateAndCompressImages(
+          imageUris,
+          (current, total) => {
+            console.log(`🖼️ Processing ${current}/${total} images...`);
+          }
+        );
+        
+        setIsUploading(false);
+        
+        // 검증 실패 시
+        if (!validation.valid) {
+          setAlertTitle('Image Validation Failed');
+          setAlertMessage(validation.errors.join('\n'));
+          setAlertButtons([{ text: 'OK', style: 'default' }]);
+          setAlertVisible(true);
+          return;
+        }
+        
+        // 압축 통계 표시
+        if (validation.stats.compressedCount > 0) {
+          const savedMB = (
+            (validation.stats.totalOriginalSize - validation.stats.totalFinalSize) /
+            (1024 * 1024)
+          ).toFixed(1);
+          
+          console.log(
+            `✅ ${validation.stats.compressedCount} images optimized, saved ${savedMB}MB`
+          );
+        }
+        
+        // 검증된 이미지 추가
         setFormData(prev => ({
           ...prev,
-          images: [...prev.images, ...newImages].slice(0, 5),
+          images: [...prev.images, ...validation.uris].slice(0, 5),
         }));
       }
     } catch (error) {
       console.error('갤러리 에러:', error);
+      setIsUploading(false);
       setAlertTitle('Error');
       setAlertMessage('Failed to select images. Please try again.');
       setAlertButtons([{ text: 'OK', style: 'default' }]);

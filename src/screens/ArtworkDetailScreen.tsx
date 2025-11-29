@@ -42,6 +42,7 @@ import { ReportUserModal } from '../components/ReportUserModal';
 import { SuccessModal } from '../components/SuccessModal';
 import { ErrorModal } from '../components/ErrorModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { LinkableText } from '../components/LinkableText';
 
 // 한글 지명을 영문으로 번역
 const translateLocationToEnglish = (text: string | undefined): string | undefined => {
@@ -646,7 +647,7 @@ export const ArtworkDetailScreen: React.FC = () => {
       
       if (Platform.OS === 'web') {
         window.alert('Your artwork has been deleted successfully.');
-        navigation.goBack();
+        navigation.navigate('Home'); // goBack 대신 Home으로
       } else {
         setAlertTitle('Deleted');
         setAlertMessage('Your artwork has been deleted successfully.');
@@ -654,8 +655,8 @@ export const ArtworkDetailScreen: React.FC = () => {
           text: 'OK', 
           style: 'default',
           onPress: () => {
-            console.log('📱 이전 화면으로 이동');
-            navigation.goBack();
+            console.log('📱 홈 화면으로 이동');
+            navigation.navigate('Home'); // goBack 대신 Home으로
           }
         }]);
         setAlertVisible(true);
@@ -1230,9 +1231,10 @@ export const ArtworkDetailScreen: React.FC = () => {
             </Text>
           </View>
 
-          <Text style={[styles.description, { color: isDark ? colors.darkTextSecondary : colors.textSecondary }]}>
-            {artwork.description}
-          </Text>
+          <LinkableText 
+            text={artwork.description}
+            style={[styles.description, { color: isDark ? colors.darkTextSecondary : colors.textSecondary }]}
+          />
 
           {/* 위치 정보 (더 눈에 띄게) */}
           {(

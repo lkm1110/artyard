@@ -29,6 +29,7 @@ import { ReportUserModal } from '../components/ReportUserModal';
 import { BlockUserModal } from '../components/BlockUserModal';
 import { SuccessModal } from '../components/SuccessModal';
 import { ErrorModal } from '../components/ErrorModal';
+import { LinkableText } from '../components/LinkableText';
 
 type RouteParams = {
   UserArtworks: {
@@ -378,12 +379,13 @@ export const UserArtworksScreen: React.FC = () => {
           )}
           
           {userProfile.bio && (
-            <Text style={[
-              styles.userBio,
-              { color: isDark ? colors.darkTextSecondary : colors.textSecondary }
-            ]}>
-              {userProfile.bio}
-            </Text>
+            <LinkableText
+              text={userProfile.bio}
+              style={[
+                styles.userBio,
+                { color: isDark ? colors.darkTextSecondary : colors.textSecondary }
+              ]}
+            />
           )}
           
           {/* Follower/Following Stats */}

@@ -2,7 +2,7 @@
  * 좋아요한 작품 페이지 - 사용자가 좋아요한 작품들 표시
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Platform,
   Share,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Screen } from '../components/Screen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { EmptyState } from '../components/EmptyState';
@@ -31,6 +31,14 @@ export const LikedArtworksScreen: React.FC = () => {
 
   // 좋아요한 작품들 조회
   const { data: likedArtworks = [], isLoading, error, refetch } = useLikedArtworks();
+
+  // 화면 포커스될 때마다 데이터 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 좋아요 화면 포커스 - 데이터 새로고침');
+      refetch();
+    }, [refetch])
+  );
 
   const handleArtworkPress = (artwork: Artwork) => {
     navigation.navigate('ArtworkDetail', { artworkId: artwork.id });

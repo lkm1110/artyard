@@ -253,6 +253,10 @@ export const uploadArtwork = async (artworkData: {
   longitude?: number;
 }): Promise<Artwork> => {
   try {
+    // Rate limiting 체크
+    const { enforceRateLimit } = await import('../utils/rateLimiter');
+    enforceRateLimit('ARTWORK_UPLOAD');
+    
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('로그인이 필요합니다.');
 

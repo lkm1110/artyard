@@ -2,7 +2,7 @@
  * Profile Screen - 리디자인 버전 (Settings 스타일)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
@@ -25,6 +25,7 @@ import { BlockUserModal } from '../components/BlockUserModal';
 import { SuccessModal } from '../components/SuccessModal';
 import { ErrorModal } from '../components/ErrorModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { LinkableText } from '../components/LinkableText';
 
 interface ProfileScreenProps {
   route?: {
@@ -123,6 +124,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
   useEffect(() => {
     loadFollowStats();
   }, [user?.id]);
+
+  // 화면 포커스될 때마다 데이터 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 프로필 화면 포커스 - 데이터 새로고침');
+      loadFollowStats();
+    }, [])
+  );
 
   const handleSignOut = async () => {
     try {
@@ -448,9 +457,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ route }) => {
             )}
             
             {user.bio && (
-                <Text style={[styles.bio, { color: theme.text }]}>
-                {user.bio}
-              </Text>
+              <LinkableText 
+                text={user.bio}
+                style={[styles.bio, { color: theme.text }]}
+              />
             )}
             
             {/* Follower/Following Stats */}

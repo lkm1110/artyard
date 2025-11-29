@@ -24,7 +24,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.artyard.app",
-      "buildNumber": "19",
+      "buildNumber": "31",
       "deploymentTarget": "13.4",
       "infoPlist": {
         "CFBundleURLTypes": [
@@ -88,6 +88,7 @@
         "backgroundColor": "#EC4899"
       },
       "package": "com.artyard.app",
+      "versionCode": 21,
       "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
@@ -134,6 +135,8 @@
     "extra": {
       "supabaseUrl": "https://bkvycanciimgyftdtqpx.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY",
+      "sentryDsn": "https://628a0dc38ec048876741c0e97ed8d370@o4510445563609088.ingest.us.sentry.io/4510445564461056",
+      "amplitudeApiKey": "5703283b8f65e91b9e1ba0e20386fbf3",
       "eas": {
         "projectId": "273782f5-efd0-4ebc-be22-667922222f8d"
       }
@@ -153,6 +156,13 @@
         "expo-apple-authentication",
         {
           "appleTeamId": "9T69A85KY2"
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "artyard",
+          "project": "artyard"
         }
       ]
     ],

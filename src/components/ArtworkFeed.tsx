@@ -2,9 +2,10 @@
  * 작품 피드 컴포넌트 - 실제 데이터만 사용
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Alert, Platform, Share } from 'react-native';
 import { useColorScheme } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../constants/theme';
 import { ArtworkCard } from './ArtworkCard';
 import { EmptyState } from './EmptyState';
@@ -50,6 +51,14 @@ export const ArtworkFeed: React.FC<ArtworkFeedProps> = ({
   
   const toggleLikeMutation = useToggleArtworkLike();
   const toggleBookmarkMutation = useToggleArtworkBookmark();
+
+  // 화면이 포커스될 때마다 데이터 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 홈 화면 포커스 - 데이터 새로고침');
+      refetch();
+    }, [refetch])
+  );
 
   // 모든 페이지의 데이터를 하나의 배열로 합치기
   const artworks = data?.pages.flatMap(page => page.data) || [];

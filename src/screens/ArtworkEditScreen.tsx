@@ -32,20 +32,22 @@ interface RouteParams {
   artwork: Artwork;
 }
 
-const MATERIALS: Material[] = [
-  'Oil Paint',
-  'Acrylic Paint',
-  'Watercolor',
-  'Digital Art',
-  'Pencil Drawing',
-  'Charcoal',
-  'Mixed Media',
-  'Photography',
-  'Sculpture',
-  'Printmaking',
-  'Ink',
-  'Pastel',
-  'Other'
+const TYPE_OPTIONS = [
+  'Painting',          // 회화
+  'Drawing',
+  'Illustration',      // 일러스트레이션
+  'Photography',       // 사진
+  'Digital Art',       // 디지털 아트
+  'Printmaking',       // 판화
+  'Sculpture',         // 조각
+  'Ceramics',          // 도자기
+  'Textile Art',       // 섬유 예술
+  'Collage',           // 콜라주
+  'Mixed Media',       // 혼합 매체
+  'Street Art',        // 거리 예술
+  'Craft',             // 공예
+  'Installation',      // 설치 미술
+  'Other',             // 기타
 ];
 
 export const ArtworkEditScreen: React.FC = () => {
@@ -60,7 +62,7 @@ export const ArtworkEditScreen: React.FC = () => {
   const [formData, setFormData] = useState({
     title: artwork.title || '',
     description: artwork.description || '',
-    material: artwork.material || 'Oil Paint',
+    type: artwork.material || 'Painting', // DB는 material 컬럼 사용
     size: artwork.size || '',
     year: artwork.year?.toString() || new Date().getFullYear().toString(),
     edition: artwork.edition || '',
@@ -125,7 +127,7 @@ export const ArtworkEditScreen: React.FC = () => {
       const updateData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        material: formData.material,
+        material: formData.type, // type을 material 컬럼에 저장
         size: formData.size.trim(),
         year: parseInt(formData.year),
         edition: formData.edition.trim() || undefined,
@@ -281,38 +283,38 @@ export const ArtworkEditScreen: React.FC = () => {
           )}
         </View>
 
-        {/* 재료 */}
+        {/* 작품 유형 */}
         <View style={styles.formGroup}>
           <Text style={[styles.label, { color: isDark ? colors.darkText : colors.text }]}>
-            Material *
+            Type *
           </Text>
           <View style={styles.materialGrid}>
-            {MATERIALS.map((material) => (
+            {TYPE_OPTIONS.map((type) => (
               <TouchableOpacity
-                key={material}
+                key={type}
                 style={[
                   styles.materialChip,
                   {
-                    backgroundColor: formData.material === material 
+                    backgroundColor: formData.type === type 
                       ? colors.primary 
                       : (isDark ? colors.darkCard : colors.card),
-                    borderColor: formData.material === material 
+                    borderColor: formData.type === type 
                       ? colors.primary 
                       : (isDark ? colors.darkBorder : colors.border),
                   }
                 ]}
-                onPress={() => setFormData(prev => ({ ...prev, material }))}
+                onPress={() => setFormData(prev => ({ ...prev, type }))}
                 activeOpacity={0.7}
               >
                 <Text style={[
                   styles.materialChipText,
                   {
-                    color: formData.material === material 
+                    color: formData.type === type 
                       ? colors.white 
                       : (isDark ? colors.darkText : colors.text),
                   }
                 ]}>
-                  {material}
+                  {type}
                 </Text>
               </TouchableOpacity>
             ))}

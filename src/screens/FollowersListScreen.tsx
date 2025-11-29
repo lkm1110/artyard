@@ -21,6 +21,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors, spacing, typography, borderRadius } from '../constants/theme';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/authStore';
+import { LinkableText } from '../components/LinkableText';
 
 interface Follower {
   id: string;
@@ -120,12 +121,11 @@ export const FollowersListScreen: React.FC = () => {
               @{followerData.handle}
             </Text>
             {followerData.bio && (
-              <Text
+              <LinkableText
+                text={followerData.bio}
                 style={[styles.bio, { color: isDark ? colors.darkTextMuted : colors.textMuted }]}
                 numberOfLines={2}
-              >
-                {followerData.bio}
-              </Text>
+              />
             )}
           </View>
           

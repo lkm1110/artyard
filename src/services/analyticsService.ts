@@ -2,8 +2,10 @@
  * Analytics Service
  * Basic event tracking for business metrics
  * 
- * Future: Integrate with Firebase Analytics, Mixpanel, or Amplitude
+ * Integrated with Amplitude for production analytics
  */
+
+import * as amplitude from '@amplitude/analytics-react-native';
 
 interface AnalyticsEvent {
   name: string;
@@ -15,6 +17,30 @@ class AnalyticsService {
   private events: AnalyticsEvent[] = [];
   private sessionStart: number = Date.now();
   private enabled: boolean = true;
+  private initialized: boolean = false;
+  private apiKey: string = '';
+
+  /**
+   * Amplitude 초기화
+   */
+  async initialize(apiKey: string) {
+    if (this.initialized || __DEV__) return;
+
+    if (!apiKey) {
+      console.warn('⚠️ Amplitude API Key가 없습니다');
+      return;
+    }
+
+    this.apiKey = apiKey;
+
+    try {
+      await amplitude.init(apiKey).promise;
+      this.initialized = true;
+      console.log('✅ Amplitude 초기화 완료');
+    } catch (error) {
+      console.warn('Amplitude 초기화 실패:', error);
+    }
+  }
 
   /**
    * Track a custom event
@@ -38,11 +64,29 @@ class AnalyticsService {
       console.log('📊 Analytics Event:', event.name, event.params);
     }
 
-    // TODO: Send to analytics service in production
-    // Example integrations:
-    // - Firebase: analytics().logEvent(eventName, params);
-    // - Mixpanel: mixpanel.track(eventName, params);
-    // - Amplitude: amplitude.getInstance().logEvent(eventName, params);
+    // Production: Send to Amplitude
+    if (!__DEV__) {
+      this.sendToAmplitude(eventName, params);
+    }
+  }
+
+  /**
+   * Amplitude로 전송 (프로덕션)
+   */
+  private async sendToAmplitude(eventName: string, params?: Record<string, any>) {
+    try {
+      if (!this.initialized && this.apiKey) {
+        await this.initialize(this.apiKey);
+      }
+
+      if (this.initialized) {
+        // Amplitude로 이벤트 전송
+        amplitude.track(eventName, params);
+      }
+    } catch (error) {
+      // Analytics 실패해도 앱은 계속 동작
+      console.warn('Analytics failed:', error);
+    }
   }
 
   /**
