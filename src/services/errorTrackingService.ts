@@ -1,10 +1,12 @@
 /**
  * Error Tracking Service (Sentry for Supabase)
  * 프로덕션 에러 추적 및 보고
+ * 
+ * NOTE: Sentry는 RN 업그레이드 후 추가 예정
  */
 
 import Constants from 'expo-constants';
-import * as Sentry from '@sentry/react-native';
+// import * as Sentry from '@sentry/react-native'; // Hermes 호환성 문제
 interface ErrorLog {
   timestamp: number;
   error: string;
@@ -52,17 +54,21 @@ class ErrorTrackingService {
       this.errorQueue.shift();
     }
 
-    // Sentry로 전송 (프로덕션)
-    if (!__DEV__) {
-      Sentry.captureException(error instanceof Error ? error : new Error(error), {
-        contexts: {
-          custom: {
-            context,
-            ...additionalData,
-          },
-        },
-      });
-    }
+    // Sentry로 전송 (프로덕션) - RN 업그레이드 후 추가 예정
+    // if (!__DEV__) {
+    //   try {
+    //     Sentry.captureException(error instanceof Error ? error : new Error(error), {
+    //       contexts: {
+    //         custom: {
+    //           context,
+    //           ...additionalData,
+    //         },
+    //       },
+    //     });
+    //   } catch (e) {
+    //     console.warn('Sentry capture failed:', e);
+    //   }
+    // }
 
     // Supabase Edge Function으로 로그 전송 (옵션)
     this.sendToSupabase(errorLog);
@@ -82,9 +88,7 @@ class ErrorTrackingService {
    * 사용자 정보 설정
    */
   setUser(userId: string, email?: string) {
-    if (!__DEV__) {
-      Sentry.setUser({ id: userId, email });
-    }
+    // Sentry는 RN 업그레이드 후 추가 예정
     console.log('📝 User set for error tracking:', userId);
   }
 
@@ -92,9 +96,7 @@ class ErrorTrackingService {
    * 컨텍스트 설정 (현재 화면 등)
    */
   setContext(key: string, value: Record<string, any>) {
-    if (!__DEV__) {
-      Sentry.setContext(key, value);
-    }
+    // Sentry는 RN 업그레이드 후 추가 예정
   }
 
   /**
@@ -102,15 +104,6 @@ class ErrorTrackingService {
    */
   addBreadcrumb(message: string, category: string, data?: Record<string, any>) {
     if (!this.enabled) return;
-
-    if (!__DEV__) {
-      Sentry.addBreadcrumb({
-        message,
-        category,
-        data,
-        level: 'info',
-      });
-    }
 
     if (__DEV__) {
       console.log('🍞 Breadcrumb:', message, category, data);

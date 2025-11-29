@@ -7,7 +7,7 @@ import React, { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import Constants from 'expo-constants';
-import * as Sentry from '@sentry/react-native';
+// import * as Sentry from '@sentry/react-native'; // Hermes 호환성 문제로 배포 후 추가
 import { queryClient } from './src/utils/queryClient';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import AIOrchestrationService from './src/services/ai/aiOrchestrationService';
@@ -15,27 +15,8 @@ import { PermissionsHandler } from './src/components/PermissionsHandler';
 import { PushNotificationConsent } from './src/components/PushNotificationConsent';
 import { NetworkStatus } from './src/components/NetworkStatus';
 
-// Sentry 초기화 (프로덕션 에러 트래킹)
-if (!__DEV__) {
-  const sentryDsn = Constants.expoConfig?.extra?.sentryDsn;
-  
-  if (sentryDsn) {
-    Sentry.init({
-      dsn: sentryDsn,
-      environment: 'production',
-      tracesSampleRate: 0.2,
-      enableAutoSessionTracking: true,
-      sessionTrackingIntervalMillis: 30000,
-      beforeSend(event) {
-        if (event.user?.email) {
-          delete event.user.email;
-        }
-        return event;
-      },
-    });
-    console.log('✅ Sentry 초기화 완료');
-  }
-}
+// Sentry는 RN 업그레이드 후 추가 예정
+// (현재 RN 0.81.4의 Hermes가 Sentry 6.x와 호환 안 됨)
 
 // Expo Go 환경 체크
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -62,18 +43,16 @@ export default function App() {
       if (!__DEV__) {
         try {
           const amplitudeApiKey = Constants.expoConfig?.extra?.amplitudeApiKey;
-          
           if (amplitudeApiKey) {
             const { analytics } = await import('./src/services/analyticsService');
             await analytics.initialize(amplitudeApiKey);
             console.log('✅ Analytics 초기화 완료');
           }
         } catch (error) {
-          console.warn('Analytics 초기화 실패:', error);
+          console.warn('⚠️ Analytics 초기화 실패:', error);
         }
       }
     };
-
     initializeAnalytics();
   }, []);
 

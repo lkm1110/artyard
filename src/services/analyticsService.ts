@@ -80,11 +80,9 @@ class AnalyticsService {
       }
 
       if (this.initialized) {
-        // Amplitude로 이벤트 전송
         amplitude.track(eventName, params);
       }
     } catch (error) {
-      // Analytics 실패해도 앱은 계속 동작
       console.warn('Analytics failed:', error);
     }
   }
