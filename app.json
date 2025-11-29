@@ -2,7 +2,7 @@
   "expo": {
     "name": "ArtYard",
     "slug": "artyard",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -135,7 +135,6 @@
     "extra": {
       "supabaseUrl": "https://bkvycanciimgyftdtqpx.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrdnljYW5jaWltZ3lmdGR0cXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODQ5MDksImV4cCI6MjA3NDc2MDkwOX0.nYAt_sr_wTLy1PexlWV7G9fCXMSz2wsV2Ql5vNbY5zY",
-      "amplitudeApiKey": "5703283b8f65e91b9e1ba0e20386fbf3",
       "eas": {
         "projectId": "273782f5-efd0-4ebc-be22-667922222f8d"
       }

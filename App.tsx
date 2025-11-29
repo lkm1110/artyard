@@ -37,24 +37,24 @@ export default function App() {
     setTimeout(checkVersion, 5000);
   }, []);
 
-  // Analytics 초기화 (프로덕션)
-  useEffect(() => {
-    const initializeAnalytics = async () => {
-      if (!__DEV__) {
-        try {
-          const amplitudeApiKey = Constants.expoConfig?.extra?.amplitudeApiKey;
-          if (amplitudeApiKey) {
-            const { analytics } = await import('./src/services/analyticsService');
-            await analytics.initialize(amplitudeApiKey);
-            console.log('✅ Analytics 초기화 완료');
-          }
-        } catch (error) {
-          console.warn('⚠️ Analytics 초기화 실패:', error);
-        }
-      }
-    };
-    initializeAnalytics();
-  }, []);
+  // Analytics 초기화 (배포 후 추가 예정)
+  // useEffect(() => {
+  //   const initializeAnalytics = async () => {
+  //     if (!__DEV__) {
+  //       try {
+  //         const amplitudeApiKey = Constants.expoConfig?.extra?.amplitudeApiKey;
+  //         if (amplitudeApiKey) {
+  //           const { analytics } = await import('./src/services/analyticsService');
+  //           await analytics.initialize(amplitudeApiKey);
+  //           console.log('✅ Analytics 초기화 완료');
+  //         }
+  //       } catch (error) {
+  //         console.warn('⚠️ Analytics 초기화 실패:', error);
+  //       }
+  //     }
+  //   };
+  //   initializeAnalytics();
+  // }, []);
 
   // AI 시스템 초기화
   useEffect(() => {

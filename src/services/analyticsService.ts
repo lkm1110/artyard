@@ -2,10 +2,10 @@
  * Analytics Service
  * Basic event tracking for business metrics
  * 
- * Integrated with Amplitude for production analytics
+ * TODO: Integrate with Amplitude after deployment
  */
 
-import * as amplitude from '@amplitude/analytics-react-native';
+// import * as amplitude from '@amplitude/analytics-react-native'; // 배포 후 추가 예정
 
 interface AnalyticsEvent {
   name: string;
@@ -21,25 +21,13 @@ class AnalyticsService {
   private apiKey: string = '';
 
   /**
-   * Amplitude 초기화
+   * Amplitude 초기화 (배포 후 추가 예정)
    */
-  async initialize(apiKey: string) {
+  async initialize(apiKey?: string) {
     if (this.initialized || __DEV__) return;
-
-    if (!apiKey) {
-      console.warn('⚠️ Amplitude API Key가 없습니다');
-      return;
-    }
-
-    this.apiKey = apiKey;
-
-    try {
-      await amplitude.init(apiKey).promise;
-      this.initialized = true;
-      console.log('✅ Amplitude 초기화 완료');
-    } catch (error) {
-      console.warn('Amplitude 초기화 실패:', error);
-    }
+    // TODO: Amplitude 추가 후 활성화
+    console.log('⚠️ Analytics 배포 후 추가 예정');
+    this.initialized = true;
   }
 
   /**
@@ -71,19 +59,12 @@ class AnalyticsService {
   }
 
   /**
-   * Amplitude로 전송 (프로덕션)
+   * Amplitude로 전송 (배포 후 추가 예정)
    */
   private async sendToAmplitude(eventName: string, params?: Record<string, any>) {
-    try {
-      if (!this.initialized && this.apiKey) {
-        await this.initialize(this.apiKey);
-      }
-
-      if (this.initialized) {
-        amplitude.track(eventName, params);
-      }
-    } catch (error) {
-      console.warn('Analytics failed:', error);
+    // TODO: Amplitude 추가 후 활성화
+    if (__DEV__) {
+      console.log('📊 Analytics:', eventName, params);
     }
   }
 
